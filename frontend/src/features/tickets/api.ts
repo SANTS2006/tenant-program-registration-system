@@ -7,8 +7,6 @@ export interface TicketConfig {
   eventTitle?: string;
   tagline?: string;
   kicker?: string;
-  admissionLabel: string;
-  priceText: string;
   eventDate?: string;
   eventTime?: string;
   venue?: string;

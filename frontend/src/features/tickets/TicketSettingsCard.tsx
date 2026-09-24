@@ -1,6 +1,6 @@
 import * as React from "react";
 import { toast } from "sonner";
-import { Ticket, Upload } from "lucide-react";
+import { Ticket } from "lucide-react";
 import { renderTicket, sampleQrMatrix, TICKET_DESIGNS, ticketDesign, code128 } from "@designs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -17,6 +17,7 @@ import { uploadIdCardBackground } from "../idcards/api";
 import { DesignColorsField, ImagePickerField, ShowOnConfirmationToggle } from "../idcards/IdCardSettingsCard";
 import { useUpdateProgram } from "../programs/hooks";
 import { DesignGallery } from "../designs/DesignGallery";
+import { UploadDesignTile } from "../designs/UploadDesignTile";
 import type { TicketConfig } from "./api";
 import { useTicketConfig, useUpdateTicketConfig } from "./hooks";
 import { TicketPreview, type TicketPreviewContext } from "./TicketPreview";
@@ -107,8 +108,6 @@ export function TicketSettingsCard({ program }: { program: Program }) {
             date: programDates,
             time: "09:00 AM - 05:00 PM",
             venue: "Venue name and address",
-            priceLabel: "General Admission",
-            price: "ADMIT ONE",
             participantName: "Jordan Avery",
             registrationNumber: "REG-2026-000123",
             fields: [],
@@ -163,6 +162,13 @@ export function TicketSettingsCard({ program }: { program: Program }) {
     }
   };
 
+  // Dropping the uploaded design falls back to the first built-in design if it was in use.
+  const removeUploadedDesign = () => {
+    if (customActive) chooseDesign(TICKET_DESIGNS[0]!.id);
+    set({ backgroundImageUrl: undefined });
+    toast.success("Design removed. Remember to save.");
+  };
+
   const handleToggleEnabled = async (checked: boolean) => {
     try {
       await updateProgram.mutateAsync({ ticketEnabled: checked });
@@ -206,33 +212,15 @@ export function TicketSettingsCard({ program }: { program: Program }) {
           <section className="flex flex-col gap-2">
             <Label>Design</Label>
             <DesignGallery options={thumbnails} selected={config.template} onSelect={chooseDesign} columns="grid-cols-1 sm:grid-cols-3">
-              <div
-                className={cn(
-                  "flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-2 text-center transition-colors",
-                  customActive ? "border-primary bg-gradient-brand-soft" : "border-border hover:border-primary/50",
-                )}
-              >
-                {config.backgroundImageUrl ? (
-                  <button type="button" onClick={() => set({ template: "custom" })} className="w-full">
-                    <img src={config.backgroundImageUrl} alt="Your uploaded design" className="aspect-[3/1] w-full rounded-md object-cover" />
-                  </button>
-                ) : (
-                  <Upload className="h-5 w-5 text-muted-foreground" />
-                )}
-                <Button variant="outline" size="sm" className="relative h-7 px-2 text-xs" disabled={uploading === "background"}>
-                  {uploading === "background" ? "Uploading..." : config.backgroundImageUrl ? "Replace" : "Your own design"}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) void upload("background", file);
-                      e.target.value = "";
-                    }}
-                    className="absolute inset-0 cursor-pointer opacity-0"
-                  />
-                </Button>
-              </div>
+              <UploadDesignTile
+                imageUrl={config.backgroundImageUrl}
+                active={customActive}
+                uploading={uploading === "background"}
+                aspectClassName="aspect-[3/1]"
+                onSelect={() => set({ template: "custom" })}
+                onUpload={(file) => void upload("background", file)}
+                onRemove={removeUploadedDesign}
+              />
             </DesignGallery>
           </section>
 
@@ -304,8 +292,6 @@ export function TicketSettingsCard({ program }: { program: Program }) {
             <TextField label="Date" value={config.eventDate} placeholder={programDates ?? "e.g. 20 May 2026"} maxLength={100} onChange={(v) => set({ eventDate: v })} />
             <TextField label="Time" value={config.eventTime} placeholder="e.g. 09:00 AM - 05:00 PM" maxLength={60} onChange={(v) => set({ eventTime: v })} />
             <TextField label="Venue" value={config.venue} placeholder="e.g. Miatta Conference Hall, Freetown" maxLength={200} onChange={(v) => set({ venue: v })} />
-            <TextField label="Price caption" value={config.admissionLabel} placeholder="General Admission" maxLength={60} onChange={(v) => set({ admissionLabel: v })} />
-            <TextField label="Price or pass type" value={config.priceText} placeholder="ADMIT ONE, FREE, VIP, Le 100" maxLength={24} onChange={(v) => set({ priceText: v })} />
             <TextField label="Contact phone" value={config.contactPhone} placeholder="+232 76 000 000" maxLength={60} onChange={(v) => set({ contactPhone: v })} />
             <TextField label="Website" value={config.website} placeholder="www.example.org" maxLength={120} onChange={(v) => set({ website: v })} />
           </section>

@@ -103,7 +103,7 @@ export function ShareFormCard({ programId, programName }: { programId: string; p
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <div className="flex gap-2">
-              <Input value={publicUrl} readOnly onFocus={(e) => e.target.select()} className="font-mono text-xs sm:text-sm" />
+              <Input value={publicUrl} readOnly onFocus={(e) => e.target.select()} className="tabular-nums text-xs sm:text-sm" />
               <Button variant="outline" onClick={copyLink}>
                 <Copy className="h-4 w-4" />
                 Copy

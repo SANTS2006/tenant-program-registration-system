@@ -16,6 +16,7 @@ import type { FieldType, Program } from "@/types/api";
 import { getAdminForm } from "../form-builder/api";
 import { useUpdateProgram } from "../programs/hooks";
 import { DesignGallery } from "../designs/DesignGallery";
+import { UploadDesignTile } from "../designs/UploadDesignTile";
 import { useIdCardConfig, useUpdateIdCardConfig } from "./hooks";
 import { uploadIdCardBackground, type IdCardConfig } from "./api";
 import { IdCardPreview, idCardPreviewContent, type IdCardPreviewContext } from "./IdCardPreview";
@@ -99,7 +100,7 @@ export function DesignColorsField({
               className="h-7 w-9 cursor-pointer rounded border-0 bg-transparent p-0"
             />
             <span className="text-muted-foreground">{label}</span>
-            <span className="ml-auto font-mono text-xs uppercase">{value}</span>
+            <span className="ml-auto tabular-nums text-xs uppercase">{value}</span>
           </label>
         ))}
       </div>
@@ -250,6 +251,13 @@ export function IdCardSettingsCard({ program }: { program: Program }) {
     }
   };
 
+  // Dropping the uploaded design falls back to the first built-in design if it was in use.
+  const removeUploadedDesign = () => {
+    if (customActive) chooseDesign(ID_CARD_DESIGNS[0]!.id);
+    set({ backgroundImageUrl: undefined });
+    toast.success("Design removed. Remember to save.");
+  };
+
   const handleToggleEnabled = async (checked: boolean) => {
     try {
       await updateProgram.mutateAsync({ idCardEnabled: checked });
@@ -300,37 +308,15 @@ export function IdCardSettingsCard({ program }: { program: Program }) {
                 onSelect={chooseDesign}
                 columns="grid-cols-3 sm:grid-cols-5"
               >
-                <div
-                  className={cn(
-                    "relative flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-2 text-center transition-colors",
-                    customActive ? "border-primary bg-gradient-brand-soft" : "border-border hover:border-primary/50",
-                  )}
-                >
-                  {config.backgroundImageUrl ? (
-                    <button type="button" onClick={() => chooseCustom()} className="w-full">
-                      <img
-                        src={config.backgroundImageUrl}
-                        alt="Your uploaded design"
-                        className="aspect-[300/476] w-full rounded-md object-cover"
-                      />
-                    </button>
-                  ) : (
-                    <Upload className="h-5 w-5 text-muted-foreground" />
-                  )}
-                  <Button variant="outline" size="sm" className="relative h-7 px-2 text-xs" disabled={uploading === "background"}>
-                    {uploading === "background" ? "Uploading..." : config.backgroundImageUrl ? "Replace" : "Your own design"}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) void upload("background", file);
-                        e.target.value = "";
-                      }}
-                      className="absolute inset-0 cursor-pointer opacity-0"
-                    />
-                  </Button>
-                </div>
+                <UploadDesignTile
+                  imageUrl={config.backgroundImageUrl}
+                  active={customActive}
+                  uploading={uploading === "background"}
+                  aspectClassName="aspect-[300/476]"
+                  onSelect={() => chooseCustom()}
+                  onUpload={(file) => void upload("background", file)}
+                  onRemove={removeUploadedDesign}
+                />
               </DesignGallery>
               {customActive && (
                 <p className="text-xs text-muted-foreground">

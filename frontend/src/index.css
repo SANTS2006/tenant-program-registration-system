@@ -60,6 +60,18 @@
     scroll-behavior: smooth;
   }
 
+  html {
+    font-family: "Poppins", ui-sans-serif, system-ui, sans-serif;
+  }
+
+  /* Form controls don't inherit the page font by default. */
+  button,
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+  }
+
   body {
     @apply text-foreground antialiased min-h-screen;
     background-color: hsl(var(--background));

@@ -82,7 +82,7 @@ export function CodeInput({ value, onChange, onComplete, length = 6, disabled, a
           maxLength={length}
           aria-label={`Character ${i + 1} of ${length}`}
           className={cn(
-            "h-12 w-10 rounded-xl border border-input bg-background text-center font-mono text-xl font-bold uppercase text-foreground shadow-sm transition-all sm:h-14 sm:w-12 sm:text-2xl",
+            "h-12 w-10 rounded-xl border border-input bg-background text-center tabular-nums text-xl font-bold uppercase text-foreground shadow-sm transition-all sm:h-14 sm:w-12 sm:text-2xl",
             "focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/40",
             char && "border-primary/60 bg-gradient-brand-soft text-primary",
             disabled && "opacity-60",

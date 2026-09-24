@@ -77,7 +77,7 @@ export function RegistrationNumberCard({ program }: { program: Program }) {
       <CardContent className="flex flex-col gap-5">
         <div className="rounded-xl border border-border/70 bg-gradient-brand-soft px-5 py-4 text-center">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">Registration numbers will look like</p>
-          <p className="gradient-text mt-1 font-mono text-xl font-semibold tracking-wide">
+          <p className="gradient-text mt-1 tabular-nums text-xl font-semibold tracking-wide">
             {formatRegistrationNumber(config, 1)}, {formatRegistrationNumber(config, 2)} …
           </p>
         </div>

@@ -4,6 +4,7 @@ import { useLocation, useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
+import { DesignSvg } from "../designs/DesignSvg";
 import type { SubmitRegistrationResult } from "./api";
 
 function downloadUrl(slug: string, registrationNumber: string, kind: "id-card" | "ticket") {
@@ -11,18 +12,29 @@ function downloadUrl(slug: string, registrationNumber: string, kind: "id-card" |
 }
 
 /** The registrant's own card or ticket, drawn by the server in the program's chosen design. */
+// Drawn inline rather than as an <img> so the card uses the page's Poppins font.
 function DocumentImage({ src, alt, className }: { src: string; alt: string; className: string }) {
+  const [svg, setSvg] = React.useState<string | null>(null);
   const [failed, setFailed] = React.useState(false);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    fetch(src, { credentials: "same-origin" })
+      .then((res) => {
+        const type = res.headers.get("content-type") ?? "";
+        if (!res.ok || !type.startsWith("image/svg+xml")) throw new Error("unavailable");
+        return res.text();
+      })
+      .then((text) => !cancelled && setSvg(text))
+      .catch(() => !cancelled && setFailed(true));
+    return () => {
+      cancelled = true;
+    };
+  }, [src]);
+
   if (failed) return null;
-  return (
-    <img
-      src={src}
-      alt={alt}
-      loading="lazy"
-      onError={() => setFailed(true)}
-      className={`h-auto rounded-xl bg-muted shadow-lg ring-1 ring-black/5 ${className}`}
-    />
-  );
+  if (!svg) return <div className={`animate-pulse rounded-xl bg-muted ${className}`} />;
+  return <DesignSvg svg={svg} label={alt} className={`h-auto rounded-xl shadow-lg ring-1 ring-black/5 ${className}`} />;
 }
 
 export function ConfirmationPage() {

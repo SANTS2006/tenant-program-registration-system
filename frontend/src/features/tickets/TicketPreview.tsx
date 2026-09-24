@@ -38,8 +38,6 @@ export function TicketPreview({
           date: config.eventDate || context.programDates,
           time: config.eventTime || undefined,
           venue: config.venue || undefined,
-          priceLabel: config.admissionLabel,
-          price: config.priceText || "ADMIT ONE",
           participantName: "Jordan Avery",
           registrationNumber: "REG-2026-000123",
           fields: (context.fieldLabels ?? []).map((label, i) => ({ label, value: SAMPLE_VALUES[i] ?? "Sample" })),

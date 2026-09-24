@@ -1,3 +1,4 @@
+import { createRequire } from "node:module";
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
 import SVGtoPDF from "svg-to-pdfkit";
@@ -33,9 +34,29 @@ export function qrMatrix(text: string): boolean[][] {
   return Array.from({ length: size }, (_, r) => Array.from({ length: size }, (_, c) => Boolean(qr.modules.get(r, c))));
 }
 
+// The designs are set in Poppins; the PDF embeds the same files the width tables were measured from.
+const require = createRequire(import.meta.url);
+const POPPINS = {
+  Poppins: "400-normal",
+  "Poppins-Bold": "700-normal",
+  "Poppins-Italic": "400-italic",
+  "Poppins-BoldItalic": "700-italic",
+} as const;
+
+function registerPoppins(doc: PDFKit.PDFDocument) {
+  for (const [name, weight] of Object.entries(POPPINS)) {
+    doc.registerFont(name, require.resolve(`@fontsource/poppins/files/poppins-latin-${weight}.woff`));
+  }
+}
+
+function poppinsFor(_family: string, bold: boolean, italic: boolean): string {
+  return `Poppins${bold && italic ? "-BoldItalic" : bold ? "-Bold" : italic ? "-Italic" : ""}`;
+}
+
 /** Draws each SVG on its own page of the given size in points. */
 export function svgPagesToPdf(svgs: string[], width: number, height: number): Promise<Buffer> {
   const doc = new PDFDocument({ size: [width, height], margin: 0, autoFirstPage: false });
+  registerPoppins(doc);
   const chunks: Buffer[] = [];
   doc.on("data", (chunk: Buffer) => chunks.push(chunk));
   const finished = new Promise<Buffer>((resolve, reject) => {
@@ -44,7 +65,7 @@ export function svgPagesToPdf(svgs: string[], width: number, height: number): Pr
   });
   for (const svg of svgs) {
     doc.addPage({ size: [width, height], margin: 0 });
-    SVGtoPDF(doc, svg, 0, 0, { width, height, preserveAspectRatio: "xMidYMid meet" });
+    SVGtoPDF(doc, svg, 0, 0, { width, height, preserveAspectRatio: "xMidYMid meet", fontCallback: poppinsFor });
   }
   doc.end();
   return finished;

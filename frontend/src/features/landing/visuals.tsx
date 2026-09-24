@@ -18,8 +18,6 @@ export function sampleTicket(template: string): TicketConfig {
     primaryColor: defaults.primary,
     secondaryColor: defaults.secondary,
     tagline: "Ideas, people, and partnerships",
-    admissionLabel: "Ticket price",
-    priceText: "FREE",
     eventDate: "14 Nov 2026",
     eventTime: "09:00 AM - 05:00 PM",
     venue: "City Conference Hall",

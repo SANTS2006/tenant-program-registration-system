@@ -37,9 +37,6 @@ export interface TicketContent {
   date?: string;
   time?: string;
   venue?: string;
-  /** Caption and big value in the price slot, e.g. "Ticket price" / "$100" or "Admission" / "VIP". */
-  priceLabel: string;
-  price: string;
   participantName: string;
   registrationNumber: string;
   fields: Row[];
@@ -119,13 +116,11 @@ const horizon: TicketDesign = {
       polygon([[224, 0], [238, 0], [190, H], [176, H]], k.primary) +
       polygon([[246, 150], [258, 150], [240, H], [228, H]], tint(k.primary, 0.35)) +
       logo(c.logo, 86, 70, { anchor: "middle", mark: "#ffffff", textColor: "#ffffff", taglineColor: "#ffffff", maxWidth: 150 }) +
-      text(24, 128, "ISSUED TO", { size: 8, fill: "#ffffff", letterSpacing: 1.4, opacity: 0.85 }) +
-      fitted(24, 148, c.participantName, 150, { size: 16, fill: "#ffffff", bold: true, minSize: 10 }) +
-      fitted(24, 190, c.priceLabel, 140, { size: 10, fill: "#ffffff", italic: true, serif: true }) +
-      fitted(24, 220, c.price, 140, { size: 30, fill: "#ffffff", bold: true, minSize: 14 }) +
+      text(24, 158, "ISSUED TO", { size: 8, fill: "#ffffff", letterSpacing: 1.4, opacity: 0.85 }) +
+      fitted(24, 180, c.participantName, 140, { size: 16, fill: "#ffffff", bold: true, minSize: 9 }) +
       rect(160, 206, STUB - 160, 34, band) +
       polygon([[166, H], [176, 206], [196, 206], [186, H]], "#eef2f4") +
-      fitted(textX - 12, 42, c.kicker, 260, { size: 16, fill: INK, italic: true, serif: true }) +
+      fitted(textX - 12, 42, c.kicker, 260, { size: 16, fill: INK, italic: true }) +
       fitted(textX - 12, 78, c.title.toUpperCase(), 262, { size: 30, fill: k.primary, bold: true, minSize: 14 }) +
       fitted(textX - 12, 100, c.subtitle, 262, { size: 13, fill: INK, minSize: 9 }) +
       rowsSvg +
@@ -138,12 +133,12 @@ const horizon: TicketDesign = {
         : "") +
       fitted(STUB - 12, 228, `No. ${c.registrationNumber}`, 130, { size: 9, fill: "#ffffff", anchor: "end", bold: true }) +
       perforation(STUB, "#94a3b8", "#ffffff") +
-      fitted(558, 34, c.kicker, 150, { size: 11, fill: INK, italic: true, serif: true }) +
+      fitted(558, 34, c.kicker, 150, { size: 11, fill: INK, italic: true }) +
       fitted(558, 57, c.title.toUpperCase(), 150, { size: 16, fill: k.primary, bold: true, minSize: 9 }) +
       fitted(558, 72, c.subtitle, 150, { size: 8, fill: INK }) +
       stubRows +
-      fitted(704, 160, c.priceLabel, 140, { size: 10, fill: k.primary, italic: true, serif: true, anchor: "end" }) +
-      fitted(704, 184, c.price, 146, { size: 24, fill: k.primary, bold: true, anchor: "end", minSize: 12 }) +
+      text(558, 162, "ISSUED TO", { size: 7, fill: "#6b7280", letterSpacing: 1.2 }) +
+      fitted(558, 180, c.participantName, 148, { size: 12, fill: k.primary, bold: true, minSize: 7 }) +
       (c.barcode ? rect(556, 194, 150, 34, "#ffffff") + barcode(c.barcode, 562, 197, 138, 22, INK) : "") +
       fitted(631, 235, c.registrationNumber, 140, { size: 6.5, fill: INK, anchor: "middle" })
     );
@@ -151,7 +146,7 @@ const horizon: TicketDesign = {
 };
 
 // ---------------------------------------------------------------------------
-// Orbit: purple circle with a checkered fill holding the price and QR code.
+// Orbit: a purple circle filled by the QR code.
 
 const orbit: TicketDesign = {
   id: "orbit",
@@ -162,6 +157,8 @@ const orbit: TicketDesign = {
     const cx = 380;
     const cy = 112;
     const r = 98;
+    // The largest square that fits inside the circle.
+    const qrBox = Math.floor(r * Math.SQRT2) - 4;
     const details = detailLines(c);
 
     let rowsSvg = "";
@@ -188,16 +185,16 @@ const orbit: TicketDesign = {
       rect(cx, 62, W - cx, 100, k.primary) +
       path(`M${n(ax)} ${n(ay)}A${r + 12} ${r + 12} 0 0 1 ${n(bx)} ${n(by)}`, "none", `stroke="${k.primary}" stroke-width="7"`) +
       circle(cx, cy, r, k.primary) +
-      checker(ctx, circle(cx, cy, r - 14, "#fff"), [cx - r, cy - r, r * 2, r * 2], 19, tint(k.primary, 0.3), 0.35) +
-      fitted(cx, 34, c.priceLabel, 120, { size: 8.5, fill: "#ffffff", italic: true, serif: true, anchor: "middle" }) +
-      fitted(cx, 56, c.price, 130, { size: 20, fill: "#ffffff", bold: true, anchor: "middle", minSize: 11 }) +
       (c.qr
-        ? rect(cx - 40, 132, 80, 80, "#ffffff", `rx="3"`) + qrCode(c.qr, cx - 36, 136, 72, INK, "#ffffff")
-        : fitted(cx, 170, c.participantName, 150, { size: 14, fill: "#ffffff", bold: true, anchor: "middle", minSize: 9 })) +
+        ? rect(cx - qrBox / 2, cy - qrBox / 2, qrBox, qrBox, "#ffffff", `rx="10"`) +
+          qrCode(c.qr, cx - qrBox / 2 + 8, cy - qrBox / 2 + 8, qrBox - 16, INK, "#ffffff")
+        : checker(ctx, circle(cx, cy, r - 14, "#fff"), [cx - r, cy - r, r * 2, r * 2], 19, tint(k.primary, 0.3), 0.35) +
+          text(cx, cy - 6, "ISSUED TO", { size: 8, fill: "#ffffff", anchor: "middle", letterSpacing: 1.3, opacity: 0.85 }) +
+          fitted(cx, cy + 14, c.participantName, 150, { size: 15, fill: "#ffffff", bold: true, anchor: "middle", minSize: 9 })) +
       [0, 1, 2].map((i) => circle(488 + i * 18, 222, 4.5, k.primary)).join("") +
       path("M492.5 222h9 M510.5 222h9", "none", `stroke="${k.primary}" stroke-width="2"`) +
       logo(c.logo, 22, 30, { mark: k.primary, textColor: INK, taglineColor: "#6b7280", maxWidth: 230 }) +
-      fitted(22, 74, c.kicker, 240, { size: 15, fill: INK, italic: true, serif: true }) +
+      fitted(22, 74, c.kicker, 240, { size: 15, fill: INK, italic: true }) +
       fitted(22, 104, c.title.toUpperCase(), 232, { size: 27, fill: k.primary, bold: true, minSize: 13 }) +
       fitted(22, 124, c.subtitle, 236, { size: 12, fill: INK, minSize: 8.5 }) +
       rowsSvg +
@@ -206,12 +203,12 @@ const orbit: TicketDesign = {
       perforation(STUB, "#94a3b8", "#ffffff") +
       (c.barcode ? barcode(c.barcode, 568, 14, 136, 28, INK) : "") +
       fitted(636, 54, c.registrationNumber, 136, { size: 7, fill: INK, anchor: "middle" }) +
-      fitted(566, 84, c.kicker, 140, { size: 10, fill: "#ffffff", italic: true, serif: true }) +
+      fitted(566, 84, c.kicker, 140, { size: 10, fill: "#ffffff", italic: true }) +
       fitted(566, 104, c.title.toUpperCase(), 140, { size: 14.5, fill: "#ffffff", bold: true, minSize: 8 }) +
       fitted(566, 117, c.subtitle, 140, { size: 7.5, fill: "#ffffff", opacity: 0.9 }) +
       stubRows +
-      fitted(636, 184, c.priceLabel, 140, { size: 9, fill: k.primary, italic: true, serif: true, anchor: "middle" }) +
-      fitted(636, 208, c.price, 140, { size: 22, fill: k.primary, bold: true, anchor: "middle", minSize: 11 }) +
+      text(636, 186, "ISSUED TO", { size: 7, fill: "#6b7280", anchor: "middle", letterSpacing: 1.2 }) +
+      fitted(636, 205, c.participantName, 140, { size: 12, fill: k.primary, bold: true, anchor: "middle", minSize: 7 }) +
       rect(580, 222, 112, 30, k.secondary, `rx="15"`)
     );
   },
@@ -236,7 +233,7 @@ const custom: TicketDesign = {
     const details = [c.date, c.time].filter(Boolean).join("  |  ");
     return (
       bg +
-      fitted(30, 38, c.priceLabel.toUpperCase(), 480, { size: 10, fill: fg, bold: true, letterSpacing: 1.6 }) +
+      fitted(30, 38, c.kicker.toUpperCase(), 480, { size: 10, fill: fg, bold: true, letterSpacing: 1.6 }) +
       fitted(30, 76, c.title, 480, { size: 30, fill: fg, bold: true, minSize: 14 }) +
       text(30, 110, "ISSUED TO", { size: 8.5, fill: muted, bold: true, letterSpacing: 1.3 }) +
       fitted(30, 130, c.participantName, 480, { size: 18, fill: fg, bold: true, minSize: 11 }) +
@@ -247,8 +244,7 @@ const custom: TicketDesign = {
         : "") +
       (c.terms ? fitted(30, 228, c.terms, 480, { size: 8, fill: muted, italic: true, minSize: 6.5 }) : "") +
       path(`M${STUB} 12V${H - 12}`, "none", `stroke="${fg}" stroke-opacity="0.6" stroke-width="1.4" stroke-dasharray="5 5"`) +
-      fitted(630, 34, c.price, 160, { size: 14, fill: fg, bold: true, anchor: "middle", letterSpacing: 1.5 }) +
-      (c.qr ? rect(582, 52, 96, 96, "#ffffff", `rx="6"`) + qrCode(c.qr, 588, 58, 84, INK, "#ffffff") : "") +
+      (c.qr ? rect(572, 30, 116, 116, "#ffffff", `rx="8"`) + qrCode(c.qr, 578, 36, 104, INK, "#ffffff") : "") +
       text(630, 176, "NO.", { size: 8.5, fill: muted, bold: true, anchor: "middle", letterSpacing: 1.2 }) +
       fitted(630, 194, c.registrationNumber, 160, { size: 11, fill: fg, bold: true, anchor: "middle", minSize: 7 })
     );

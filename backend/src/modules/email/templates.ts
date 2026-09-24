@@ -17,7 +17,7 @@ const BRAND = {
   tintBorder: "#bfdbfe",
 };
 
-const FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+const FONT = "'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 const MONO = "'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace";
 
 export function escapeHtml(value: string): string {
@@ -88,6 +88,7 @@ function layout(params: { preheader: string; eyebrow: string; heading: string; b
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light only" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet" />
     <title>${escapeHtml(params.heading)}</title>
   </head>
   <body style="margin:0;padding:0;background-color:${BRAND.page};">

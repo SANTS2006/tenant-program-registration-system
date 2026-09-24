@@ -12,8 +12,6 @@ export const ticketConfigSchema = z.object({
   eventTitle: optionalText(120),
   tagline: optionalText(140),
   kicker: optionalText(80),
-  admissionLabel: z.string().trim().max(60).default("General Admission"),
-  priceText: z.string().trim().max(24).default("ADMIT ONE"),
   eventDate: optionalText(100),
   eventTime: optionalText(60),
   venue: optionalText(200),

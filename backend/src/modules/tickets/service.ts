@@ -65,8 +65,6 @@ async function renderProgramTicket(program: programsRepo.ProgramRow, registratio
       date: config.eventDate ?? formatProgramDate(program),
       time: config.eventTime,
       venue: config.venue,
-      priceLabel: config.admissionLabel,
-      price: config.priceText,
       participantName: registration.applicantName ?? "Registered Participant",
       registrationNumber: registration.registrationNumber,
       fields,
