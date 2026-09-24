@@ -1,0 +1,49 @@
+# Render Blueprint: one web service that serves both the API (/api/*) and the
+# built React app, so the auth cookie and /api calls stay on a single origin.
+services:
+  - type: web
+    name: program-registration
+    runtime: node
+    plan: starter
+    # Same AWS region as the Neon database (us-east-2) to keep query latency low.
+    region: ohio
+    # NODE_ENV=production would make npm skip devDependencies, but the build
+    # needs them (vite, typescript, tsup) and so does the migration runner (tsx).
+    buildCommand: npm ci --include=dev && npm run build
+    preDeployCommand: npm run db:migrate
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: API_PORT
+        value: "10000"
+      # Both set to your public address, e.g. https://register.yourdomain.com
+      - key: APP_URL
+        sync: false
+      - key: API_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: CLOUDINARY_UPLOAD_FOLDER
+        value: program-registration
+      - key: BREVO_API_KEY
+        sync: false
+      - key: EMAIL_FROM_NAME
+        value: Program Registration
+      # Must be a sender address verified in your Brevo account.
+      - key: EMAIL_FROM_ADDRESS
+        sync: false

@@ -1,0 +1,156 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 99%;
+    --foreground: 217 33% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 217 33% 12%;
+    --primary: 217 91% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 60% 96%;
+    --secondary-foreground: 217 50% 25%;
+    --muted: 213 30% 95%;
+    --muted-foreground: 215 16% 45%;
+    --accent: 199 89% 94%;
+    --accent-foreground: 205 60% 25%;
+    --destructive: 350 78% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 160 70% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --border: 213 25% 89%;
+    --input: 213 25% 89%;
+    --ring: 217 91% 53%;
+    --radius: 0.875rem;
+  }
+
+  .dark {
+    --background: 220 40% 6%;
+    --foreground: 210 30% 96%;
+    --card: 220 33% 9%;
+    --card-foreground: 210 30% 96%;
+    --primary: 213 94% 68%;
+    --primary-foreground: 220 40% 8%;
+    --secondary: 217 28% 15%;
+    --secondary-foreground: 210 30% 92%;
+    --muted: 217 24% 14%;
+    --muted-foreground: 215 15% 65%;
+    --accent: 205 40% 18%;
+    --accent-foreground: 199 70% 85%;
+    --destructive: 350 80% 62%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 160 65% 48%;
+    --success-foreground: 220 40% 8%;
+    --warning: 38 92% 58%;
+    --warning-foreground: 220 40% 8%;
+    --border: 217 24% 18%;
+    --input: 217 24% 18%;
+    --ring: 213 94% 68%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply text-foreground antialiased min-h-screen;
+    background-color: hsl(var(--background));
+    background-image:
+      radial-gradient(circle at 0% 0%, rgba(37, 99, 235, 0.10), transparent 45%),
+      radial-gradient(circle at 100% 0%, rgba(14, 165, 233, 0.10), transparent 45%),
+      radial-gradient(circle at 50% 100%, rgba(59, 130, 246, 0.05), transparent 55%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+  }
+
+  .dark body {
+    background-image:
+      radial-gradient(circle at 0% 0%, rgba(37, 99, 235, 0.18), transparent 45%),
+      radial-gradient(circle at 100% 0%, rgba(14, 165, 233, 0.14), transparent 45%),
+      radial-gradient(circle at 50% 100%, rgba(59, 130, 246, 0.08), transparent 55%);
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    background-color: rgba(37, 99, 235, 0.25);
+  }
+
+  a {
+    text-decoration: none;
+  }
+
+  /* Custom scrollbars */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #60a5fa transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-image: linear-gradient(180deg, #60a5fa, #0ea5e9);
+    border-radius: 9999px;
+    border: 2px solid hsl(var(--background));
+    background-clip: padding-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-image: linear-gradient(180deg, #3b82f6, #0284c7);
+    background-clip: padding-box;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    border: 2px solid hsl(var(--background));
+  }
+}
+
+@layer utilities {
+  .gradient-text {
+    @apply bg-gradient-brand bg-clip-text text-transparent;
+  }
+
+  .gradient-border {
+    position: relative;
+  }
+
+  .gradient-border::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.6), rgba(14, 165, 233, 0.6), rgba(59, 130, 246, 0.4));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .page-enter {
+    @apply animate-fade-in-up;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}

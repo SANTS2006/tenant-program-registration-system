@@ -1,0 +1,78 @@
+import {
+  pgTable,
+  uuid,
+  text,
+  timestamp,
+  boolean,
+  integer,
+  index,
+  unique,
+  jsonb,
+} from "drizzle-orm/pg-core";
+import { programStatusEnum, programRoleEnum } from "./enums";
+import { users } from "./users";
+import { tenants } from "./tenants";
+
+export const programs = pgTable(
+  "programs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    slug: text("slug").notNull().unique(),
+    description: text("description"),
+    shortDescription: text("short_description"),
+    thumbnailUrl: text("thumbnail_url"),
+    status: programStatusEnum("status").notNull().default("draft"),
+    startDate: timestamp("start_date", { withTimezone: true }),
+    endDate: timestamp("end_date", { withTimezone: true }),
+    registrationStartDate: timestamp("registration_start_date", { withTimezone: true }),
+    registrationEndDate: timestamp("registration_end_date", { withTimezone: true }),
+    registrationEnabled: boolean("registration_enabled").notNull().default(false),
+    idCardEnabled: boolean("id_card_enabled").notNull().default(false),
+    idCardConfig: jsonb("id_card_config").notNull().default({}),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("programs_status_idx").on(table.status),
+    index("programs_deleted_at_idx").on(table.deletedAt),
+    index("programs_tenant_id_idx").on(table.tenantId),
+  ],
+);
+
+export const programMembers = pgTable(
+  "program_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    programId: uuid("program_id")
+      .notNull()
+      .references(() => programs.id, { onDelete: "cascade" }),
+    roleOnProgram: programRoleEnum("role_on_program").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique("program_members_user_program_unique").on(table.userId, table.programId),
+    index("program_members_program_id_idx").on(table.programId),
+  ],
+);
+
+export const programCounters = pgTable(
+  "program_counters",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    programId: uuid("program_id")
+      .notNull()
+      .references(() => programs.id, { onDelete: "cascade" }),
+    year: integer("year").notNull(),
+    nextValue: integer("next_value").notNull().default(1),
+  },
+  (table) => [unique("program_counters_program_year_unique").on(table.programId, table.year)],
+);
