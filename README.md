@@ -65,11 +65,14 @@ uploads, email, audit, dashboard) and `frontend/src/features/*` for their UI cou
 ## Deployment (Render)
 
 In production a single Node service serves both the API (`/api/*`) and the built React app, so the
-refresh-token cookie and `/api` calls share one origin. `render.yaml` is a Render Blueprint describing it:
+refresh-token cookie and `/api` calls share one origin. `render.yaml` is a Render Blueprint that creates a
+`program-registration` project with a `production` environment containing one **free** web service:
 
-- **Build:** `npm ci --include=dev && npm run build` (dev dependencies are needed for Vite/tsup).
-- **Pre-deploy:** `npm run db:migrate` applies any new migrations before the new version goes live.
+- **Build:** `npm ci --include=dev && npm run build && npm run db:migrate` (dev dependencies are needed for
+  Vite/tsup/tsx; migrations run here because pre-deploy commands aren't guaranteed on the free plan).
 - **Start:** `npm start`, listening on `API_PORT=10000`. Health check: `GET /health`.
+- **Free-plan behavior:** the service sleeps after 15 minutes without traffic and takes about a minute to
+  wake on the next visit. Switch `plan: free` to `plan: starter` to keep it always on.
 
 Environment variables marked `sync: false` in `render.yaml` are entered in the Render dashboard on first
 deploy. `APP_URL`/`API_URL` must both be the public HTTPS address (e.g. `https://register.yourdomain.com`),
