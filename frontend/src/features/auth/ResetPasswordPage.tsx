@@ -25,7 +25,7 @@ export function ResetPasswordPage() {
   if (linkInvalid) {
     return (
       <AuthCardShell icon={TriangleAlert} title="Link expired" subtitle="This password reset link is invalid or has expired.">
-        <p className="text-sm text-muted-foreground">Reset links work once and expire after 60 minutes. Request a new one below.</p>
+        <p className="text-sm text-muted-foreground">Reset links work once and expire after 10 minutes. Request a new one below.</p>
         <LinkButton to="/forgot-password" variant="default" size="lg" className="h-12 rounded-full">
           Request a new link
         </LinkButton>

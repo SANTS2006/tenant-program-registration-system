@@ -37,12 +37,12 @@ export function ForgotPasswordPage() {
       <AuthCardShell icon={MailCheck} title="Check your inbox" subtitle="Follow the link in the email to choose a new password.">
         <p className="text-sm text-muted-foreground">
           If an account exists for <span className="font-semibold text-foreground">{sentTo}</span>, we&apos;ve sent it a
-          password reset link. The link expires in 60 minutes. Didn&apos;t get it? Check your spam folder.
+          password reset link. The link expires in 10 minutes. Didn&apos;t get it? Check your spam folder.
         </p>
         <Button variant="outline" onClick={() => setSentTo(null)}>
           Use a different email
         </Button>
-        <Link to="/login" className="inline-flex items-center justify-center gap-1.5 text-sm font-medium text-primary hover:underline">
+        <Link to="/login" className="inline-flex items-center justify-center gap-1.5 text-sm font-medium text-primary hover:opacity-80">
           <ArrowLeft className="h-4 w-4" />
           Back to sign in
         </Link>
@@ -60,7 +60,7 @@ export function ForgotPasswordPage() {
             type="email"
             autoComplete="email"
             autoFocus
-            placeholder="you@example.com"
+            placeholder="Enter your email"
             className="h-12 rounded-full px-5"
             value={email}
             onChange={(e) => setEmail(e.target.value)}

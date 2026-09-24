@@ -2,18 +2,29 @@ import { apiFetch } from "@/lib/api";
 import { getProgramUploadSignature, uploadToCloudinary } from "../programs/api";
 
 export interface IdCardConfig {
-  visibleFields: string[];
+  template: string;
   primaryColor: string;
   secondaryColor: string;
+  roleText: string;
+  roleFieldKey?: string;
+  visibleFields: string[];
   showQrCode: boolean;
-  backgroundImageUrl?: string;
   photoFieldKey?: string;
+  logoUrl?: string;
+  backgroundImageUrl?: string;
+  terms?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  contactWebsite?: string;
+  contactAddress?: string;
+  signatureLabel: string;
   showOnConfirmation: boolean;
 }
 
 export interface IdCardConfigResponse {
   idCardEnabled: boolean;
   config: IdCardConfig;
+  organizationName: string;
 }
 
 export function getIdCardConfig(programId: string) {
@@ -27,6 +38,7 @@ export function updateIdCardConfig(programId: string, config: IdCardConfig) {
   });
 }
 
+/** Uploads a logo or design image for cards and tickets, returning its URL. */
 export async function uploadIdCardBackground(programId: string, file: File): Promise<string> {
   const signature = await getProgramUploadSignature(programId);
   const { secureUrl } = await uploadToCloudinary(file, signature);

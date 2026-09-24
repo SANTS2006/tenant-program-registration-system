@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as platformApi from "./api";
 
 export const platformKeys = {
@@ -29,6 +29,15 @@ export function useTenantUsers(tenantId: string | undefined) {
     queryKey: platformKeys.users(tenantId ?? ""),
     queryFn: () => platformApi.listTenantUsers(tenantId!),
     enabled: !!tenantId,
+  });
+}
+
+export function useUpdateUserStatus(tenantId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, status }: { userId: string; status: "active" | "suspended" }) =>
+      platformApi.updateUserStatus(userId, status),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: platformKeys.users(tenantId) }),
   });
 }
 

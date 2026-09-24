@@ -1,10 +1,6 @@
 import { apiFetch } from "@/lib/api";
-import type { FormWithContent, PaginatedResult, PublicProgram } from "@/types/api";
+import type { FormWithContent, PublicProgram } from "@/types/api";
 import type { UploadedFileInfo } from "./DynamicForm";
-
-export function listPublicPrograms(page = 1) {
-  return apiFetch<PaginatedResult<PublicProgram>>(`/public/programs?page=${page}&pageSize=12`);
-}
 
 export function getPublicProgram(slug: string) {
   return apiFetch<PublicProgram>(`/public/programs/${slug}`);

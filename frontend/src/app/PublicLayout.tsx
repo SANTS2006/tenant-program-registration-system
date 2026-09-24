@@ -8,7 +8,7 @@ export function PublicLayout() {
     <div className="flex min-h-screen flex-col bg-transparent">
       <header className="sticky top-0 z-30 border-b border-border/70 bg-card/70 backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:py-4">
-          <Link to="/programs" className="flex items-center gap-2 text-base font-semibold tracking-tight sm:text-lg">
+          <Link to="/" className="flex items-center gap-2 text-base font-semibold tracking-tight sm:text-lg">
             <BrandLogo className="h-9" />
             <span className="gradient-text hidden sm:inline">Program Registration</span>
           </Link>

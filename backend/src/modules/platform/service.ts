@@ -19,6 +19,15 @@ export async function getTenantUsers(tenantId: string) {
   return platformRepo.listUsersForTenant(tenantId);
 }
 
+export async function setUserStatus(userId: string, status: "active" | "suspended") {
+  const user = await platformRepo.updateUserStatus(userId, status);
+  if (!user) throw AppError.notFound("User not found");
+  // Suspension is enforced on every request (authenticate re-reads the user), but
+  // also end their sessions so the refresh cookie can't mint new access tokens.
+  if (status === "suspended") await platformRepo.revokeUserSessions(userId);
+  return user;
+}
+
 export async function getTenantPrograms(tenantId: string) {
   await getTenant(tenantId);
   return platformRepo.listProgramsForTenant(tenantId);

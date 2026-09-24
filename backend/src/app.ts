@@ -25,7 +25,6 @@ import { analyticsRoutes } from "./modules/analytics/routes.js";
 import { platformRoutes } from "./modules/platform/routes.js";
 import { publicTicketRoutes, ticketRoutes } from "./modules/tickets/routes.js";
 
-const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 // Resolves to <repo>/frontend/dist from both src/ (tsx) and dist/ (built bundle).
 const FRONTEND_DIST = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../frontend/dist");
@@ -95,14 +94,6 @@ export function buildApp() {
       // block) until they confirm their email address.
       protectedApp.addHook("preHandler", async (request) => {
         if (request.user && !request.user.emailVerified) throw AppError.emailNotVerified();
-      });
-      // The platform super_admin has cross-tenant visibility for oversight,
-      // but must never be able to mutate a tenant's data through the normal
-      // admin surface -- enforced once, here, rather than in every service.
-      protectedApp.addHook("preHandler", async (request) => {
-        if (request.user?.role === "super_admin" && !SAFE_METHODS.has(request.method)) {
-          throw AppError.forbidden("Platform admin access is read-only");
-        }
       });
       protectedApp.register(userRoutes, { prefix: "/users" });
       protectedApp.register(programRoutes, { prefix: "/programs" });

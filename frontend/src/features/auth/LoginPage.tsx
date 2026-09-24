@@ -77,7 +77,7 @@ export function LoginPage() {
           <div className="pointer-events-none absolute inset-0 bg-gradient-radial-soft opacity-60" />
 
           <p className="relative max-w-[220px] text-xs text-white/70">
-            Program registration, made simple &mdash; one platform for every program.
+            Program registration made simple. One platform for every program.
           </p>
 
           <div className="relative flex flex-1 flex-col items-center justify-center gap-8 py-10">
@@ -126,7 +126,7 @@ export function LoginPage() {
                     id="email"
                     type="email"
                     autoComplete="email"
-                    placeholder="Email address"
+                    placeholder="Enter your email"
                     className="h-12 rounded-full px-5"
                     {...register("email")}
                   />
@@ -155,7 +155,7 @@ export function LoginPage() {
                     </button>
                   </div>
                   {errors.password && <p className="px-2 text-sm text-destructive">{errors.password.message}</p>}
-                  <Link to="/forgot-password" className="self-end px-2 text-sm font-medium text-primary hover:underline">
+                  <Link to="/forgot-password" className="self-end px-2 text-sm font-medium text-primary hover:opacity-80">
                     Forgot password?
                   </Link>
                 </div>
@@ -167,7 +167,7 @@ export function LoginPage() {
 
               <p className="mt-6 text-center text-sm text-muted-foreground">
                 Don&apos;t have an account?{" "}
-                <Link to="/register" className="font-medium text-primary hover:underline">
+                <Link to="/register" className="font-medium text-primary hover:opacity-80">
                   Create one
                 </Link>
               </p>

@@ -1,17 +1,22 @@
 import { apiFetch } from "@/lib/api";
 
-export type TicketTemplate = "classic" | "modern" | "minimal";
-
 export interface TicketConfig {
-  template: TicketTemplate;
+  template: string;
   primaryColor: string;
   secondaryColor: string;
   eventTitle?: string;
+  tagline?: string;
+  kicker?: string;
   admissionLabel: string;
+  priceText: string;
   eventDate?: string;
+  eventTime?: string;
   venue?: string;
   terms?: string;
+  contactPhone?: string;
+  website?: string;
   visibleFields: string[];
+  logoUrl?: string;
   backgroundImageUrl?: string;
   textColor: "light" | "dark";
   overlayOpacity: number;
@@ -22,6 +27,7 @@ export interface TicketConfig {
 export interface TicketConfigResponse {
   ticketEnabled: boolean;
   config: TicketConfig;
+  organizationName: string;
 }
 
 export function getTicketConfig(programId: string) {

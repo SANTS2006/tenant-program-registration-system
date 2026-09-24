@@ -1,16 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import { publicUploadSignatureHandler } from "../uploads/controller.js";
-import {
-  getPublicFormHandler,
-  getPublicProgramHandler,
-  listPublicProgramsHandler,
-  submitPublicRegistrationHandler,
-} from "./controller.js";
+import { getPublicFormHandler, getPublicProgramHandler, submitPublicRegistrationHandler } from "./controller.js";
 
 const submissionRateLimit = { rateLimit: { max: 20, timeWindow: "1 minute" } };
 
+// No public listing of programs: each account shares its own program links, and
+// one account's programs must not be discoverable by browsing the platform.
 export async function publicRoutes(app: FastifyInstance) {
-  app.get("/programs", listPublicProgramsHandler);
   app.get("/programs/:slug", getPublicProgramHandler);
   app.get("/programs/:slug/form", getPublicFormHandler);
   app.post(

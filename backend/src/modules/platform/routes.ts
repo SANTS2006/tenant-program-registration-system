@@ -5,11 +5,12 @@ import {
   listTenantProgramsHandler,
   listTenantUsersHandler,
   listTenantsHandler,
+  updateUserStatusHandler,
 } from "./controller.js";
 
-// Platform-level oversight for the one true super_admin: read-only by design
-// (no mutation routes exist in this module at all -- a structural guarantee
-// on top of the global write-block hook in app.ts).
+// Cross-account administration for the platform super_admin. Program, form and
+// registration management goes through the normal /programs routes, where the
+// super_admin resolves to admin on every program.
 export async function platformRoutes(app: FastifyInstance) {
   app.addHook("preHandler", requireRole("super_admin"));
 
@@ -17,4 +18,5 @@ export async function platformRoutes(app: FastifyInstance) {
   app.get("/tenants/:tenantId", getTenantHandler);
   app.get("/tenants/:tenantId/users", listTenantUsersHandler);
   app.get("/tenants/:tenantId/programs", listTenantProgramsHandler);
+  app.patch("/users/:userId/status", updateUserStatusHandler);
 }

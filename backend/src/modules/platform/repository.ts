@@ -1,6 +1,6 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { programs, tenants, users } from "../../db/schema/index.js";
+import { programs, refreshTokens, tenants, users } from "../../db/schema/index.js";
 import type { PaginationInput } from "../../lib/pagination.js";
 import { toOffsetLimit } from "../../lib/pagination.js";
 
@@ -74,6 +74,22 @@ export async function listUsersForTenant(tenantId: string) {
     .from(users)
     .where(eq(users.tenantId, tenantId))
     .orderBy(desc(users.createdAt));
+}
+
+export async function updateUserStatus(userId: string, status: "active" | "suspended") {
+  const [row] = await db
+    .update(users)
+    .set({ status, updatedAt: new Date() })
+    .where(eq(users.id, userId))
+    .returning({ id: users.id, name: users.name, email: users.email, role: users.role, status: users.status });
+  return row ?? null;
+}
+
+export async function revokeUserSessions(userId: string) {
+  await db
+    .update(refreshTokens)
+    .set({ revokedAt: new Date() })
+    .where(and(eq(refreshTokens.userId, userId), isNull(refreshTokens.revokedAt)));
 }
 
 export async function listProgramsForTenant(tenantId: string) {

@@ -1,6 +1,7 @@
 import * as React from "react";
 import { toast } from "sonner";
-import { ImageUp, LayoutTemplate, Ticket, Upload, X } from "lucide-react";
+import { Ticket, Upload } from "lucide-react";
+import { renderTicket, sampleQrMatrix, TICKET_DESIGNS, ticketDesign, code128 } from "@designs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -13,26 +14,45 @@ import { cn } from "@/lib/utils";
 import type { Program } from "@/types/api";
 import { getAdminForm } from "../form-builder/api";
 import { uploadIdCardBackground } from "../idcards/api";
-import { ShowOnConfirmationToggle } from "../idcards/IdCardSettingsCard";
+import { DesignColorsField, ImagePickerField, ShowOnConfirmationToggle } from "../idcards/IdCardSettingsCard";
 import { useUpdateProgram } from "../programs/hooks";
-import type { TicketConfig, TicketTemplate } from "./api";
+import { DesignGallery } from "../designs/DesignGallery";
+import type { TicketConfig } from "./api";
 import { useTicketConfig, useUpdateTicketConfig } from "./hooks";
-import { TicketPreview } from "./TicketPreview";
+import { TicketPreview, type TicketPreviewContext } from "./TicketPreview";
 
-const MAX_VISIBLE_FIELDS = 3;
-
-const TEMPLATES: { value: TicketTemplate; label: string; hint: string }[] = [
-  { value: "classic", label: "Classic", hint: "Bold gradient" },
-  { value: "modern", label: "Modern", hint: "Clean with accent" },
-  { value: "minimal", label: "Minimal", hint: "White & outline" },
-];
+const MAX_VISIBLE_FIELDS = 2;
+const THUMB_QR = sampleQrMatrix();
+const THUMB_BARCODE = code128("REG-2026-000123");
 
 function formatProgramDates(program: Program): string | undefined {
   if (!program.startDate) return undefined;
   const fmt = (d: string) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
   const start = fmt(program.startDate);
   const end = program.endDate ? fmt(program.endDate) : start;
-  return start === end ? start : `${start} – ${end}`;
+  return start === end ? start : `${start} - ${end}`;
+}
+
+function TextField({
+  label,
+  value,
+  placeholder,
+  maxLength,
+  onChange,
+}: {
+  label: string;
+  value?: string;
+  placeholder?: string;
+  maxLength?: number;
+  onChange: (value: string) => void;
+}) {
+  const id = React.useId();
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <Input id={id} value={value ?? ""} placeholder={placeholder} maxLength={maxLength} onChange={(e) => onChange(e.target.value)} />
+    </div>
+  );
 }
 
 export function TicketSettingsCard({ program }: { program: Program }) {
@@ -41,7 +61,7 @@ export function TicketSettingsCard({ program }: { program: Program }) {
   const updateProgram = useUpdateProgram(program.id);
   const [config, setConfig] = React.useState<TicketConfig | null>(null);
   const [availableFields, setAvailableFields] = React.useState<{ fieldKey: string; label: string }[]>([]);
-  const [uploading, setUploading] = React.useState(false);
+  const [uploading, setUploading] = React.useState<"logo" | "background" | null>(null);
 
   React.useEffect(() => {
     if (data) setConfig(data.config);
@@ -57,6 +77,50 @@ export function TicketSettingsCard({ program }: { program: Program }) {
       .catch(() => setAvailableFields([]));
   }, [program.id]);
 
+  const programDates = formatProgramDates(program);
+  const organizationName = data?.organizationName ?? "Your organization";
+  const fieldLabels = React.useMemo(
+    () =>
+      (config?.visibleFields ?? [])
+        .map((key) => availableFields.find((f) => f.fieldKey === key)?.label)
+        .filter((l): l is string => Boolean(l)),
+    [config?.visibleFields, availableFields],
+  );
+  const context = React.useMemo<TicketPreviewContext>(
+    () => ({ organizationName, programName: program.name, programDates, shortDescription: program.shortDescription, fieldLabels }),
+    [organizationName, program.name, programDates, program.shortDescription, fieldLabels],
+  );
+
+  const logoUrl = config?.logoUrl;
+  const thumbnails = React.useMemo(
+    () =>
+      TICKET_DESIGNS.map((d) => ({
+        id: d.id,
+        name: d.name,
+        svg: renderTicket(
+          d.id,
+          {
+            logo: { image: logoUrl ?? null, orgName: organizationName, tagline: program.name },
+            kicker: organizationName,
+            title: program.name,
+            subtitle: program.shortDescription ?? "",
+            date: programDates,
+            time: "09:00 AM - 05:00 PM",
+            venue: "Venue name and address",
+            priceLabel: "General Admission",
+            price: "ADMIT ONE",
+            participantName: "Jordan Avery",
+            registrationNumber: "REG-2026-000123",
+            fields: [],
+            qr: THUMB_QR,
+            barcode: THUMB_BARCODE,
+          },
+          d.defaults,
+        ),
+      })),
+    [logoUrl, organizationName, program.name, program.shortDescription, programDates],
+  );
+
   if (isLoading || !config) {
     return (
       <Card>
@@ -69,8 +133,12 @@ export function TicketSettingsCard({ program }: { program: Program }) {
   }
 
   const set = (patch: Partial<TicketConfig>) => setConfig((c) => (c ? { ...c, ...patch } : c));
-  const programDates = formatProgramDates(program);
-  const usingUpload = Boolean(config.backgroundImageUrl);
+  const customActive = config.template === "custom";
+
+  const chooseDesign = (id: string) => {
+    const { defaults } = ticketDesign(id);
+    set({ template: id, primaryColor: defaults.primary, secondaryColor: defaults.secondary });
+  };
 
   const toggleField = (fieldKey: string) => {
     if (config.visibleFields.includes(fieldKey)) {
@@ -79,6 +147,19 @@ export function TicketSettingsCard({ program }: { program: Program }) {
       toast.error(`You can show up to ${MAX_VISIBLE_FIELDS} extra fields on the ticket`);
     } else {
       set({ visibleFields: [...config.visibleFields, fieldKey] });
+    }
+  };
+
+  const upload = async (kind: "logo" | "background", file: File) => {
+    setUploading(kind);
+    try {
+      const url = await uploadIdCardBackground(program.id, file);
+      set(kind === "logo" ? { logoUrl: url } : { template: "custom", backgroundImageUrl: url });
+      toast.success(kind === "logo" ? "Logo uploaded. Remember to save." : "Design uploaded. Remember to save.");
+    } catch {
+      toast.error("Upload failed. Please try again.");
+    } finally {
+      setUploading(null);
     }
   };
 
@@ -91,23 +172,11 @@ export function TicketSettingsCard({ program }: { program: Program }) {
     }
   };
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    try {
-      const url = await uploadIdCardBackground(program.id, file);
-      set({ backgroundImageUrl: url });
-      toast.success("Design uploaded — remember to save");
-    } catch {
-      toast.error("Failed to upload the ticket design");
-    } finally {
-      setUploading(false);
-      e.target.value = "";
-    }
-  };
-
   const handleSave = async () => {
+    if (customActive && !config.backgroundImageUrl) {
+      toast.error("Upload your ticket design first, or pick one of the designs");
+      return;
+    }
     try {
       await updateConfig.mutateAsync(config);
       toast.success("Ticket design saved");
@@ -125,167 +194,138 @@ export function TicketSettingsCard({ program }: { program: Program }) {
             Tickets
           </CardTitle>
           <CardDescription>
-            Give every registrant a printable ticket with a scannable verification QR code. Start from a template, or
-            upload your own ticket design and the system fills in each registrant&apos;s details on it.
+            Pick a design and every registrant gets a printable ticket with their name, a barcode, and a verification QR
+            code. You can also upload your own ticket design.
           </CardDescription>
         </div>
         <Switch checked={program.ticketEnabled} onCheckedChange={handleToggleEnabled} />
       </CardHeader>
 
       {program.ticketEnabled && (
-        <CardContent className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_420px]">
-          <div className="flex flex-col gap-5">
-            <div className="flex flex-col gap-2">
-              <Label className="flex items-center gap-1.5">
-                <LayoutTemplate className="h-3.5 w-3.5 text-primary" />
-                Design
-              </Label>
-              <div className="grid grid-cols-3 gap-2">
-                {TEMPLATES.map((t) => (
-                  <button
-                    key={t.value}
-                    type="button"
-                    onClick={() => set({ template: t.value, backgroundImageUrl: undefined })}
-                    className={cn(
-                      "rounded-lg border px-3 py-2 text-left transition-colors",
-                      !usingUpload && config.template === t.value
-                        ? "border-primary bg-gradient-brand-soft"
-                        : "border-border hover:border-primary/50",
-                    )}
-                  >
-                    <p className="text-sm font-medium">{t.label}</p>
-                    <p className="text-xs text-muted-foreground">{t.hint}</p>
-                  </button>
-                ))}
-              </div>
-
+        <CardContent className="flex flex-col gap-6">
+          <section className="flex flex-col gap-2">
+            <Label>Design</Label>
+            <DesignGallery options={thumbnails} selected={config.template} onSelect={chooseDesign} columns="grid-cols-1 sm:grid-cols-3">
               <div
                 className={cn(
-                  "flex flex-col gap-2 rounded-lg border border-dashed p-3",
-                  usingUpload ? "border-primary bg-gradient-brand-soft" : "border-border",
+                  "flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-2 text-center transition-colors",
+                  customActive ? "border-primary bg-gradient-brand-soft" : "border-border hover:border-primary/50",
                 )}
               >
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button variant="outline" size="sm" className="relative" disabled={uploading}>
-                    {usingUpload ? <ImageUp className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
-                    {uploading ? "Uploading..." : usingUpload ? "Replace design" : "Upload your own design"}
-                    <input type="file" accept="image/*" onChange={handleUpload} className="absolute inset-0 cursor-pointer opacity-0" />
-                  </Button>
-                  {usingUpload && (
-                    <Button variant="ghost" size="sm" onClick={() => set({ backgroundImageUrl: undefined })}>
-                      <X className="h-4 w-4" />
-                      Remove
-                    </Button>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Upload a sample ticket image (ideally 7.5 × 3 in, landscape). It becomes the ticket background, and each
-                  registrant&apos;s name, program details, number, and QR code are laid over it.
-                </p>
-                {usingUpload && (
-                  <div className="grid grid-cols-2 gap-3 pt-1">
-                    <div className="flex flex-col gap-1.5">
-                      <Label className="text-xs">Text color</Label>
-                      <div className="flex gap-2">
-                        {(["light", "dark"] as const).map((tone) => (
-                          <Button
-                            key={tone}
-                            type="button"
-                            size="sm"
-                            variant={config.textColor === tone ? "default" : "outline"}
-                            onClick={() => set({ textColor: tone })}
-                          >
-                            {tone === "light" ? "Light text" : "Dark text"}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <Label className="text-xs">Tint for readability ({Math.round(config.overlayOpacity * 100)}%)</Label>
-                      <input
-                        type="range"
-                        min={0}
-                        max={0.8}
-                        step={0.05}
-                        value={config.overlayOpacity}
-                        onChange={(e) => set({ overlayOpacity: Number(e.target.value) })}
-                        className="accent-primary"
-                      />
-                    </div>
-                  </div>
+                {config.backgroundImageUrl ? (
+                  <button type="button" onClick={() => set({ template: "custom" })} className="w-full">
+                    <img src={config.backgroundImageUrl} alt="Your uploaded design" className="aspect-[3/1] w-full rounded-md object-cover" />
+                  </button>
+                ) : (
+                  <Upload className="h-5 w-5 text-muted-foreground" />
                 )}
+                <Button variant="outline" size="sm" className="relative h-7 px-2 text-xs" disabled={uploading === "background"}>
+                  {uploading === "background" ? "Uploading..." : config.backgroundImageUrl ? "Replace" : "Your own design"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) void upload("background", file);
+                      e.target.value = "";
+                    }}
+                    className="absolute inset-0 cursor-pointer opacity-0"
+                  />
+                </Button>
               </div>
-            </div>
+            </DesignGallery>
+          </section>
 
-            {!usingUpload && (
-              <div className="grid grid-cols-2 gap-4">
+          <div className="flex flex-col gap-2">
+            <p className="text-xs font-medium text-muted-foreground">Live preview</p>
+            <TicketPreview config={config} context={context} />
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            {customActive ? (
+              <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
-                  <Label>Primary color</Label>
-                  <input
-                    type="color"
-                    value={config.primaryColor}
-                    onChange={(e) => set({ primaryColor: e.target.value })}
-                    className="h-10 w-full cursor-pointer rounded-lg border border-input bg-background"
-                  />
+                  <Label className="text-xs">Text color</Label>
+                  <div className="flex gap-2">
+                    {(["light", "dark"] as const).map((tone) => (
+                      <Button
+                        key={tone}
+                        type="button"
+                        size="sm"
+                        variant={config.textColor === tone ? "default" : "outline"}
+                        onClick={() => set({ textColor: tone })}
+                      >
+                        {tone === "light" ? "Light" : "Dark"}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <Label>Secondary color</Label>
+                  <Label className="text-xs">Tint for readability ({Math.round(config.overlayOpacity * 100)}%)</Label>
                   <input
-                    type="color"
-                    value={config.secondaryColor}
-                    onChange={(e) => set({ secondaryColor: e.target.value })}
-                    className="h-10 w-full cursor-pointer rounded-lg border border-input bg-background"
+                    type="range"
+                    min={0}
+                    max={0.8}
+                    step={0.05}
+                    value={config.overlayOpacity}
+                    onChange={(e) => set({ overlayOpacity: Number(e.target.value) })}
+                    className="accent-primary"
                   />
                 </div>
               </div>
+            ) : (
+              <DesignColorsField
+                primary={config.primaryColor}
+                secondary={config.secondaryColor}
+                onChange={set}
+                onReset={() => chooseDesign(config.template)}
+              />
             )}
+            <ImagePickerField
+              label="Logo"
+              hint="Leave empty to show an emblem with your organization's initials and name."
+              value={config.logoUrl}
+              uploading={uploading === "logo"}
+              onUpload={(file) => void upload("logo", file)}
+              onRemove={() => set({ logoUrl: undefined })}
+            />
+          </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <Label>Event title</Label>
-                <Input placeholder={program.name} value={config.eventTitle ?? ""} onChange={(e) => set({ eventTitle: e.target.value })} />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Admission label</Label>
-                <Input
-                  placeholder="General Admission"
-                  value={config.admissionLabel}
-                  onChange={(e) => set({ admissionLabel: e.target.value })}
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Date &amp; time</Label>
-                <Input
-                  placeholder={programDates ?? "e.g. Sat, 12 Oct 2026 · 9:00 AM"}
-                  value={config.eventDate ?? ""}
-                  onChange={(e) => set({ eventDate: e.target.value })}
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Venue</Label>
-                <Input
-                  placeholder="e.g. Miatta Conference Hall, Freetown"
-                  value={config.venue ?? ""}
-                  onChange={(e) => set({ venue: e.target.value })}
-                />
-              </div>
-            </div>
-            <p className="-mt-2 text-xs text-muted-foreground">Leave title or date blank to use the program&apos;s own details.</p>
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <TextField label="Event title" value={config.eventTitle} placeholder={program.name} maxLength={120} onChange={(v) => set({ eventTitle: v })} />
+            <TextField
+              label="Subtitle"
+              value={config.tagline}
+              placeholder={program.shortDescription ?? "e.g. Collaboration in the business landscape"}
+              maxLength={140}
+              onChange={(v) => set({ tagline: v })}
+            />
+            <TextField label="Small line above the title" value={config.kicker} placeholder={organizationName} maxLength={80} onChange={(v) => set({ kicker: v })} />
+            <TextField label="Date" value={config.eventDate} placeholder={programDates ?? "e.g. 20 May 2026"} maxLength={100} onChange={(v) => set({ eventDate: v })} />
+            <TextField label="Time" value={config.eventTime} placeholder="e.g. 09:00 AM - 05:00 PM" maxLength={60} onChange={(v) => set({ eventTime: v })} />
+            <TextField label="Venue" value={config.venue} placeholder="e.g. Miatta Conference Hall, Freetown" maxLength={200} onChange={(v) => set({ venue: v })} />
+            <TextField label="Price caption" value={config.admissionLabel} placeholder="General Admission" maxLength={60} onChange={(v) => set({ admissionLabel: v })} />
+            <TextField label="Price or pass type" value={config.priceText} placeholder="ADMIT ONE, FREE, VIP, Le 100" maxLength={24} onChange={(v) => set({ priceText: v })} />
+            <TextField label="Contact phone" value={config.contactPhone} placeholder="+232 76 000 000" maxLength={60} onChange={(v) => set({ contactPhone: v })} />
+            <TextField label="Website" value={config.website} placeholder="www.example.org" maxLength={120} onChange={(v) => set({ website: v })} />
+          </section>
+          <p className="-mt-3 text-xs text-muted-foreground">Leave the title, subtitle, or date blank to use the program&apos;s own details.</p>
 
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             <div className="flex flex-col gap-1.5">
-              <Label>Terms / notes (optional)</Label>
+              <Label htmlFor="ticketTerms">Terms / notes (shown on your own design)</Label>
               <Textarea
-                rows={2}
+                id="ticketTerms"
+                rows={3}
                 maxLength={300}
                 placeholder="e.g. Non-transferable. Present this ticket at the entrance."
                 value={config.terms ?? ""}
                 onChange={(e) => set({ terms: e.target.value })}
               />
             </div>
-
             <div className="flex flex-col gap-2">
-              <Label>Extra fields on ticket (up to {MAX_VISIBLE_FIELDS})</Label>
-              <div className="flex max-h-44 flex-col gap-1.5 overflow-y-auto rounded-lg border border-border/70 p-3">
+              <Label>Extra fields on the ticket (up to {MAX_VISIBLE_FIELDS})</Label>
+              <div className="flex max-h-32 flex-col gap-1.5 overflow-y-auto rounded-lg border border-border/70 p-3">
                 {availableFields.length === 0 && (
                   <p className="text-xs text-muted-foreground">No form fields yet. Build the form first.</p>
                 )}
@@ -300,28 +340,23 @@ export function TicketSettingsCard({ program }: { program: Program }) {
                 ))}
               </div>
             </div>
-
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox checked={config.showQrCode} onCheckedChange={(v) => set({ showQrCode: v === true })} />
-              Show verification QR code
-            </label>
-
-            <ShowOnConfirmationToggle
-              id="ticketShowOnConfirmation"
-              checked={config.showOnConfirmation}
-              onChange={(checked) => set({ showOnConfirmation: checked })}
-              thing="ticket"
-            />
-
-            <Button onClick={handleSave} disabled={updateConfig.isPending} className="w-fit">
-              {updateConfig.isPending ? "Saving..." : "Save ticket design"}
-            </Button>
           </div>
 
-          <div className="flex flex-col gap-2 xl:sticky xl:top-20 xl:self-start">
-            <p className="text-xs font-medium text-muted-foreground">Live preview</p>
-            <TicketPreview config={config} eventTitle={program.name} eventDate={programDates} />
-          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox checked={config.showQrCode} onCheckedChange={(v) => set({ showQrCode: v === true })} />
+            Show verification QR code
+          </label>
+
+          <ShowOnConfirmationToggle
+            id="ticketShowOnConfirmation"
+            checked={config.showOnConfirmation}
+            onChange={(checked) => set({ showOnConfirmation: checked })}
+            thing="ticket"
+          />
+
+          <Button onClick={handleSave} disabled={updateConfig.isPending} className="w-fit">
+            {updateConfig.isPending ? "Saving..." : "Save ticket design"}
+          </Button>
         </CardContent>
       )}
     </Card>

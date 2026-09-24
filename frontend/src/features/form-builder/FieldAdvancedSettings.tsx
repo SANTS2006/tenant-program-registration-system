@@ -200,7 +200,7 @@ export function DependentOptionsEditor({
               ))}
             </div>
           ) : (
-            <p className="text-xs text-destructive">The question this depends on no longer exists — choose another.</p>
+            <p className="text-xs text-destructive">The question this depends on no longer exists. Choose another.</p>
           )}
         </>
       )}

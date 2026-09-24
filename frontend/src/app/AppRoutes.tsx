@@ -8,7 +8,7 @@ import { RegisterPage } from "@/features/auth/RegisterPage";
 import { VerifyEmailPage } from "@/features/auth/VerifyEmailPage";
 import { ForgotPasswordPage } from "@/features/auth/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/features/auth/ResetPasswordPage";
-import { PublicProgramsListPage } from "@/features/public-registration/PublicProgramsListPage";
+import { LandingPage } from "@/features/landing/LandingPage";
 import { PublicProgramPage } from "@/features/public-registration/PublicProgramPage";
 import { PublicRegistrationPage } from "@/features/public-registration/PublicRegistrationPage";
 import { ConfirmationPage } from "@/features/public-registration/ConfirmationPage";
@@ -29,6 +29,7 @@ import { TenantDetailPage } from "@/features/platform/TenantDetailPage";
 export function AppRoutes() {
   return (
     <Routes>
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
@@ -36,8 +37,6 @@ export function AppRoutes() {
       <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       <Route element={<PublicLayout />}>
-        <Route path="/" element={<Navigate to="/programs" replace />} />
-        <Route path="/programs" element={<PublicProgramsListPage />} />
         <Route path="/programs/:slug" element={<PublicProgramPage />} />
         <Route path="/verify/:slug/:registrationNumber" element={<VerifyPage />} />
       </Route>
@@ -76,7 +75,7 @@ export function AppRoutes() {
         </Route>
       </Route>
 
-      <Route path="*" element={<Navigate to="/programs" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

@@ -1,24 +1,36 @@
 import { participantFileName } from "../../lib/downloadName.js";
 import { AppError } from "../../lib/errors.js";
+import { code128, renderTicket } from "../../shared/designs/index.js";
+import { BACKGROUND_TRANSFORM, cardDate, fetchImageDataUri, LOGO_TRANSFORM, qrMatrix, svgPagesToPdf } from "../idcards/pdf.js";
 import {
   findAdminRegistration,
   findPublicRegistration,
+  organizationName,
   resolveExtraFields,
   verifyUrlFor,
   type GeneratedDocument,
 } from "../idcards/service.js";
 import * as programsRepo from "../programs/repository.js";
 import type * as registrationsRepo from "../registrations/repository.js";
-import { generateTicketPdf } from "./pdf.js";
-import { resolveTicketConfig, type TicketConfig } from "./schemas.js";
+import { resolveTicketConfig, type TicketConfig, type TicketConfigInput } from "./schemas.js";
 
-export async function getConfig(programId: string): Promise<{ ticketEnabled: boolean; config: TicketConfig }> {
+// 7.5in x 2.5in landscape ticket in PDF points.
+const TICKET_WIDTH_PT = 540;
+const TICKET_HEIGHT_PT = 180;
+
+export async function getConfig(
+  programId: string,
+): Promise<{ ticketEnabled: boolean; config: TicketConfig; organizationName: string }> {
   const program = await programsRepo.findProgramById(programId);
   if (!program) throw AppError.notFound("Program not found");
-  return { ticketEnabled: program.ticketEnabled, config: resolveTicketConfig(program.ticketConfig) };
+  return {
+    ticketEnabled: program.ticketEnabled,
+    config: resolveTicketConfig(program.ticketConfig),
+    organizationName: await organizationName(program),
+  };
 }
 
-export async function updateConfig(programId: string, config: TicketConfig): Promise<TicketConfig> {
+export async function updateConfig(programId: string, config: TicketConfigInput): Promise<TicketConfig> {
   const program = await programsRepo.findProgramById(programId);
   if (!program) throw AppError.notFound("Program not found");
   const updated = await programsRepo.updateProgramRow(programId, { ticketConfig: config });
@@ -26,45 +38,82 @@ export async function updateConfig(programId: string, config: TicketConfig): Pro
 }
 
 function formatProgramDate(program: programsRepo.ProgramRow): string | undefined {
-  if (!program.startDate) return undefined;
-  const opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", year: "numeric" };
-  const start = new Date(program.startDate).toLocaleDateString("en-GB", opts);
-  if (!program.endDate) return start;
-  const end = new Date(program.endDate).toLocaleDateString("en-GB", opts);
-  return start === end ? start : `${start} – ${end}`;
+  const start = cardDate(program.startDate);
+  if (!start) return undefined;
+  const end = cardDate(program.endDate);
+  return !end || start === end ? start : `${start} - ${end}`;
 }
 
-async function buildTicket(
-  program: programsRepo.ProgramRow,
-  registration: registrationsRepo.RegistrationRow,
-): Promise<GeneratedDocument> {
+async function renderProgramTicket(program: programsRepo.ProgramRow, registration: registrationsRepo.RegistrationRow) {
   if (!program.ticketEnabled) throw AppError.conflict("Tickets are not enabled for this program");
 
   const config = resolveTicketConfig(program.ticketConfig);
-  const pdf = await generateTicketPdf(
+  const [orgName, fields, logoImage, background] = await Promise.all([
+    organizationName(program),
+    resolveExtraFields(registration, config.visibleFields),
+    fetchImageDataUri(config.logoUrl, LOGO_TRANSFORM),
+    config.template === "custom" ? fetchImageDataUri(config.backgroundImageUrl, BACKGROUND_TRANSFORM) : null,
+  ]);
+
+  return renderTicket(
+    config.template,
     {
-      eventTitle: config.eventTitle || program.name,
-      admissionLabel: config.admissionLabel || "General Admission",
+      logo: { image: logoImage, orgName, tagline: program.name },
+      kicker: config.kicker ?? orgName,
+      title: config.eventTitle ?? program.name,
+      subtitle: config.tagline ?? program.shortDescription ?? "",
+      date: config.eventDate ?? formatProgramDate(program),
+      time: config.eventTime,
+      venue: config.venue,
+      priceLabel: config.admissionLabel,
+      price: config.priceText,
       participantName: registration.applicantName ?? "Registered Participant",
       registrationNumber: registration.registrationNumber,
-      eventDate: config.eventDate || formatProgramDate(program),
-      venue: config.venue || undefined,
-      terms: config.terms || undefined,
-      extraFields: await resolveExtraFields(registration, config.visibleFields),
-      verifyUrl: config.showQrCode ? verifyUrlFor(program, registration) : undefined,
+      fields,
+      phone: config.contactPhone,
+      website: config.website,
+      terms: config.terms,
+      qr: config.showQrCode ? qrMatrix(verifyUrlFor(program, registration)) : null,
+      barcode: code128(registration.registrationNumber),
+      background,
+      textColor: config.textColor,
+      overlayOpacity: config.overlayOpacity,
     },
-    config,
+    { primary: config.primaryColor, secondary: config.secondaryColor },
   );
+}
+
+async function buildTicketPdf(
+  program: programsRepo.ProgramRow,
+  registration: registrationsRepo.RegistrationRow,
+): Promise<GeneratedDocument> {
+  const svg = await renderProgramTicket(program, registration);
+  const pdf = await svgPagesToPdf([svg], TICKET_WIDTH_PT, TICKET_HEIGHT_PT);
   return { pdf, fileName: participantFileName(registration.applicantName, `ticket:${registration.id}`) };
+}
+
+async function publicRegistrationWithTicket(slug: string, registrationNumber: string) {
+  const found = await findPublicRegistration(slug, registrationNumber);
+  if (!resolveTicketConfig(found.program.ticketConfig).showOnConfirmation) throw AppError.notFound("Ticket not available");
+  return found;
 }
 
 export async function generateForRegistrationInProgram(programId: string, registrationId: string) {
   const { program, registration } = await findAdminRegistration(programId, registrationId);
-  return buildTicket(program, registration);
+  return buildTicketPdf(program, registration);
 }
 
 export async function generateForPublicRegistration(slug: string, registrationNumber: string) {
-  const { program, registration } = await findPublicRegistration(slug, registrationNumber);
-  if (!resolveTicketConfig(program.ticketConfig).showOnConfirmation) throw AppError.notFound("Ticket not available");
-  return buildTicket(program, registration);
+  const { program, registration } = await publicRegistrationWithTicket(slug, registrationNumber);
+  return buildTicketPdf(program, registration);
+}
+
+export async function svgForRegistrationInProgram(programId: string, registrationId: string) {
+  const { program, registration } = await findAdminRegistration(programId, registrationId);
+  return renderProgramTicket(program, registration);
+}
+
+export async function svgForPublicRegistration(slug: string, registrationNumber: string) {
+  const { program, registration } = await publicRegistrationWithTicket(slug, registrationNumber);
+  return renderProgramTicket(program, registration);
 }

@@ -20,7 +20,13 @@ async function generateUniqueSlug(name: string): Promise<string> {
 }
 
 export async function createProgram(user: AuthenticatedUser, input: CreateProgramInput) {
-  if (!user.tenantId) throw AppError.forbidden("This account cannot create programs");
+  let tenantId = user.tenantId;
+  if (user.role === "super_admin") {
+    if (!input.tenantId) throw AppError.validation("Choose the account this program belongs to");
+    if (!(await programsRepo.tenantExists(input.tenantId))) throw AppError.notFound("Account not found");
+    tenantId = input.tenantId;
+  }
+  if (!tenantId) throw AppError.forbidden("This account cannot create programs");
   const slug = await generateUniqueSlug(input.name);
   const program = await programsRepo.insertProgram({
     name: input.name,
@@ -32,7 +38,7 @@ export async function createProgram(user: AuthenticatedUser, input: CreateProgra
     registrationStartDate: input.registrationStartDate,
     registrationEndDate: input.registrationEndDate,
     createdBy: user.id,
-    tenantId: user.tenantId,
+    tenantId,
   });
 
   // Tenant admins bypass program_members entirely (like the platform

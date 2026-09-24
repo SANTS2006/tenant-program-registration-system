@@ -1,21 +1,28 @@
 import { z } from "zod";
+import { TICKET_DESIGN_IDS, ticketDesign } from "../../shared/designs/index.js";
+import { optionalText } from "../idcards/schemas.js";
 
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a hex color like #2563eb");
 
-export const ticketTemplateValues = ["classic", "modern", "minimal"] as const;
-
 export const ticketConfigSchema = z.object({
-  template: z.enum(ticketTemplateValues).default("classic"),
-  primaryColor: hexColor.default("#1d4ed8"),
-  secondaryColor: hexColor.default("#0ea5e9"),
+  template: z.string().default("horizon"),
+  primaryColor: hexColor.optional(),
+  secondaryColor: hexColor.optional(),
   // All optional text falls back to the program's own details when blank.
-  eventTitle: z.string().trim().max(120).optional(),
+  eventTitle: optionalText(120),
+  tagline: optionalText(140),
+  kicker: optionalText(80),
   admissionLabel: z.string().trim().max(60).default("General Admission"),
-  eventDate: z.string().trim().max(100).optional(),
-  venue: z.string().trim().max(200).optional(),
-  terms: z.string().trim().max(300).optional(),
-  visibleFields: z.array(z.string()).max(3).default([]),
-  // An uploaded design sample used as the ticket's background, with program details laid over it.
+  priceText: z.string().trim().max(24).default("ADMIT ONE"),
+  eventDate: optionalText(100),
+  eventTime: optionalText(60),
+  venue: optionalText(200),
+  terms: optionalText(300),
+  contactPhone: optionalText(60),
+  website: optionalText(120),
+  visibleFields: z.array(z.string()).max(2).default([]),
+  logoUrl: z.string().url().optional(),
+  // An uploaded design sample used by the "custom" template, with the details laid over it.
   backgroundImageUrl: z.string().url().optional(),
   textColor: z.enum(["light", "dark"]).default("light"),
   overlayOpacity: z.number().min(0).max(0.8).default(0.35),
@@ -23,9 +30,28 @@ export const ticketConfigSchema = z.object({
   showOnConfirmation: z.boolean().default(true),
 });
 
-export type TicketConfig = z.infer<typeof ticketConfigSchema>;
+export type TicketConfigInput = z.input<typeof ticketConfigSchema>;
+
+export interface TicketConfig extends z.output<typeof ticketConfigSchema> {
+  primaryColor: string;
+  secondaryColor: string;
+}
 
 export function resolveTicketConfig(raw: unknown): TicketConfig {
-  const parsed = ticketConfigSchema.safeParse(raw ?? {});
-  return parsed.success ? parsed.data : ticketConfigSchema.parse({});
+  const stored = (raw ?? {}) as Record<string, unknown>;
+  const parsed = ticketConfigSchema.safeParse(stored);
+  const config = parsed.success ? parsed.data : ticketConfigSchema.parse({});
+
+  // Tickets saved before the design gallery used "classic" / "modern" / "minimal".
+  const legacy = !TICKET_DESIGN_IDS.includes(config.template);
+  let template = legacy ? "horizon" : config.template;
+  if (legacy && config.backgroundImageUrl) template = "custom";
+  const defaults = ticketDesign(template).defaults;
+
+  return {
+    ...config,
+    template,
+    primaryColor: (!legacy && config.primaryColor) || defaults.primary,
+    secondaryColor: (!legacy && config.secondaryColor) || defaults.secondary,
+  };
 }

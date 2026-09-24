@@ -12,6 +12,8 @@ export const createProgramSchema = z.object({
   endDate: z.coerce.date().optional(),
   registrationStartDate: z.coerce.date().optional(),
   registrationEndDate: z.coerce.date().optional(),
+  // Only used by the platform super_admin, who belongs to no account of its own.
+  tenantId: z.string().uuid().optional(),
 });
 
 export const updateProgramSchema = z.object({

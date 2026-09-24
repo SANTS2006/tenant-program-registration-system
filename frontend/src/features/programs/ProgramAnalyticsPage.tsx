@@ -23,7 +23,7 @@ export function ProgramAnalyticsPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-base">Registrations — last 30 days</CardTitle>
+            <CardTitle className="text-base">Registrations in the last 30 days</CardTitle>
           </CardHeader>
           <CardContent>
             {trendLoading || !trend ? (
@@ -50,7 +50,7 @@ export function ProgramAnalyticsPage() {
           <Card className="lg:col-span-2">
             <CardContent className="py-10 text-center text-sm text-muted-foreground">
               No choice-based fields (gender, country, single choice, dropdown, yes/no) found on the published form
-              yet — add one to see a breakdown here.
+              yet. Add one to see a breakdown here.
             </CardContent>
           </Card>
         )}

@@ -7,6 +7,7 @@ import { addDuration, generateOpaqueToken, generateVerificationCode, hashToken }
 import { sendEmail } from "../email/service.js";
 import {
   passwordChangedEmail,
+  PASSWORD_RESET_TTL_MINUTES,
   passwordResetEmail,
   VERIFICATION_CODE_TTL_MINUTES,
   verificationCodeEmail,
@@ -261,7 +262,7 @@ export async function forgotPassword(input: ForgotPasswordInput, appUrl: string)
   if (!user) return;
 
   const token = generateOpaqueToken();
-  const expiresAt = new Date(Date.now() + env.PASSWORD_RESET_TTL_MINUTES * 60_000);
+  const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MINUTES * 60_000);
 
   await authRepo.storePasswordResetToken({ userId: user.id, tokenHash: hashToken(token), expiresAt });
 

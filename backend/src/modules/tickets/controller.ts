@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { sendSuccess } from "../../lib/response.js";
-import { sendPdf } from "../idcards/controller.js";
+import { sendPdf, sendSvg, wantsSvg } from "../idcards/controller.js";
 import { ticketConfigSchema } from "./schemas.js";
 import * as ticketService from "./service.js";
 
@@ -17,10 +17,12 @@ export async function updateTicketConfigHandler(request: FastifyRequest, reply: 
 
 export async function downloadAdminTicketHandler(request: FastifyRequest, reply: FastifyReply) {
   const { programId, registrationId } = request.params as { programId: string; registrationId: string };
+  if (wantsSvg(request).svg) return sendSvg(reply, await ticketService.svgForRegistrationInProgram(programId, registrationId));
   return sendPdf(reply, await ticketService.generateForRegistrationInProgram(programId, registrationId));
 }
 
 export async function downloadPublicTicketHandler(request: FastifyRequest, reply: FastifyReply) {
   const { slug, registrationNumber } = request.params as { slug: string; registrationNumber: string };
+  if (wantsSvg(request).svg) return sendSvg(reply, await ticketService.svgForPublicRegistration(slug, registrationNumber));
   return sendPdf(reply, await ticketService.generateForPublicRegistration(slug, registrationNumber));
 }

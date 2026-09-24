@@ -18,7 +18,7 @@ import {
 
 export async function programRoutes(app: FastifyInstance) {
   app.get("/", listProgramsHandler);
-  app.post("/", { preHandler: requireRole("admin", "program_admin") }, createProgramHandler);
+  app.post("/", { preHandler: requireRole("super_admin", "admin", "program_admin") }, createProgramHandler);
 
   app.get("/:programId", { preHandler: requireProgramAccess("viewer") }, getProgramHandler);
   app.patch("/:programId", { preHandler: requireProgramAccess("admin") }, updateProgramHandler);

@@ -33,7 +33,7 @@ export function ShareFormCard({ programId, programName }: { programId: string; p
       await navigator.clipboard.writeText(publicUrl);
       toast.success("Link copied to clipboard");
     } catch {
-      toast.error("Couldn't copy the link automatically — please copy it manually");
+      toast.error("Couldn't copy the link automatically. Please copy it manually");
     }
   };
 

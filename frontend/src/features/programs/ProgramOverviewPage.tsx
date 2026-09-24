@@ -242,7 +242,7 @@ export function ProgramOverviewPage() {
           <RegistrationNumberCard program={program} />
         </div>
         <div className="lg:col-span-3">
-          <IdCardSettingsCard programId={program.id} idCardEnabled={program.idCardEnabled} />
+          <IdCardSettingsCard program={program} />
         </div>
         <div className="lg:col-span-3">
           <TicketSettingsCard program={program} />

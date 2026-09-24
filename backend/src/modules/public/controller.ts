@@ -1,7 +1,5 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { AppError } from "../../lib/errors.js";
-import { paginationSchema } from "../../lib/pagination.js";
-import { buildPaginatedResult } from "../../lib/pagination.js";
 import { sendSuccess } from "../../lib/response.js";
 import * as formsService from "../forms/service.js";
 import * as programsRepo from "../programs/repository.js";
@@ -30,13 +28,6 @@ function toPublicProgram(program: programsRepo.ProgramRow) {
     registrationEndDate: program.registrationEndDate,
     registrationOpen: isRegistrationOpen(program),
   };
-}
-
-export async function listPublicProgramsHandler(request: FastifyRequest, reply: FastifyReply) {
-  const pagination = paginationSchema.parse(request.query);
-  const { items, total } = await programsRepo.listPublicPrograms(pagination);
-  const result = buildPaginatedResult(items.map(toPublicProgram), total, pagination);
-  return sendSuccess(reply, result);
 }
 
 export async function getPublicProgramHandler(request: FastifyRequest, reply: FastifyReply) {

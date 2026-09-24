@@ -60,6 +60,10 @@ export function listTenantUsers(tenantId: string) {
   return apiFetch<TenantUser[]>(`/platform/tenants/${tenantId}/users`);
 }
 
+export function updateUserStatus(userId: string, status: "active" | "suspended") {
+  return apiFetch<TenantUser>(`/platform/users/${userId}/status`, { method: "PATCH", body: { status } });
+}
+
 export function listTenantPrograms(tenantId: string) {
   return apiFetch<TenantProgram[]>(`/platform/tenants/${tenantId}/programs`);
 }

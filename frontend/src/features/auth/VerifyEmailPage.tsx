@@ -54,7 +54,7 @@ export function VerifyEmailPage() {
     try {
       const updated = mode === "confirm-new-email" ? await confirmEmailChange(value) : await verifyEmail(value);
       updateLocalUser(updated);
-      toast.success("Email verified — welcome aboard!");
+      toast.success("Email verified. Welcome aboard!");
       navigate("/admin", { replace: true });
     } catch (err) {
       toast.error(errorMessage(err, "Verification failed"));
@@ -181,7 +181,7 @@ export function VerifyEmailPage() {
                   {cooldown > 0 ? (
                     <span className="font-medium text-foreground">resend in {cooldown}s</span>
                   ) : (
-                    <button type="button" onClick={resend} className="font-medium text-primary hover:underline">
+                    <button type="button" onClick={resend} className="font-medium text-primary hover:opacity-80">
                       resend the code
                     </button>
                   )}

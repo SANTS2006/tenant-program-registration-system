@@ -94,7 +94,7 @@ export function RegisterPage() {
           <div className="pointer-events-none absolute inset-0 bg-gradient-radial-soft opacity-60" />
 
           <p className="relative max-w-[220px] text-xs text-white/70">
-            Set up your own workspace in minutes &mdash; no setup fees, no waiting.
+            Set up your own workspace in minutes. No setup fees, no waiting.
           </p>
 
           <div className="relative flex flex-1 flex-col items-center justify-center gap-8 py-10">
@@ -173,7 +173,7 @@ export function RegisterPage() {
                     id="email"
                     type="email"
                     autoComplete="email"
-                    placeholder="Email address"
+                    placeholder="Enter your email"
                     className="h-12 rounded-full px-5"
                     {...register("email")}
                   />
@@ -227,7 +227,7 @@ export function RegisterPage() {
 
               <p className="mt-6 text-center text-sm text-muted-foreground">
                 Already have an account?{" "}
-                <Link to="/login" className="font-medium text-primary hover:underline">
+                <Link to="/login" className="font-medium text-primary hover:opacity-80">
                   Sign in
                 </Link>
               </p>

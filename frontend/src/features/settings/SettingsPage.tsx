@@ -7,6 +7,7 @@ import { Camera, KeyRound, MailCheck, ShieldCheck, User as UserIcon } from "luci
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Avatar } from "@/components/Avatar";
 import { CodeInput } from "@/components/CodeInput";
@@ -126,7 +127,7 @@ function ChangeEmailSection({ currentEmail }: { currentEmail: string }) {
               {cooldown > 0 ? (
                 `Resend in ${cooldown}s`
               ) : (
-                <button type="button" onClick={sendCode} className="font-medium text-primary hover:underline">
+                <button type="button" onClick={sendCode} className="font-medium text-primary hover:opacity-80">
                   Resend code
                 </button>
               )}
@@ -265,21 +266,21 @@ export function SettingsPage() {
             <form className="flex flex-col gap-4" onSubmit={passwordForm.handleSubmit(onChangePassword)}>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="currentPassword">Current password</Label>
-                <Input id="currentPassword" type="password" {...passwordForm.register("currentPassword")} />
+                <PasswordInput id="currentPassword" autoComplete="current-password" {...passwordForm.register("currentPassword")} />
                 {passwordForm.formState.errors.currentPassword && (
                   <p className="text-sm text-destructive">{passwordForm.formState.errors.currentPassword.message}</p>
                 )}
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="newPassword">New password</Label>
-                <Input id="newPassword" type="password" {...passwordForm.register("newPassword")} />
+                <PasswordInput id="newPassword" autoComplete="new-password" {...passwordForm.register("newPassword")} />
                 {passwordForm.formState.errors.newPassword && (
                   <p className="text-sm text-destructive">{passwordForm.formState.errors.newPassword.message}</p>
                 )}
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="confirmPassword">Confirm new password</Label>
-                <Input id="confirmPassword" type="password" {...passwordForm.register("confirmPassword")} />
+                <PasswordInput id="confirmPassword" autoComplete="new-password" {...passwordForm.register("confirmPassword")} />
                 {passwordForm.formState.errors.confirmPassword && (
                   <p className="text-sm text-destructive">{passwordForm.formState.errors.confirmPassword.message}</p>
                 )}

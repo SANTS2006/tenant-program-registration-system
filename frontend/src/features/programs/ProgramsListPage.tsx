@@ -22,7 +22,7 @@ export function ProgramsListPage() {
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Programs</h1>
           <p className="text-sm text-muted-foreground">Manage every program and its registration form.</p>
         </div>
-        {(user?.role === "admin" || user?.role === "program_admin") && <ProgramCreateDialog />}
+        {user?.role !== "viewer" && <ProgramCreateDialog />}
       </div>
 
       <div className="relative max-w-sm">

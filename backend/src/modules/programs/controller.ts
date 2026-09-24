@@ -35,10 +35,8 @@ export async function getProgramHandler(request: FastifyRequest, reply: FastifyR
   if (!request.user) throw AppError.unauthorized();
   const { programId } = request.params as { programId: string };
   const program = await programsService.getProgram(programId);
-  // Lets the UI show only the actions this user can actually perform. The platform
-  // super_admin resolves to "admin" for access but is read-only, so it's a viewer here.
-  const role = await getProgramRole(request.user, programId);
-  const myRole = request.user.role === "super_admin" ? "viewer" : role;
+  // Lets the UI show only the actions this user can actually perform.
+  const myRole = await getProgramRole(request.user, programId);
   return sendSuccess(reply, { ...program, myRole });
 }
 

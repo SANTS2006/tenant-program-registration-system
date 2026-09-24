@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, CalendarDays, Clock } from "lucide-react";
+import { CalendarDays, Clock } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -27,14 +27,6 @@ export function PublicProgramPage() {
 
   return (
     <article className="flex flex-col gap-6">
-      <Link
-        to="/programs"
-        className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to programs
-      </Link>
-
       {program.thumbnailUrl && <img src={program.thumbnailUrl} alt="" className="h-64 w-full rounded-lg object-cover" />}
 
       <div className="flex flex-col gap-2">

@@ -169,8 +169,8 @@ export function verificationCodeEmail(params: {
      </p>`,
     `<div style="border-top:1px solid ${BRAND.border};padding-top:20px;">
        <p style="margin:0;font-family:${FONT};font-size:13px;line-height:1.6;color:${BRAND.muted};">
-         Didn't request this? You can safely ignore this email &mdash; ${
-           isSignup ? "no account will be activated" : "your email address won't change"
+         Didn't request this? You can safely ignore this email. ${
+           isSignup ? "No account will be activated" : "Your email address won't change"
          } without this code. Never share this code with anyone.
        </p>
      </div>`,
@@ -223,7 +223,7 @@ export function invitationEmail(params: {
       { label: "Sign-in email", value: params.email },
       { label: "Temporary password", value: params.temporaryPassword, mono: true },
     ]),
-    paragraph(`Confirm your invitation by clicking the button below &mdash; it takes you straight to the sign-in page.`),
+    paragraph(`Confirm your invitation by clicking the button below. It takes you straight to the sign-in page.`),
     button("Confirm & sign in", params.loginUrl),
     `<div style="margin-top:20px;border-top:1px solid ${BRAND.border};padding-top:20px;">
        <p style="margin:0 0 8px;font-family:${FONT};font-size:13px;line-height:1.6;color:${BRAND.muted};">
@@ -246,14 +246,18 @@ export function invitationEmail(params: {
   };
 }
 
+export const PASSWORD_RESET_TTL_MINUTES = 10;
+
 export function passwordResetEmail(resetUrl: string): { subject: string; html: string } {
   const body = [
     paragraph("We received a request to reset the password for your account."),
-    paragraph("Click the button below to choose a new password. For your security, this link expires soon."),
+    paragraph(
+      `Click the button below to choose a new password. For your security, this link expires in <strong>${PASSWORD_RESET_TTL_MINUTES} minutes</strong>.`,
+    ),
     button("Reset password", resetUrl),
     `<div style="margin-top:20px;border-top:1px solid ${BRAND.border};padding-top:20px;">
        <p style="margin:0;font-family:${FONT};font-size:13px;line-height:1.6;color:${BRAND.muted};">
-         If you didn't request a password reset, you can safely ignore this email &mdash; your password won't change.
+         If you didn't request a password reset, you can safely ignore this email. Your password won't change.
        </p>
      </div>`,
   ].join("");

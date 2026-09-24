@@ -10,6 +10,8 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(dirname, "./src"),
+      // Card and ticket designs are shared with the backend so previews match the PDFs.
+      "@designs": path.resolve(dirname, "../backend/src/shared/designs/index.ts"),
     },
   },
   server: {

@@ -48,7 +48,7 @@ export function DashboardPage() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <Card className="lg:col-span-2">
               <CardHeader>
-                <CardTitle className="text-base">Registrations — last 30 days</CardTitle>
+                <CardTitle className="text-base">Registrations in the last 30 days</CardTitle>
               </CardHeader>
               <CardContent>
                 {trendLoading || !trend ? (

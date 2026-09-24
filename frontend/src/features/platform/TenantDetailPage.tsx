@@ -1,15 +1,29 @@
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { ApiError } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/link-button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useTenant, useTenantPrograms, useTenantUsers } from "./hooks";
+import { useTenant, useTenantPrograms, useTenantUsers, useUpdateUserStatus } from "./hooks";
 
 export function TenantDetailPage() {
   const { tenantId } = useParams<{ tenantId: string }>();
   const { data: tenant, isLoading: tenantLoading } = useTenant(tenantId);
   const { data: users, isLoading: usersLoading } = useTenantUsers(tenantId);
   const { data: programs, isLoading: programsLoading } = useTenantPrograms(tenantId);
+  const updateStatus = useUpdateUserStatus(tenantId ?? "");
+
+  const toggleStatus = async (userId: string, name: string, status: string) => {
+    const next = status === "active" ? "suspended" : "active";
+    try {
+      await updateStatus.mutateAsync({ userId, status: next });
+      toast.success(next === "suspended" ? `${name} has been suspended` : `${name} has been reactivated`);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to update the user");
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -22,7 +36,7 @@ export function TenantDetailPage() {
             {tenantLoading ? "Loading..." : (tenant?.name ?? "Account")}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Read-only view for platform oversight &mdash; {tenant?.slug}
+            Manage this account's users and programs ({tenant?.slug})
           </p>
         </div>
       </div>
@@ -39,12 +53,13 @@ export function TenantDetailPage() {
                 <TableHead className="font-semibold">Email</TableHead>
                 <TableHead className="font-semibold">Role</TableHead>
                 <TableHead className="font-semibold">Status</TableHead>
+                <TableHead className="w-32" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {usersLoading && (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center text-muted-foreground">
                     Loading...
                   </TableCell>
                 </TableRow>
@@ -56,6 +71,16 @@ export function TenantDetailPage() {
                   <TableCell className="capitalize">{user.role.replace("_", " ")}</TableCell>
                   <TableCell>
                     <Badge variant={user.status === "active" ? "success" : "secondary"}>{user.status}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      size="sm"
+                      variant={user.status === "active" ? "outline" : "default"}
+                      disabled={updateStatus.isPending}
+                      onClick={() => toggleStatus(user.id, user.name, user.status)}
+                    >
+                      {user.status === "active" ? "Suspend" : "Reactivate"}
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -88,7 +113,11 @@ export function TenantDetailPage() {
               )}
               {programs?.map((program) => (
                 <TableRow key={program.id}>
-                  <TableCell>{program.name}</TableCell>
+                  <TableCell>
+                    <Link to={`/admin/programs/${program.id}`} className="font-medium text-primary hover:opacity-80">
+                      {program.name}
+                    </Link>
+                  </TableCell>
                   <TableCell className="capitalize">{program.status}</TableCell>
                   <TableCell>{program.registrationEnabled ? "Open" : "Closed"}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">

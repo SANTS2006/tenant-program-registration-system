@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, ilike, inArray, isNull, or } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { programMembers, programs } from "../../db/schema/index.js";
+import { programMembers, programs, tenants } from "../../db/schema/index.js";
 import type { PaginationInput } from "../../lib/pagination.js";
 import { toOffsetLimit } from "../../lib/pagination.js";
 import type { ProgramRole } from "../users/types.js";
@@ -33,6 +33,16 @@ export async function findProgramBySlug(slug: string): Promise<ProgramRow | null
     .where(and(eq(programs.slug, slug), isNull(programs.deletedAt)))
     .limit(1);
   return row ?? null;
+}
+
+export async function tenantExists(tenantId: string): Promise<boolean> {
+  const [row] = await db.select({ id: tenants.id }).from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+  return !!row;
+}
+
+export async function findTenantName(tenantId: string): Promise<string | null> {
+  const [row] = await db.select({ name: tenants.name }).from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+  return row?.name ?? null;
 }
 
 export async function slugExists(slug: string): Promise<boolean> {
@@ -85,18 +95,6 @@ export async function updateProgramRow(id: string, values: Partial<NewProgram>):
 
 export async function softDeleteProgram(id: string): Promise<void> {
   await db.update(programs).set({ deletedAt: new Date(), updatedAt: new Date() }).where(eq(programs.id, id));
-}
-
-export async function listPublicPrograms(pagination: PaginationInput) {
-  const where = and(isNull(programs.deletedAt), eq(programs.status, "published"));
-  const { limit, offset } = toOffsetLimit(pagination);
-
-  const [items, totalRow] = await Promise.all([
-    db.select().from(programs).where(where).orderBy(desc(programs.createdAt)).limit(limit).offset(offset),
-    db.select({ value: count() }).from(programs).where(where),
-  ]);
-
-  return { items, total: Number(totalRow[0]?.value ?? 0) };
 }
 
 export async function listAccessibleProgramIdsForUser(userId: string): Promise<string[]> {

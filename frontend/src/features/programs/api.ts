@@ -33,6 +33,8 @@ export interface CreateProgramInput {
   endDate?: string;
   registrationStartDate?: string;
   registrationEndDate?: string;
+  /** Platform super admin only: the account the program belongs to. */
+  tenantId?: string;
 }
 
 export function createProgram(input: CreateProgramInput) {

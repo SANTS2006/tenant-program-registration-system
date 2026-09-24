@@ -1,3 +1,4 @@
+import * as React from "react";
 import { CheckCircle2, IdCard, Printer, Ticket } from "lucide-react";
 import { useLocation, useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,6 +8,21 @@ import type { SubmitRegistrationResult } from "./api";
 
 function downloadUrl(slug: string, registrationNumber: string, kind: "id-card" | "ticket") {
   return `/api/public/programs/${encodeURIComponent(slug)}/registrations/${encodeURIComponent(registrationNumber)}/${kind}`;
+}
+
+/** The registrant's own card or ticket, drawn by the server in the program's chosen design. */
+function DocumentImage({ src, alt, className }: { src: string; alt: string; className: string }) {
+  const [failed, setFailed] = React.useState(false);
+  if (failed) return null;
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      onError={() => setFailed(true)}
+      className={`h-auto rounded-xl bg-muted shadow-lg ring-1 ring-black/5 ${className}`}
+    />
+  );
 }
 
 export function ConfirmationPage() {
@@ -41,6 +57,29 @@ export function ConfirmationPage() {
           <div className="rounded-xl border border-border/70 bg-gradient-brand-soft px-6 py-3">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Registration Number</p>
             <p className="gradient-text text-lg font-semibold tracking-wide">{result.registrationNumber}</p>
+          </div>
+        )}
+        {slug && (result.idCardAvailable || result.ticketAvailable) && (
+          <div className="flex w-full flex-col items-center gap-6 py-2">
+            {result.idCardAvailable && (
+              <div className="flex flex-wrap justify-center gap-4">
+                {(["front", "back"] as const).map((side) => (
+                  <DocumentImage
+                    key={side}
+                    src={`${downloadUrl(slug, result.registrationNumber, "id-card")}?format=svg&side=${side}`}
+                    alt={`Your ID card (${side})`}
+                    className="aspect-[300/476] w-40 sm:w-48"
+                  />
+                ))}
+              </div>
+            )}
+            {result.ticketAvailable && (
+              <DocumentImage
+                src={`${downloadUrl(slug, result.registrationNumber, "ticket")}?format=svg`}
+                alt="Your ticket"
+                className="aspect-[3/1] w-full max-w-xl"
+              />
+            )}
           </div>
         )}
         <div className="flex flex-wrap items-center justify-center gap-3">

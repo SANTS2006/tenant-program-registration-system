@@ -15,7 +15,7 @@ export function TenantsListPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Accounts</h1>
         <p className="text-sm text-muted-foreground">
-          Every account on the platform, for oversight only &mdash; view-only, no editing.
+          Every account on the platform. Open one to manage its users and programs.
         </p>
       </div>
 
