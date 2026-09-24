@@ -19,6 +19,7 @@
     "db:generate": "npm run db:generate --workspace backend",
     "db:migrate": "npm run db:migrate --workspace backend",
     "db:seed": "npm run db:seed --workspace backend",
+    "db:create-super-admin": "npm run db:create-super-admin --workspace backend --",
     "test": "npm run test --workspace backend",
     "lint": "npm run lint --workspace backend && npm run lint --workspace frontend"
   },

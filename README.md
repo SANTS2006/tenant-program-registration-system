@@ -79,6 +79,17 @@ deploy. `APP_URL`/`API_URL` must both be the public HTTPS address (e.g. `https:/
 and `EMAIL_FROM_ADDRESS` must be a sender verified in Brevo. `JWT_SECRET`/`JWT_REFRESH_SECRET` are generated
 by Render.
 
+**Creating the platform super admin.** `npm run db:seed` only creates demo accounts with published
+passwords, so never use it for real data. Create your super admin (cross-tenant, view-only) from the
+`backend` folder instead; it prompts for a hidden password of at least 12 characters:
+
+```bash
+npx tsx src/db/createSuperAdmin.ts --email you@yourdomain.com --name "Your Name"
+```
+
+It writes to whatever `DATABASE_URL` is in effect, so to target production set that variable to the
+production connection string first. Where there's no interactive terminal, set `SUPER_ADMIN_PASSWORD`.
+
 To test a production build locally: `npm run build`, then
 `NODE_ENV=production API_PORT=4100 node --env-file=.env backend/dist/server.js` and open `http://localhost:4100`.
 
