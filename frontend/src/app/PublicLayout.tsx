@@ -1,5 +1,5 @@
 import { Link, Outlet } from "react-router-dom";
-import { Sparkles } from "lucide-react";
+import { BrandLogo } from "@/components/BrandLogo";
 import { LinkButton } from "@/components/ui/link-button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
@@ -9,9 +9,7 @@ export function PublicLayout() {
       <header className="sticky top-0 z-30 border-b border-border/70 bg-card/70 backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:py-4">
           <Link to="/programs" className="flex items-center gap-2 text-base font-semibold tracking-tight sm:text-lg">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-brand text-white shadow-glow">
-              <Sparkles className="h-4 w-4" />
-            </span>
+            <BrandLogo className="h-9" />
             <span className="gradient-text hidden sm:inline">Program Registration</span>
           </Link>
           <div className="flex items-center gap-2">

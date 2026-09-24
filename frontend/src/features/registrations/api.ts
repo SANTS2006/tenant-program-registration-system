@@ -68,9 +68,10 @@ export interface ExportParams {
   dateTo?: string;
 }
 
-export function exportRegistrations(programId: string, params: ExportParams) {
+export function exportRegistrations(programId: string, programName: string, params: ExportParams) {
   const query = toQuery(params);
-  const fallbackName = `registrations.${params.format}`;
+  // The server names the file too; this is only used if its header can't be read.
+  const fallbackName = `${programName} ${new Date().toISOString().slice(0, 10)}.${params.format}`;
   return downloadAuthenticatedFile(`/programs/${programId}/registrations/export${query}`, fallbackName);
 }
 
@@ -78,5 +79,19 @@ export function downloadIdCard(programId: string, registrationId: string, regist
   return downloadAuthenticatedFile(
     `/programs/${programId}/registrations/${registrationId}/id-card`,
     `id-card-${registrationNumber}.pdf`,
+  );
+}
+
+export function downloadTicket(programId: string, registrationId: string, registrationNumber: string) {
+  return downloadAuthenticatedFile(
+    `/programs/${programId}/registrations/${registrationId}/ticket`,
+    `ticket-${registrationNumber}.pdf`,
+  );
+}
+
+export function downloadRegistrationFile(programId: string, registrationId: string, file: RegistrationFile) {
+  return downloadAuthenticatedFile(
+    `/programs/${programId}/registrations/${registrationId}/files/${file.id}/download`,
+    file.originalFilename,
   );
 }

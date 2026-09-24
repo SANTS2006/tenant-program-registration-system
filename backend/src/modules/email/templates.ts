@@ -100,8 +100,10 @@ function layout(params: { preheader: string; eyebrow: string; heading: string; b
               <td style="padding:0 4px 18px;">
                 <table role="presentation" cellpadding="0" cellspacing="0">
                   <tr>
-                    <td style="width:34px;height:34px;border-radius:10px;background-color:${BRAND.primary};background-image:${BRAND.gradient};
-                               text-align:center;vertical-align:middle;font-size:17px;color:#ffffff;">&#10022;</td>
+                    <td style="vertical-align:middle;">
+                      <img src="${escapeHtml(env.APP_URL)}/email-logo.png" width="48" height="38" alt="${escapeHtml(env.EMAIL_FROM_NAME)}"
+                           style="display:block;width:48px;height:38px;border:0;outline:none;" />
+                    </td>
                     <td style="padding-left:10px;font-family:${FONT};font-size:16px;font-weight:700;color:${BRAND.primaryDark};">
                       ${escapeHtml(env.EMAIL_FROM_NAME)}
                     </td>
@@ -259,6 +261,30 @@ export function passwordResetEmail(resetUrl: string): { subject: string; html: s
   return {
     subject: "Reset your password",
     html: layout({ preheader: "Reset your password", eyebrow: "Account security", heading: "Reset your password", body }),
+  };
+}
+
+export function passwordChangedEmail(params: { name: string; loginUrl: string }): { subject: string; html: string } {
+  const body = [
+    paragraph(`Hi <strong style="color:${BRAND.heading};">${escapeHtml(params.name)}</strong>,`),
+    paragraph("Your password was reset successfully. You can now sign in with your new password."),
+    paragraph("For your security, you've been signed out of all other devices."),
+    button("Sign in", params.loginUrl),
+    `<div style="margin-top:20px;border-top:1px solid ${BRAND.border};padding-top:20px;">
+       <p style="margin:0;font-family:${FONT};font-size:13px;line-height:1.6;color:${BRAND.muted};">
+         Didn't make this change? Reset your password again straight away and contact your administrator.
+       </p>
+     </div>`,
+  ].join("");
+
+  return {
+    subject: "Your password has been changed",
+    html: layout({
+      preheader: "Your password was reset successfully.",
+      eyebrow: "Account security",
+      heading: "Password changed",
+      body,
+    }),
   };
 }
 

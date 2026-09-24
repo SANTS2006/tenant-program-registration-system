@@ -11,6 +11,8 @@ export const idCardConfigSchema = z.object({
   showQrCode: z.boolean().default(true),
   backgroundImageUrl: z.string().url().optional(),
   photoFieldKey: z.string().optional(),
+  // Offer the card on the public registration success page (and allow its public download).
+  showOnConfirmation: z.boolean().default(true),
 });
 
 export type IdCardConfig = z.infer<typeof idCardConfigSchema>;
@@ -20,4 +22,5 @@ export const DEFAULT_ID_CARD_CONFIG: IdCardConfig = {
   primaryColor: "#2563eb",
   secondaryColor: "#0ea5e9",
   showQrCode: true,
+  showOnConfirmation: true,
 };

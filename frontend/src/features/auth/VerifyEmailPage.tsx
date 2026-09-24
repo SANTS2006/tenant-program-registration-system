@@ -1,7 +1,8 @@
 import * as React from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, MailCheck, Sparkles } from "lucide-react";
+import { ArrowLeft, Loader2, MailCheck } from "lucide-react";
+import { BrandLogo } from "@/components/BrandLogo";
 import { useAuth } from "@/app/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,8 +102,8 @@ export function VerifyEmailPage() {
           <div className="pointer-events-none absolute inset-0 bg-gradient-radial-soft opacity-60" />
           <div className="relative flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm font-semibold">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 backdrop-blur-sm">
-                <Sparkles className="h-4 w-4" />
+              <span className="flex h-9 items-center justify-center rounded-lg bg-white px-1.5 shadow-sm">
+                <BrandLogo className="h-7" />
               </span>
               Program Registration
             </div>

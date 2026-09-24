@@ -21,7 +21,7 @@ export interface UploadedFileInfo {
 interface DynamicFormProps {
   sections: FormSection[];
   fields: FormField[];
-  onSubmit: (responses: Record<string, unknown>, files: UploadedFileInfo[]) => Promise<void>;
+  onSubmit: (responses: Record<string, unknown>, files: UploadedFileInfo[], consentAccepted: boolean) => Promise<void>;
   onUploadFile?: (file: File, fieldKey: string) => Promise<UploadedFileInfo>;
   submitting?: boolean;
   errors?: string[];
@@ -60,6 +60,72 @@ function isVisible(field: FormField, responses: Record<string, unknown>) {
   return field.conditionalLogic.every((rule) => evaluateRule(rule, responses));
 }
 
+const FILE_TYPES = new Set(["image_upload", "pdf_upload", "document_upload"]);
+const NUMBER_TYPES = new Set(["number", "currency", "rating"]);
+
+/** Options like "Other" or "Other (please specify)" ask the registrant to type their own answer. */
+export function isOtherOption(option: string) {
+  return /^other\b/i.test(option.trim());
+}
+
+export function otherTextKey(fieldKey: string) {
+  return `${fieldKey}__other`;
+}
+
+/** The choices to show right now -- narrowed by the parent's answer for cascading fields. */
+function optionsFor(field: FormField, responses: Record<string, unknown>): string[] {
+  const dep = field.config.optionsDependOn;
+  if (!dep) return field.config.options ?? [];
+  const parentValue = responses[dep.fieldKey];
+  return isEmpty(parentValue) ? [] : (dep.map[String(parentValue)] ?? []);
+}
+
+/** Drops answers a changed parent no longer allows, following chains (region -> district -> chiefdom). */
+function pruneDependentAnswers(fields: FormField[], responses: Record<string, unknown>) {
+  const next = { ...responses };
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const field of fields) {
+      if (!field.config.optionsDependOn || isEmpty(next[field.fieldKey])) continue;
+      const allowed = optionsFor(field, next);
+      const current = next[field.fieldKey];
+      if (Array.isArray(current)) {
+        const kept = current.filter((v) => allowed.includes(String(v)));
+        if (kept.length !== current.length) {
+          next[field.fieldKey] = kept;
+          changed = true;
+        }
+      } else if (!allowed.includes(String(current))) {
+        delete next[field.fieldKey];
+        changed = true;
+      }
+    }
+  }
+  return next;
+}
+
+function initialResponses(fields: FormField[]): Record<string, unknown> {
+  const responses: Record<string, unknown> = {};
+  for (const field of fields) {
+    const value = field.config.defaultValue;
+    if (value === undefined || value === "" || FILE_TYPES.has(field.type)) continue;
+    if (Array.isArray(value) && value.length === 0) continue;
+
+    if (field.type === "multiple_choice") responses[field.fieldKey] = Array.isArray(value) ? value : [String(value)];
+    else if (field.type === "yes_no") responses[field.fieldKey] = value === true || value === "true" || value === "yes";
+    else if (field.type === "consent") responses[field.fieldKey] = value === true || value === "true";
+    else if (NUMBER_TYPES.has(field.type)) responses[field.fieldKey] = Number(value);
+    else responses[field.fieldKey] = Array.isArray(value) ? value[0] : String(value);
+  }
+  return pruneDependentAnswers(fields, responses);
+}
+
+function chosenOptions(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(String);
+  return typeof value === "string" ? [value] : [];
+}
+
 export function DynamicForm({
   sections,
   fields,
@@ -76,8 +142,9 @@ export function DynamicForm({
   const orderedSections = [...sections].sort((a, b) => a.orderIndex - b.orderIndex);
   const hasSections = orderedSections.length > 0;
   const [consented, setConsented] = React.useState(!requireConsent);
+  const [consentChecked, setConsentChecked] = React.useState(false);
   const [stepIndex, setStepIndex] = React.useState(0);
-  const [responses, setResponses] = React.useState<Record<string, unknown>>({});
+  const [responses, setResponses] = React.useState<Record<string, unknown>>(() => initialResponses(fields));
   const [uploadedFiles, setUploadedFiles] = React.useState<Record<string, UploadedFileInfo>>({});
   const [uploadingKey, setUploadingKey] = React.useState<string | null>(null);
   const [stepErrors, setStepErrors] = React.useState<string[]>([]);
@@ -99,7 +166,8 @@ export function DynamicForm({
   const currentStep = steps[stepIndex]!;
   const isLastStep = stepIndex === steps.length - 1;
 
-  const setValue = (key: string, value: unknown) => setResponses((r) => ({ ...r, [key]: value }));
+  const setValue = (key: string, value: unknown) =>
+    setResponses((r) => pruneDependentAnswers(fields, { ...r, [key]: value }));
 
   const handleFileChange = async (field: FormField, file: File | undefined) => {
     if (!file || !onUploadFile) return;
@@ -118,9 +186,18 @@ export function DynamicForm({
     for (const field of fieldsToCheck) {
       if (!isVisible(field, responses)) continue;
       if (!field.required) continue;
+      // Cascading field with no options for the parent's answer doesn't apply.
+      if (field.config.optionsDependOn && optionsFor(field, responses).length === 0) continue;
       const isFile = field.type.endsWith("_upload");
       const hasValue = isFile ? !!uploadedFiles[field.fieldKey] : !isEmpty(responses[field.fieldKey]);
       if (!hasValue) missing.push(`${field.label} is required`);
+    }
+    for (const field of fieldsToCheck) {
+      if (!isVisible(field, responses)) continue;
+      const pickedOther = chosenOptions(responses[field.fieldKey]).some(isOtherOption);
+      if (pickedOther && isEmpty(String(responses[otherTextKey(field.fieldKey)] ?? "").trim())) {
+        missing.push(`Please specify your answer for ${field.label}`);
+      }
     }
     return missing;
   };
@@ -141,7 +218,7 @@ export function DynamicForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateStep()) return;
-    await onSubmit(responses, Object.values(uploadedFiles));
+    await onSubmit(responses, Object.values(uploadedFiles), consented);
   };
 
   const renderField = (field: FormField) => {
@@ -157,9 +234,40 @@ export function DynamicForm({
         {field.description && <p className="text-xs text-muted-foreground">{field.description}</p>}
 
         {renderInput(field, value)}
+        {renderOtherInput(field, value)}
 
         {field.helpText && <p className="text-xs text-muted-foreground">{field.helpText}</p>}
       </div>
+    );
+  };
+
+  /** Free-text box that appears right under a choice field when an "Other" option is picked. */
+  const renderOtherInput = (field: FormField, value: unknown) => {
+    if (!chosenOptions(value).some(isOtherOption)) return null;
+    const key = otherTextKey(field.fieldKey);
+    return (
+      <Input
+        id={key}
+        aria-label={`${field.label}: please specify`}
+        placeholder="Please specify"
+        autoFocus
+        maxLength={500}
+        value={(responses[key] as string) ?? ""}
+        onChange={(e) => setResponses((r) => ({ ...r, [key]: e.target.value }))}
+        className="mt-1"
+      />
+    );
+  };
+
+  /** Shown in place of a cascading field's options until its parent has an answer. */
+  const renderAwaitingParent = (field: FormField) => {
+    const parent = fields.find((f) => f.fieldKey === field.config.optionsDependOn?.fieldKey);
+    return (
+      <p className="rounded-md border border-dashed border-input px-3 py-2 text-sm text-muted-foreground">
+        {isEmpty(responses[field.config.optionsDependOn!.fieldKey])
+          ? `Select ${parent?.label ?? "the previous question"} first`
+          : "No options available for your previous answer"}
+      </p>
     );
   };
 
@@ -169,6 +277,9 @@ export function DynamicForm({
       placeholder: field.placeholder ?? undefined,
       required: field.required,
     };
+    if (field.config.optionsDependOn && optionsFor(field, responses).length === 0) {
+      return renderAwaitingParent(field);
+    }
 
     switch (field.type) {
       case "long_text":
@@ -222,7 +333,7 @@ export function DynamicForm({
       case "country":
         return (
           <div className="flex flex-col gap-2">
-            {(field.config.options ?? []).map((option) => (
+            {optionsFor(field, responses).map((option) => (
               <label key={option} className="flex items-center gap-2 text-sm">
                 <input
                   type="radio"
@@ -243,7 +354,7 @@ export function DynamicForm({
               <SelectValue placeholder="Select an option" />
             </SelectTrigger>
             <SelectContent>
-              {(field.config.options ?? []).map((option) => (
+              {optionsFor(field, responses).map((option) => (
                 <SelectItem key={option} value={option}>
                   {option}
                 </SelectItem>
@@ -255,7 +366,7 @@ export function DynamicForm({
         const selected = Array.isArray(value) ? (value as string[]) : [];
         return (
           <div className="flex flex-col gap-2">
-            {(field.config.options ?? []).map((option) => (
+            {optionsFor(field, responses).map((option) => (
               <label key={option} className="flex items-center gap-2 text-sm">
                 <Checkbox
                   checked={selected.includes(option)}
@@ -337,12 +448,28 @@ export function DynamicForm({
             {consentText || "By continuing, you consent to the collection of the information in this form."}
           </div>
         </div>
-        <Button
-          onClick={() => setConsented(true)}
-          className="w-fit"
-        >
-          I agree — continue to the form
-        </Button>
+        <label htmlFor="consent-agree" className="flex cursor-pointer items-start gap-3 text-sm">
+          <Checkbox
+            id="consent-agree"
+            checked={consentChecked}
+            onCheckedChange={(checked) => setConsentChecked(checked === true)}
+            className="mt-0.5"
+          />
+          <span>I have read and agree to the consent statement above.</span>
+        </label>
+        <div className="flex items-center justify-between gap-3">
+          {onCancel ? (
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+          ) : (
+            <span />
+          )}
+          <Button type="button" onClick={() => setConsented(true)} disabled={!consentChecked}>
+            Continue to the form
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     );
   }

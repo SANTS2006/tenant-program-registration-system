@@ -1,4 +1,5 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
+import { attachmentDisposition } from "../../lib/downloadName.js";
 import { sendSuccess } from "../../lib/response.js";
 import * as idCardService from "./service.js";
 import { idCardConfigSchema } from "./schemas.js";
@@ -16,20 +17,20 @@ export async function updateConfigHandler(request: FastifyRequest, reply: Fastif
   return sendSuccess(reply, config, "ID card design updated");
 }
 
+export function sendPdf(reply: FastifyReply, { pdf, fileName }: idCardService.GeneratedDocument) {
+  reply.header("Content-Type", "application/pdf");
+  reply.header("Content-Disposition", attachmentDisposition(fileName));
+  return reply.send(pdf);
+}
+
 export async function downloadAdminIdCardHandler(request: FastifyRequest, reply: FastifyReply) {
   const { programId, registrationId } = request.params as { programId: string; registrationId: string };
-  const pdf = await idCardService.generateForRegistrationInProgram(programId, registrationId);
-  reply.header("Content-Type", "application/pdf");
-  reply.header("Content-Disposition", `attachment; filename="id-card-${registrationId}.pdf"`);
-  return reply.send(pdf);
+  return sendPdf(reply, await idCardService.generateForRegistrationInProgram(programId, registrationId));
 }
 
 export async function downloadPublicIdCardHandler(request: FastifyRequest, reply: FastifyReply) {
   const { slug, registrationNumber } = request.params as { slug: string; registrationNumber: string };
-  const pdf = await idCardService.generateForPublicRegistration(slug, registrationNumber);
-  reply.header("Content-Type", "application/pdf");
-  reply.header("Content-Disposition", `attachment; filename="id-card-${registrationNumber}.pdf"`);
-  return reply.send(pdf);
+  return sendPdf(reply, await idCardService.generateForPublicRegistration(slug, registrationNumber));
 }
 
 export async function verifyHandler(request: FastifyRequest, reply: FastifyReply) {

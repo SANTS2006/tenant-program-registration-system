@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { CalendarClock, CheckCircle2, ClipboardList, Copy, Trash2, Users2 } from "lucide-react";
+import { CalendarClock, CheckCircle2, ClipboardList, Copy, Users2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,10 @@ import {
 import * as programsApi from "./api";
 import { useProgramStats } from "../registrations/hooks";
 import { IdCardSettingsCard } from "../idcards/IdCardSettingsCard";
+import { TicketSettingsCard } from "../tickets/TicketSettingsCard";
+import { DeleteProgramDialog } from "./DeleteProgramDialog";
+import { RegistrationNumberCard } from "./RegistrationNumberCard";
+import type { Program } from "@/types/api";
 
 const schema = z.object({
   name: z.string().min(2),
@@ -50,6 +54,7 @@ export function ProgramOverviewPage() {
   const reopenRegistration = useProgramAction(programsApi.reopenRegistration);
   const archiveProgram = useProgramAction(programsApi.archiveProgram);
   const [uploading, setUploading] = React.useState(false);
+  const canEdit = program.myRole === "admin";
 
   const {
     register,
@@ -114,6 +119,9 @@ export function ProgramOverviewPage() {
         <StatCard label="Approved" value={stats?.byStatus.approved ?? 0} icon={CheckCircle2} />
       </div>
 
+      {!canEdit ? (
+        <ProgramDetailsReadOnly program={program} />
+      ) : (
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -199,34 +207,77 @@ export function ProgramOverviewPage() {
             )}
             <Button
               variant="outline"
+              disabled={duplicateProgram.isPending}
               onClick={async () => {
-                const copy = await duplicateProgram.mutateAsync(program.id);
-                toast.success("Program duplicated");
-                navigate(`/admin/programs/${copy.id}`);
+                try {
+                  const copy = await duplicateProgram.mutateAsync(program.id);
+                  toast.success("Program duplicated");
+                  navigate(`/admin/programs/${copy.id}`);
+                } catch (err) {
+                  toast.error(err instanceof ApiError ? err.message : "Failed to duplicate program");
+                }
               }}
             >
               <Copy className="h-4 w-4" />
-              Duplicate program
+              {duplicateProgram.isPending ? "Duplicating..." : "Duplicate program"}
             </Button>
-            <Button
-              variant="destructive"
-              onClick={async () => {
-                if (!confirm(`Delete "${program.name}"? This cannot be undone from the UI.`)) return;
-                await deleteProgram.mutateAsync(program.id);
-                toast.success("Program deleted");
-                navigate("/admin/programs");
+            <DeleteProgramDialog
+              programName={program.name}
+              registrationCount={stats?.total ?? 0}
+              onConfirm={async () => {
+                try {
+                  await deleteProgram.mutateAsync(program.id);
+                  toast.success("Program deleted");
+                  navigate("/admin/programs");
+                } catch (err) {
+                  toast.error(err instanceof ApiError ? err.message : "Failed to delete program");
+                  throw err;
+                }
               }}
-            >
-              <Trash2 className="h-4 w-4" />
-              Delete program
-            </Button>
+            />
           </CardContent>
         </Card>
 
         <div className="lg:col-span-2">
+          <RegistrationNumberCard program={program} />
+        </div>
+        <div className="lg:col-span-3">
           <IdCardSettingsCard programId={program.id} idCardEnabled={program.idCardEnabled} />
         </div>
+        <div className="lg:col-span-3">
+          <TicketSettingsCard program={program} />
+        </div>
       </div>
+      )}
     </div>
+  );
+}
+
+function ProgramDetailsReadOnly({ program }: { program: Program }) {
+  const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString() : "—");
+  const rows = [
+    { label: "Status", value: program.status },
+    { label: "Registration", value: program.registrationEnabled ? "Open" : "Closed" },
+    { label: "Registration opens", value: fmt(program.registrationStartDate) },
+    { label: "Registration closes", value: fmt(program.registrationEndDate) },
+  ];
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Program details</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        {program.shortDescription && <p className="text-sm font-medium">{program.shortDescription}</p>}
+        {program.description && <p className="whitespace-pre-line text-sm text-muted-foreground">{program.description}</p>}
+        <dl className="grid grid-cols-2 gap-4 border-t border-border/60 pt-4 sm:grid-cols-4">
+          {rows.map((row) => (
+            <div key={row.label}>
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">{row.label}</dt>
+              <dd className="text-sm font-medium capitalize">{row.value}</dd>
+            </div>
+          ))}
+        </dl>
+      </CardContent>
+    </Card>
   );
 }

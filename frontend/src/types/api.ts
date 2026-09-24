@@ -29,8 +29,20 @@ export interface Program {
   registrationEndDate: string | null;
   registrationEnabled: boolean;
   idCardEnabled: boolean;
+  ticketEnabled: boolean;
+  registrationNumberConfig: Partial<RegistrationNumberConfig>;
   createdAt: string;
   updatedAt: string;
+  /** The current user's role on this program (only on the single-program endpoint). */
+  myRole?: ProgramRole | null;
+}
+
+export interface RegistrationNumberConfig {
+  prefix: string;
+  separator: "-" | "/" | "";
+  includeYear: boolean;
+  digits: number;
+  startAt: number;
 }
 
 export interface PublicProgram {
@@ -82,7 +94,9 @@ export interface FieldConfig {
   allowMultiple?: boolean;
   maxFileSizeMb?: number;
   allowedFileTypes?: string[];
-  defaultValue?: string | number | boolean;
+  defaultValue?: string | number | boolean | string[];
+  /** Cascading options: which choices show depends on the answer to another field. */
+  optionsDependOn?: { fieldKey: string; map: Record<string, string[]> };
   currencyCode?: string;
   maxRating?: number;
 }
@@ -129,6 +143,7 @@ export interface FormMeta {
   confirmationMessage: string | null;
   requireConsent: boolean;
   consentText: string | null;
+  showRegistrationNumber: boolean;
   layoutMode: "stepped" | "single";
   status: FormStatus;
   publishedAt: string | null;

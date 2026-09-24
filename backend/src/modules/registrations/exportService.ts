@@ -2,6 +2,7 @@ import ExcelJS from "exceljs";
 import * as formsRepo from "../forms/repository.js";
 import type { RegistrationFilters, RegistrationRow } from "./repository.js";
 import { listRegistrationsForExport } from "./repository.js";
+import { isOtherOption, otherTextKey } from "./validation.js";
 
 export type ExportFormat = "csv" | "xlsx";
 
@@ -30,6 +31,13 @@ function formatCellValue(value: unknown): string {
   if (typeof value === "boolean") return value ? "Yes" : "No";
   if (typeof value === "object") return JSON.stringify(value);
   return String(value);
+}
+
+/** Shows a chosen "Other" option together with what the registrant typed, e.g. "Other: Freetown". */
+function withOtherText(value: unknown, otherText: unknown): unknown {
+  if (typeof otherText !== "string" || !otherText) return value;
+  const expand = (option: unknown) => (typeof option === "string" && isOtherOption(option) ? `${option}: ${otherText}` : option);
+  return Array.isArray(value) ? value.map(expand) : expand(value);
 }
 
 async function buildFieldColumns(programId: string): Promise<ExportColumn[]> {
@@ -65,7 +73,7 @@ async function buildRows(programId: string, filters: RegistrationFilters) {
       applicantPhone: registration.applicantPhone ?? "",
     };
     for (const field of fieldColumns) {
-      row[field.key] = formatCellValue(responses[field.key]);
+      row[field.key] = formatCellValue(withOtherText(responses[field.key], responses[otherTextKey(field.key)]));
     }
     return row;
   });

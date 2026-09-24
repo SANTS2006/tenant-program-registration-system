@@ -2,6 +2,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { AppError } from "../../lib/errors.js";
 import { sendSuccess } from "../../lib/response.js";
 import { recordAudit } from "../audit/service.js";
+import { getProgramRole } from "./access.js";
 import * as programsService from "./service.js";
 import { createProgramSchema, listProgramsQuerySchema, updateProgramSchema } from "./schemas.js";
 
@@ -31,9 +32,14 @@ export async function listProgramsHandler(request: FastifyRequest, reply: Fastif
 }
 
 export async function getProgramHandler(request: FastifyRequest, reply: FastifyReply) {
+  if (!request.user) throw AppError.unauthorized();
   const { programId } = request.params as { programId: string };
   const program = await programsService.getProgram(programId);
-  return sendSuccess(reply, program);
+  // Lets the UI show only the actions this user can actually perform. The platform
+  // super_admin resolves to "admin" for access but is read-only, so it's a viewer here.
+  const role = await getProgramRole(request.user, programId);
+  const myRole = request.user.role === "super_admin" ? "viewer" : role;
+  return sendSuccess(reply, { ...program, myRole });
 }
 
 export async function updateProgramHandler(request: FastifyRequest, reply: FastifyReply) {

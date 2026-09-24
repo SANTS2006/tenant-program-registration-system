@@ -38,11 +38,11 @@ export function PublicRegistrationPage() {
     );
   }
 
-  const handleSubmit = async (responses: Record<string, unknown>, files: UploadedFileInfo[]) => {
+  const handleSubmit = async (responses: Record<string, unknown>, files: UploadedFileInfo[], consentAccepted: boolean) => {
     setSubmitting(true);
     setErrors([]);
     try {
-      const result = await submitRegistration(slug!, responses, files);
+      const result = await submitRegistration(slug!, responses, files, consentAccepted);
       navigate(`/programs/${slug}/confirmation`, { state: result });
     } catch (err) {
       if (err instanceof ApiError && Array.isArray(err.details)) {

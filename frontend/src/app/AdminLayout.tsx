@@ -1,6 +1,7 @@
 import * as React from "react";
 import { NavLink, Outlet } from "react-router-dom";
-import { Building2, LayoutDashboard, ListChecks, LogOut, Menu, Settings, Sparkles, Users, X } from "lucide-react";
+import { Building2, LayoutDashboard, ListChecks, LogOut, Menu, Settings, Users, X } from "lucide-react";
+import { BrandLogo } from "@/components/BrandLogo";
 import { useAuth } from "./AuthContext";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -21,9 +22,7 @@ const navItems = [
 function BrandMark() {
   return (
     <div className="flex items-center gap-2 text-base font-semibold tracking-tight">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-brand text-white shadow-glow">
-        <Sparkles className="h-4 w-4" />
-      </span>
+      <BrandLogo className="h-9" />
       <span className="gradient-text">Program Registration</span>
     </div>
   );

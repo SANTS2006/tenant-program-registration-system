@@ -1,9 +1,13 @@
-import { CheckCircle2, Printer } from "lucide-react";
+import { CheckCircle2, IdCard, Printer, Ticket } from "lucide-react";
 import { useLocation, useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import type { SubmitRegistrationResult } from "./api";
+
+function downloadUrl(slug: string, registrationNumber: string, kind: "id-card" | "ticket") {
+  return `/api/public/programs/${encodeURIComponent(slug)}/registrations/${encodeURIComponent(registrationNumber)}/${kind}`;
+}
 
 export function ConfirmationPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -33,20 +37,24 @@ export function ConfirmationPage() {
         <p className="max-w-md text-sm text-muted-foreground">
           {result.confirmationMessage ?? "Thank you for registering. We've received your submission."}
         </p>
-        <div className="rounded-xl border border-border/70 bg-gradient-brand-soft px-6 py-3">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Registration Number</p>
-          <p className="gradient-text text-lg font-semibold tracking-wide">{result.registrationNumber}</p>
-        </div>
+        {result.showRegistrationNumber !== false && (
+          <div className="rounded-xl border border-border/70 bg-gradient-brand-soft px-6 py-3">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Registration Number</p>
+            <p className="gradient-text text-lg font-semibold tracking-wide">{result.registrationNumber}</p>
+          </div>
+        )}
         <div className="flex flex-wrap items-center justify-center gap-3">
-          {result.idCardEnabled && slug && (
-            <Button
-              variant="success"
-              onClick={() =>
-                window.open(`/api/public/programs/${slug}/registrations/${result.registrationNumber}/id-card`, "_blank")
-              }
-            >
+          {result.idCardAvailable && slug && (
+            <a href={downloadUrl(slug, result.registrationNumber, "id-card")} className={buttonVariants({ variant: "success" })}>
+              <IdCard className="h-4 w-4" />
               Download ID Card
-            </Button>
+            </a>
+          )}
+          {result.ticketAvailable && slug && (
+            <a href={downloadUrl(slug, result.registrationNumber, "ticket")} className={buttonVariants({ variant: "default" })}>
+              <Ticket className="h-4 w-4" />
+              Download Ticket
+            </a>
           )}
           <Button onClick={() => window.print()} variant="outline">
             <Printer className="h-4 w-4" />

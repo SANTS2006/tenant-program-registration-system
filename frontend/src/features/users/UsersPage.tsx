@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Plus, Settings2, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Plus, Settings2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +26,7 @@ type CreateUserForm = z.infer<typeof createUserSchema>;
 
 function CreateUserDialog() {
   const [open, setOpen] = React.useState(false);
+  const [showPassword, setShowPassword] = React.useState(false);
   const createUser = useCreateUser();
   const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateUserForm>({
     resolver: zodResolver(createUserSchema),
@@ -70,8 +71,24 @@ function CreateUserDialog() {
             {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label>Temporary password</Label>
-            <Input type="password" {...register("password")} />
+            <Label htmlFor="invitePassword">Temporary password</Label>
+            <div className="relative">
+              <Input
+                id="invitePassword"
+                type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
+                className="pr-10"
+                {...register("password")}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
             {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
           </div>
           <div className="flex flex-col gap-1.5">

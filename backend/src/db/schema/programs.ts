@@ -30,6 +30,10 @@ export const programs = pgTable(
     registrationEnabled: boolean("registration_enabled").notNull().default(false),
     idCardEnabled: boolean("id_card_enabled").notNull().default(false),
     idCardConfig: jsonb("id_card_config").notNull().default({}),
+    ticketEnabled: boolean("ticket_enabled").notNull().default(false),
+    ticketConfig: jsonb("ticket_config").notNull().default({}),
+    // { prefix, includeYear, digits, startAt } -- empty means the default REG-{YEAR}-{000001} format.
+    registrationNumberConfig: jsonb("registration_number_config").notNull().default({}),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
     tenantId: uuid("tenant_id")
       .notNull()

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isOwnCloudinaryUrl } from "../../lib/cloudinaryUrl.js";
 import { paginationSchema } from "../../lib/pagination.js";
 
 export const registrationStatusValues = [
@@ -34,7 +35,7 @@ export const exportRegistrationsQuerySchema = z.object({
 
 export const submittedFileSchema = z.object({
   fieldKey: z.string().min(1),
-  url: z.string().url(),
+  url: z.string().url().refine(isOwnCloudinaryUrl, "Files must be uploaded through the registration form"),
   publicId: z.string().min(1),
   filename: z.string().min(1),
   mimeType: z.string().min(1),
@@ -44,6 +45,7 @@ export const submittedFileSchema = z.object({
 export const submitRegistrationSchema = z.object({
   responses: z.record(z.string(), z.unknown()),
   files: z.array(submittedFileSchema).optional().default([]),
+  consentAccepted: z.boolean().optional(),
 });
 
 export type UpdateStatusInput = z.infer<typeof updateStatusSchema>;

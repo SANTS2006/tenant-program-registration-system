@@ -17,6 +17,35 @@ import type { FieldType } from "@/types/api";
 
 const MAX_VISIBLE_FIELDS = 4;
 
+/** Whether registrants can view/download the document on the public success page. */
+export function ShowOnConfirmationToggle({
+  id,
+  checked,
+  onChange,
+  thing,
+}: {
+  id: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  thing: string;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3 rounded-lg border border-border/70 p-3">
+      <div>
+        <Label htmlFor={id} className="font-medium">
+          Show on the registration success page
+        </Label>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {checked
+            ? `Registrants can download their ${thing} right after registering.`
+            : `Only your team can download ${thing}s, from each registration's page.`}
+        </p>
+      </div>
+      <Switch id={id} checked={checked} onCheckedChange={onChange} />
+    </div>
+  );
+}
+
 interface AvailableField {
   fieldKey: string;
   label: string;
@@ -206,6 +235,13 @@ export function IdCardSettingsCard({ programId, idCardEnabled }: { programId: st
                 Show verification QR code
               </Label>
             </div>
+
+            <ShowOnConfirmationToggle
+              id="idCardShowOnConfirmation"
+              checked={config.showOnConfirmation}
+              onChange={(checked) => setConfig((c) => (c ? { ...c, showOnConfirmation: checked } : c))}
+              thing="ID card"
+            />
 
             <div className="flex flex-col gap-2">
               <Label>Extra fields on card (up to {MAX_VISIBLE_FIELDS})</Label>

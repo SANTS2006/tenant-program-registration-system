@@ -8,6 +8,7 @@ export interface IdCardConfig {
   showQrCode: boolean;
   backgroundImageUrl?: string;
   photoFieldKey?: string;
+  showOnConfirmation: boolean;
 }
 
 export interface IdCardConfigResponse {

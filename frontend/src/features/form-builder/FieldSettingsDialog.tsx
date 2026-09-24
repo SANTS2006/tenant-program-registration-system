@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, X } from "lucide-react";
+import { DefaultValueEditor, DependentOptionsEditor } from "./FieldAdvancedSettings";
 import { metaFor } from "./fieldTypes";
 import type { EditableField } from "./types";
 import { slugifyKey } from "@/lib/utils";
@@ -145,6 +146,10 @@ export function FieldSettingsDialog({
           )}
 
           {meta.hasOptions && (
+            <DependentOptionsEditor draft={draft} otherFields={otherFields} updateConfig={updateConfig} />
+          )}
+
+          {meta.hasOptions && !draft.config.optionsDependOn && (
             <div className="flex flex-col gap-2">
               <Label>Options</Label>
               {options.map((option, index) => (
@@ -177,6 +182,10 @@ export function FieldSettingsDialog({
                 <Plus className="h-4 w-4" />
                 Add option
               </Button>
+              <p className="text-xs text-muted-foreground">
+                Tip: an option that starts with “Other” (e.g. “Other (please specify)”) asks registrants to type their
+                answer when they choose it.
+              </p>
               {draft.type === "multiple_choice" && (
                 <div className="flex items-center gap-2 pt-1">
                   <Checkbox
@@ -191,6 +200,8 @@ export function FieldSettingsDialog({
               )}
             </div>
           )}
+
+          <DefaultValueEditor draft={draft} updateConfig={updateConfig} />
 
           {meta.isFile && (
             <div className="flex flex-col gap-1.5">

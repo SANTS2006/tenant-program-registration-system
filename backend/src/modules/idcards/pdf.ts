@@ -1,5 +1,6 @@
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
+import { isOwnCloudinaryUrl } from "../../lib/cloudinaryUrl.js";
 
 // CR-80 card size (3.375in x 2.125in) in PDF points, landscape.
 const CARD_WIDTH = 243;
@@ -18,7 +19,8 @@ export interface IdCardData {
   photoUrl?: string;
 }
 
-async function fetchImageBuffer(url: string): Promise<Buffer | null> {
+export async function fetchImageBuffer(url: string): Promise<Buffer | null> {
+  if (!isOwnCloudinaryUrl(url)) return null;
   try {
     const res = await fetch(url);
     if (!res.ok) return null;

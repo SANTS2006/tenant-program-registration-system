@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { paginationSchema } from "../../lib/pagination.js";
+import { registrationNumberConfigSchema } from "../registrations/numbering.js";
 
 export const programStatusValues = ["draft", "published", "closed", "archived"] as const;
 
@@ -24,6 +25,8 @@ export const updateProgramSchema = z.object({
   registrationEndDate: z.coerce.date().optional(),
   registrationEnabled: z.boolean().optional(),
   idCardEnabled: z.boolean().optional(),
+  ticketEnabled: z.boolean().optional(),
+  registrationNumberConfig: registrationNumberConfigSchema.optional(),
 });
 
 export const listProgramsQuerySchema = paginationSchema.extend({

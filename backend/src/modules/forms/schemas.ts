@@ -37,7 +37,15 @@ export const fieldConfigSchema = z
     allowMultiple: z.boolean().optional(),
     maxFileSizeMb: z.number().positive().optional(),
     allowedFileTypes: z.array(z.string()).optional(),
-    defaultValue: z.union([z.string(), z.number(), z.boolean()]).optional(),
+    defaultValue: z.union([z.string(), z.number(), z.boolean(), z.array(z.string())]).optional(),
+    // Cascading options: this field's choices depend on the value picked in another
+    // choice field, e.g. district -> chiefdoms. `map` is parentOption -> childOptions.
+    optionsDependOn: z
+      .object({
+        fieldKey: z.string().min(1),
+        map: z.record(z.array(z.string().min(1))),
+      })
+      .optional(),
     currencyCode: z.string().length(3).optional(),
     maxRating: z.number().int().min(2).max(10).optional(),
   })
@@ -83,6 +91,7 @@ export const upsertFormSchema = z.object({
   confirmationMessage: z.string().max(2000).optional(),
   requireConsent: z.boolean().default(false),
   consentText: z.string().max(3000).optional(),
+  showRegistrationNumber: z.boolean().default(true),
   layoutMode: z.enum(formLayoutModeValues).default("stepped"),
   sections: z.array(sectionInputSchema),
   fields: z.array(fieldInputSchema),

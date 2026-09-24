@@ -10,7 +10,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { Eye, Plus, Save, ShieldCheck, Trash2, UploadCloud } from "lucide-react";
+import { Eye, Hash, Plus, Save, ShieldCheck, Trash2, UploadCloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -53,6 +53,7 @@ export function FormBuilderPage() {
   const [confirmationMessage, setConfirmationMessage] = React.useState("");
   const [requireConsent, setRequireConsent] = React.useState(false);
   const [consentText, setConsentText] = React.useState("");
+  const [showRegistrationNumber, setShowRegistrationNumber] = React.useState(true);
   const [layoutMode, setLayoutMode] = React.useState<FormLayoutMode>("stepped");
   const [sections, setSections] = React.useState<EditableSection[]>([]);
   const [fields, setFields] = React.useState<EditableField[]>([]);
@@ -71,6 +72,7 @@ export function FormBuilderPage() {
     setConfirmationMessage(data.form.confirmationMessage ?? "");
     setRequireConsent(data.form.requireConsent);
     setConsentText(data.form.consentText ?? "");
+    setShowRegistrationNumber(data.form.showRegistrationNumber ?? true);
     setLayoutMode(data.form.layoutMode);
     setSections(
       data.sections.map((s) => ({ key: s.id, title: s.title, description: s.description ?? undefined, orderIndex: s.orderIndex })),
@@ -98,6 +100,7 @@ export function FormBuilderPage() {
     return <p className="text-sm text-muted-foreground">Loading form...</p>;
   }
 
+  const canEdit = program.myRole === "admin";
   const usedKeys = new Set(fields.map((f) => f.fieldKey));
   const editingField = fields.find((f) => f.fieldKey === editingKey) ?? null;
 
@@ -158,6 +161,7 @@ export function FormBuilderPage() {
     confirmationMessage: confirmationMessage || undefined,
     requireConsent,
     consentText: consentText || undefined,
+    showRegistrationNumber,
     layoutMode,
     sections: sections.map((s) => ({ key: s.key, title: s.title, description: s.description, orderIndex: s.orderIndex })),
     fields,
@@ -322,19 +326,42 @@ export function FormBuilderPage() {
             <Eye className="h-4 w-4" />
             Preview
           </Button>
-          <Button variant="outline" onClick={handleSave} disabled={saving}>
-            <Save className="h-4 w-4" />
-            {saving ? "Saving..." : "Save Draft"}
-          </Button>
-          <Button onClick={handlePublish} disabled={publishing || fields.length === 0}>
-            <UploadCloud className="h-4 w-4" />
-            {publishing ? "Publishing..." : "Publish"}
-          </Button>
+          {canEdit && (
+            <>
+              <Button variant="outline" onClick={handleSave} disabled={saving}>
+                <Save className="h-4 w-4" />
+                {saving ? "Saving..." : "Save Draft"}
+              </Button>
+              <Button onClick={handlePublish} disabled={publishing || fields.length === 0}>
+                <UploadCloud className="h-4 w-4" />
+                {publishing ? "Publishing..." : "Publish"}
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
       <ShareFormCard programId={program.id} programName={program.name} />
 
+      {!canEdit ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{title}</CardTitle>
+            <p className="text-sm text-muted-foreground">You have view-only access to this form.</p>
+          </CardHeader>
+          <CardContent>
+            <DynamicForm
+              sections={previewSections}
+              fields={previewFields}
+              layoutMode={layoutMode}
+              requireConsent={requireConsent}
+              consentText={consentText}
+              onSubmit={async () => undefined}
+            />
+          </CardContent>
+        </Card>
+      ) : (
+      <>
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Form settings</CardTitle>
@@ -390,6 +417,19 @@ export function FormBuilderPage() {
               </div>
             )}
           </div>
+
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-border/70 p-3">
+            <div>
+              <Label htmlFor="showRegistrationNumber" className="flex items-center gap-2 font-medium">
+                <Hash className="h-4 w-4 text-primary" />
+                Show registration number on the success page
+              </Label>
+              <p className="mt-1 text-xs text-muted-foreground">
+                When off, registrants still get their number by email, but it isn&apos;t displayed after submitting.
+              </p>
+            </div>
+            <Switch id="showRegistrationNumber" checked={showRegistrationNumber} onCheckedChange={setShowRegistrationNumber} />
+          </div>
         </CardContent>
       </Card>
 
@@ -400,8 +440,10 @@ export function FormBuilderPage() {
         <Plus className="h-4 w-4" />
         Add section
       </Button>
+      </>
+      )}
 
-      {editingField && (
+      {canEdit && editingField && (
         <FieldSettingsDialog
           field={editingField}
           otherFields={fields.filter((f) => f.fieldKey !== editingField.fieldKey)}

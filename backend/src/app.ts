@@ -23,6 +23,7 @@ import { idCardRoutes } from "./modules/idcards/routes.js";
 import { publicIdCardRoutes } from "./modules/idcards/publicRoutes.js";
 import { analyticsRoutes } from "./modules/analytics/routes.js";
 import { platformRoutes } from "./modules/platform/routes.js";
+import { publicTicketRoutes, ticketRoutes } from "./modules/tickets/routes.js";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
@@ -108,6 +109,7 @@ export function buildApp() {
       protectedApp.register(formRoutes, { prefix: "/programs" });
       protectedApp.register(registrationRoutes, { prefix: "/programs" });
       protectedApp.register(idCardRoutes, { prefix: "/programs" });
+      protectedApp.register(ticketRoutes, { prefix: "/programs" });
       protectedApp.register(analyticsRoutes, { prefix: "/programs" });
       protectedApp.register(dashboardRoutes, { prefix: "/dashboard" });
       protectedApp.register(auditRoutes, { prefix: "/audit-logs" });
@@ -119,6 +121,7 @@ export function buildApp() {
   app.register(authRoutes, { prefix: "/api/auth" });
   app.register(publicRoutes, { prefix: "/api/public" });
   app.register(publicIdCardRoutes, { prefix: "/api/public" });
+  app.register(publicTicketRoutes, { prefix: "/api/public" });
 
   return app;
 }

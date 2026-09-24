@@ -1,7 +1,11 @@
+import { Readable } from "node:stream";
 import type { FastifyReply, FastifyRequest } from "fastify";
+import { isOwnCloudinaryUrl } from "../../lib/cloudinaryUrl.js";
+import { attachmentDisposition } from "../../lib/downloadName.js";
 import { AppError } from "../../lib/errors.js";
 import { sendSuccess } from "../../lib/response.js";
 import { recordAudit } from "../audit/service.js";
+import * as programsRepo from "../programs/repository.js";
 import { generateCsvExport, generateXlsxExport } from "./exportService.js";
 import * as registrationsService from "./service.js";
 import { exportRegistrationsQuerySchema, listRegistrationsQuerySchema, updateStatusSchema } from "./schemas.js";
@@ -50,7 +54,9 @@ export async function exportRegistrationsHandler(request: FastifyRequest, reply:
   const { programId } = request.params as { programId: string };
   const query = exportRegistrationsQuerySchema.parse(request.query);
   const filters = { status: query.status, search: query.search, dateFrom: query.dateFrom, dateTo: query.dateTo };
-  const timestamp = new Date().toISOString().slice(0, 10);
+  const program = await programsRepo.findProgramById(programId);
+  if (!program) throw AppError.notFound("Program not found");
+  const baseName = `${program.name.replace(/[\\/:*?"<>|]+/g, " ").trim()} ${new Date().toISOString().slice(0, 10)}`;
 
   await recordAudit({
     actorUserId: request.user?.id,
@@ -64,12 +70,30 @@ export async function exportRegistrationsHandler(request: FastifyRequest, reply:
   if (query.format === "xlsx") {
     const buffer = await generateXlsxExport(programId, filters);
     reply.header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    reply.header("Content-Disposition", `attachment; filename="registrations-${timestamp}.xlsx"`);
+    reply.header("Content-Disposition", attachmentDisposition(`${baseName}.xlsx`));
     return reply.send(buffer);
   }
 
   const csv = await generateCsvExport(programId, filters);
   reply.header("Content-Type", "text/csv; charset=utf-8");
-  reply.header("Content-Disposition", `attachment; filename="registrations-${timestamp}.csv"`);
+  reply.header("Content-Disposition", attachmentDisposition(`${baseName}.csv`));
   return reply.send(csv);
+}
+
+export async function downloadRegistrationFileHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { programId, registrationId, fileId } = request.params as {
+    programId: string;
+    registrationId: string;
+    fileId: string;
+  };
+  const file = await registrationsService.getRegistrationFile(programId, registrationId, fileId);
+
+  const upstream = isOwnCloudinaryUrl(file.secureUrl) ? await fetch(file.secureUrl).catch(() => null) : null;
+  if (!upstream?.ok || !upstream.body) throw AppError.notFound("This file is no longer available");
+
+  reply.header("Content-Type", file.mimeType || upstream.headers.get("content-type") || "application/octet-stream");
+  reply.header("Content-Disposition", attachmentDisposition(file.originalFilename));
+  const length = upstream.headers.get("content-length");
+  if (length) reply.header("Content-Length", length);
+  return reply.send(Readable.fromWeb(upstream.body as import("node:stream/web").ReadableStream));
 }

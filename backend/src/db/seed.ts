@@ -2,7 +2,8 @@ import { eq } from "drizzle-orm";
 import { db, pool } from "./client.js";
 import { formFields, formSections, forms, programMembers, programs, tenants, users } from "./schema/index.js";
 import { hashPassword } from "../lib/password.js";
-import { createRegistration, formatRegistrationNumber, nextRegistrationSequence } from "../modules/registrations/repository.js";
+import { createRegistration, nextRegistrationSequence } from "../modules/registrations/repository.js";
+import { formatRegistrationNumber, resolveNumberingConfig } from "../modules/registrations/numbering.js";
 
 async function main() {
   console.log("Seeding database...");
@@ -263,7 +264,7 @@ async function main() {
   await createRegistration({
     programId: bootcamp!.id,
     formId: bootcampForm!.id,
-    registrationNumber: formatRegistrationNumber(year, seq1),
+    registrationNumber: formatRegistrationNumber(resolveNumberingConfig({}), year, seq1),
     applicantName: "Jane Doe",
     applicantEmail: "jane.doe@example.com",
     applicantPhone: "+1-555-0100",
@@ -281,7 +282,7 @@ async function main() {
   await createRegistration({
     programId: bootcamp!.id,
     formId: bootcampForm!.id,
-    registrationNumber: formatRegistrationNumber(year, seq2),
+    registrationNumber: formatRegistrationNumber(resolveNumberingConfig({}), year, seq2),
     applicantName: "John Smith",
     applicantEmail: "john.smith@example.com",
     applicantPhone: "+1-555-0101",
@@ -299,7 +300,7 @@ async function main() {
   await createRegistration({
     programId: leadership!.id,
     formId: leadershipForm!.id,
-    registrationNumber: formatRegistrationNumber(year, seq3),
+    registrationNumber: formatRegistrationNumber(resolveNumberingConfig({}), year, seq3),
     applicantName: "Amara Okafor",
     applicantEmail: "amara.okafor@example.com",
     applicantPhone: null,

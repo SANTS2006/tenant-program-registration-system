@@ -7,8 +7,10 @@ import { Card, CardContent, CardInteractive } from "@/components/ui/card";
 import { ProgramStatusBadge } from "@/components/StatusBadge";
 import { useProgramsList } from "./hooks";
 import { ProgramCreateDialog } from "./ProgramCreateDialog";
+import { useAuth } from "@/app/AuthContext";
 
 export function ProgramsListPage() {
+  const { user } = useAuth();
   const [search, setSearch] = React.useState("");
   const [page, setPage] = React.useState(1);
   const { data, isLoading } = useProgramsList({ page, pageSize: 12, search: search || undefined });
@@ -20,7 +22,7 @@ export function ProgramsListPage() {
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Programs</h1>
           <p className="text-sm text-muted-foreground">Manage every program and its registration form.</p>
         </div>
-        <ProgramCreateDialog />
+        {(user?.role === "admin" || user?.role === "program_admin") && <ProgramCreateDialog />}
       </div>
 
       <div className="relative max-w-sm">

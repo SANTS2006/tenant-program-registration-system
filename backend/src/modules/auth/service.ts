@@ -5,7 +5,12 @@ import { signAccessToken } from "../../lib/jwt.js";
 import { hashPassword, verifyPassword } from "../../lib/password.js";
 import { addDuration, generateOpaqueToken, generateVerificationCode, hashToken } from "../../lib/tokens.js";
 import { sendEmail } from "../email/service.js";
-import { passwordResetEmail, VERIFICATION_CODE_TTL_MINUTES, verificationCodeEmail } from "../email/templates.js";
+import {
+  passwordChangedEmail,
+  passwordResetEmail,
+  VERIFICATION_CODE_TTL_MINUTES,
+  verificationCodeEmail,
+} from "../email/templates.js";
 import type { AuthenticatedUser } from "../users/types.js";
 import * as authRepo from "./repository.js";
 import type {
@@ -274,6 +279,13 @@ export async function resetPassword(input: ResetPasswordInput): Promise<void> {
   await authRepo.updateUserPassword(record.userId, passwordHash);
   await authRepo.markPasswordResetTokenUsed(record.id);
   await authRepo.revokeAllRefreshTokensForUser(record.userId);
+
+  const user = await authRepo.findUserById(record.userId);
+  if (!user) return;
+  // The reset link could only be opened from this inbox, so it also proves the address.
+  if (!user.emailVerifiedAt) await authRepo.markEmailVerified(user.id);
+  const message = passwordChangedEmail({ name: user.name, loginUrl: `${env.APP_URL}/login` });
+  await sendEmail({ to: user.email, toName: user.name, subject: message.subject, html: message.html });
 }
 
 export async function getCurrentUser(userId: string): Promise<AuthenticatedUser> {

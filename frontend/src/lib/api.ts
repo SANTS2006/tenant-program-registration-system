@@ -96,6 +96,20 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   return payload.data as T;
 }
 
+/** Prefers the exact UTF-8 name (RFC 5987 `filename*`) over the ASCII `filename` fallback. */
+function filenameFromDisposition(disposition: string | null): string | null {
+  if (!disposition) return null;
+  const extended = disposition.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
+  if (extended?.[1]) {
+    try {
+      return decodeURIComponent(extended[1].trim());
+    } catch {
+      /* malformed encoding: fall through to the plain name */
+    }
+  }
+  return disposition.match(/filename\s*=\s*"?([^";]+)"?/i)?.[1] ?? null;
+}
+
 /**
  * Downloads a binary response (file export, PDF, ...) from an authenticated endpoint.
  * Plain browser navigation can't carry the Authorization header, so this fetches the
@@ -118,9 +132,7 @@ export async function downloadAuthenticatedFile(path: string, fallbackFilename: 
     throw new ApiError("DOWNLOAD_FAILED", message, response.status);
   }
 
-  const disposition = response.headers.get("content-disposition");
-  const match = disposition?.match(/filename="?([^"]+)"?/);
-  const filename = match?.[1] ?? fallbackFilename;
+  const filename = filenameFromDisposition(response.headers.get("content-disposition")) ?? fallbackFilename;
 
   const blob = await response.blob();
   const url = URL.createObjectURL(blob);

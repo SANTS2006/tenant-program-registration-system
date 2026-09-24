@@ -19,6 +19,7 @@ async function getOrCreateDraft(programId: string): Promise<formsRepo.FormRow> {
     confirmationMessage: published?.confirmationMessage ?? "Thank you for registering!",
     requireConsent: published?.requireConsent ?? false,
     consentText: published?.consentText ?? undefined,
+    showRegistrationNumber: published?.showRegistrationNumber ?? true,
     layoutMode: published?.layoutMode ?? "stepped",
   });
 
@@ -52,30 +53,56 @@ export async function saveDraft(programId: string, input: UpsertFormInput) {
       throw AppError.validation(`Field ${field.fieldKey} references unknown section ${field.sectionKey}`);
     }
   }
+  normalizeDependentOptions(input.fields);
 
-  await formsRepo.updateFormMeta(draft.id, {
+  const form = await formsRepo.updateFormMeta(draft.id, {
     title: input.title,
-    description: input.description,
-    instructions: input.instructions,
-    confirmationMessage: input.confirmationMessage,
+    description: input.description ?? null,
+    instructions: input.instructions ?? null,
+    confirmationMessage: input.confirmationMessage ?? null,
     requireConsent: input.requireConsent,
-    consentText: input.consentText,
+    consentText: input.consentText ?? null,
+    showRegistrationNumber: input.showRegistrationNumber,
     layoutMode: input.layoutMode,
   });
   await formsRepo.replaceDraftContent(draft.id, input.sections, input.fields);
 
   const content = await formsRepo.getContent(draft.id);
-  return {
-    form: {
-      ...draft,
-      title: input.title,
-      description: input.description,
-      requireConsent: input.requireConsent,
-      consentText: input.consentText ?? null,
-      layoutMode: input.layoutMode,
-    },
-    ...content,
-  };
+  return { form, ...content };
+}
+
+const PARENT_CHOICE_TYPES = new Set(["single_choice", "dropdown", "gender", "country"]);
+
+/**
+ * Validates cascading-option links and sets each dependent field's `options` to
+ * the union of all its mapped choices, so validation, analytics and exports can
+ * treat it like any other choice field.
+ */
+function normalizeDependentOptions(fields: UpsertFormInput["fields"]) {
+  const byKey = new Map(fields.map((f) => [f.fieldKey, f]));
+  for (const field of fields) {
+    const dep = field.config.optionsDependOn;
+    if (!dep) continue;
+    const parent = byKey.get(dep.fieldKey);
+    if (!parent || parent.fieldKey === field.fieldKey || !PARENT_CHOICE_TYPES.has(parent.type)) {
+      throw AppError.validation(`"${field.label}" must depend on another single-choice or dropdown field`);
+    }
+
+    // Walk up the chain to reject cycles (A depends on B depends on A).
+    const seen = new Set([field.fieldKey]);
+    let cursor = parent;
+    while (cursor.config.optionsDependOn) {
+      if (seen.has(cursor.fieldKey)) {
+        throw AppError.validation(`"${field.label}" is part of a circular option dependency`);
+      }
+      seen.add(cursor.fieldKey);
+      const next = byKey.get(cursor.config.optionsDependOn.fieldKey);
+      if (!next) break;
+      cursor = next;
+    }
+
+    field.config.options = [...new Set(Object.values(dep.map).flat())];
+  }
 }
 
 export async function publishForm(programId: string) {
@@ -116,6 +143,7 @@ export async function duplicateFormForProgram(sourceProgramId: string, targetPro
     confirmationMessage: source.confirmationMessage ?? undefined,
     requireConsent: source.requireConsent,
     consentText: source.consentText ?? undefined,
+    showRegistrationNumber: source.showRegistrationNumber,
     layoutMode: source.layoutMode,
   });
   await formsRepo.copyFormContent(source.id, draft.id);

@@ -25,10 +25,6 @@ export async function nextRegistrationSequence(programId: string, year: number):
   return row!.nextValue;
 }
 
-export function formatRegistrationNumber(year: number, sequence: number): string {
-  return `REG-${year}-${String(sequence).padStart(6, "0")}`;
-}
-
 interface CreateRegistrationInput {
   programId: string;
   formId: string;
@@ -106,6 +102,15 @@ export async function findRegistrationByNumber(
 
 export async function getRegistrationFiles(registrationId: string) {
   return db.select().from(registrationFiles).where(eq(registrationFiles.registrationId, registrationId));
+}
+
+export async function findRegistrationFile(registrationId: string, fileId: string) {
+  const [row] = await db
+    .select()
+    .from(registrationFiles)
+    .where(and(eq(registrationFiles.id, fileId), eq(registrationFiles.registrationId, registrationId)))
+    .limit(1);
+  return row ?? null;
 }
 
 export async function getRegistrationHistory(registrationId: string) {

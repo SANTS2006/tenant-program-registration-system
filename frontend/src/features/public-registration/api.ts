@@ -18,13 +18,20 @@ export interface SubmitRegistrationResult {
   registrationNumber: string;
   status: string;
   confirmationMessage: string | null;
-  idCardEnabled: boolean;
+  showRegistrationNumber: boolean;
+  idCardAvailable: boolean;
+  ticketAvailable: boolean;
 }
 
-export function submitRegistration(slug: string, responses: Record<string, unknown>, files: UploadedFileInfo[]) {
+export function submitRegistration(
+  slug: string,
+  responses: Record<string, unknown>,
+  files: UploadedFileInfo[],
+  consentAccepted: boolean,
+) {
   return apiFetch<SubmitRegistrationResult>(`/public/programs/${slug}/registrations`, {
     method: "POST",
-    body: { responses, files },
+    body: { responses, files, consentAccepted },
   });
 }
 
@@ -74,7 +81,8 @@ export async function uploadPublicFile(slug: string, fieldKey: string, file: Fil
     url: json.secure_url,
     publicId: json.public_id,
     filename: file.name,
-    mimeType: file.type,
+    // Browsers leave the type empty for some files (e.g. certain .docx on Windows).
+    mimeType: file.type || "application/octet-stream",
     sizeBytes: file.size,
   };
 }

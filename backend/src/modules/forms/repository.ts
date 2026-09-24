@@ -48,13 +48,15 @@ export async function listFormVersions(programId: string): Promise<FormRow[]> {
   return db.select().from(forms).where(eq(forms.programId, programId)).orderBy(desc(forms.version));
 }
 
+// Optional text fields accept null so an admin can clear them (undefined is skipped by drizzle).
 interface FormMetaFields {
   title: string;
-  description?: string;
-  instructions?: string;
-  confirmationMessage?: string;
+  description?: string | null;
+  instructions?: string | null;
+  confirmationMessage?: string | null;
   requireConsent?: boolean;
-  consentText?: string;
+  consentText?: string | null;
+  showRegistrationNumber?: boolean;
   layoutMode?: "stepped" | "single";
 }
 

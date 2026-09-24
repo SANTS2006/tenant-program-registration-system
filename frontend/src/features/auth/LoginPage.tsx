@@ -4,7 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowRight, Eye, EyeOff, Sparkles } from "lucide-react";
+import { ArrowRight, Eye, EyeOff } from "lucide-react";
+import { BrandLogo } from "@/components/BrandLogo";
 import { useAuth } from "@/app/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,9 +104,7 @@ export function LoginPage() {
         <div className="flex flex-col p-6 sm:p-10 lg:p-12">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-base font-semibold">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-brand text-white shadow-glow">
-                <Sparkles className="h-4 w-4" />
-              </span>
+              <BrandLogo className="h-9" />
               <span className="gradient-text">Program Registration</span>
             </div>
             <ThemeToggle />
@@ -156,6 +155,9 @@ export function LoginPage() {
                     </button>
                   </div>
                   {errors.password && <p className="px-2 text-sm text-destructive">{errors.password.message}</p>}
+                  <Link to="/forgot-password" className="self-end px-2 text-sm font-medium text-primary hover:underline">
+                    Forgot password?
+                  </Link>
                 </div>
                 <Button type="submit" disabled={submitting} size="lg" className="mt-2 h-12 rounded-full">
                   {submitting ? "Signing in..." : "Sign in"}

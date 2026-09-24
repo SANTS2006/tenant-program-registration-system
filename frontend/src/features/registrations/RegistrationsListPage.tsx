@@ -80,7 +80,7 @@ export function RegistrationsListPage() {
   const handleExport = async (format: "csv" | "xlsx") => {
     setExporting(format);
     try {
-      await exportRegistrations(program.id, {
+      await exportRegistrations(program.id, program.name, {
         format,
         search: search || undefined,
         status: status === "all" ? undefined : (status as RegistrationStatus),

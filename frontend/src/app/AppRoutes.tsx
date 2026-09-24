@@ -6,6 +6,8 @@ import { ProtectedRoute } from "./ProtectedRoute";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { RegisterPage } from "@/features/auth/RegisterPage";
 import { VerifyEmailPage } from "@/features/auth/VerifyEmailPage";
+import { ForgotPasswordPage } from "@/features/auth/ForgotPasswordPage";
+import { ResetPasswordPage } from "@/features/auth/ResetPasswordPage";
 import { PublicProgramsListPage } from "@/features/public-registration/PublicProgramsListPage";
 import { PublicProgramPage } from "@/features/public-registration/PublicProgramPage";
 import { PublicRegistrationPage } from "@/features/public-registration/PublicRegistrationPage";
@@ -30,6 +32,8 @@ export function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       <Route element={<PublicLayout />}>
         <Route path="/" element={<Navigate to="/programs" replace />} />

@@ -17,6 +17,33 @@ interface ConditionalRule {
 }
 
 const FILE_FIELD_TYPES = new Set(["image_upload", "pdf_upload", "document_upload"]);
+const OTHER_TEXT_MAX_LENGTH = 500;
+
+/** Options like "Other" or "Other (please specify)" ask the registrant to type their own answer. */
+export function isOtherOption(option: string): boolean {
+  return /^other\b/i.test(option.trim());
+}
+
+/** Key under which the free-text answer for a chosen "Other" option is stored. */
+export function otherTextKey(fieldKey: string): string {
+  return `${fieldKey}__other`;
+}
+
+interface OptionsDependOn {
+  fieldKey: string;
+  map: Record<string, string[]>;
+}
+
+/** The options valid for a field right now -- narrowed by its parent's answer for cascading fields. */
+function allowedOptions(field: FieldRow, responses: Record<string, unknown>): string[] | undefined {
+  const config = (field.config as Record<string, unknown>) ?? {};
+  const dep = config.optionsDependOn as OptionsDependOn | undefined;
+  if (dep) {
+    const parentValue = responses[dep.fieldKey];
+    return isEmptyValue(parentValue) ? [] : (dep.map[String(parentValue)] ?? []);
+  }
+  return config.options as string[] | undefined;
+}
 
 function isEmptyValue(value: unknown): boolean {
   return value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
@@ -48,12 +75,21 @@ function isFieldVisible(field: FieldRow, responses: Record<string, unknown>): bo
   return rules.every((rule) => evaluateRule(rule, responses));
 }
 
-function validateFieldValue(field: FieldRow, value: unknown, errors: string[]): unknown {
+function validateFieldValue(
+  field: FieldRow,
+  value: unknown,
+  errors: string[],
+  responses: Record<string, unknown>,
+): unknown {
   const config = (field.config as Record<string, unknown>) ?? {};
   const label = field.label;
 
+  // A cascading field with no choices for the parent's answer (e.g. District "Other")
+  // doesn't apply, so it can't be required.
+  const notApplicable = Boolean(config.optionsDependOn) && (allowedOptions(field, responses)?.length ?? 0) === 0;
+
   if (isEmptyValue(value)) {
-    if (field.required) errors.push(`${label} is required`);
+    if (field.required && !notApplicable) errors.push(`${label} is required`);
     return null;
   }
 
@@ -129,16 +165,17 @@ function validateFieldValue(field: FieldRow, value: unknown, errors: string[]): 
     case "gender":
     case "country": {
       const str = String(value);
-      const options = config.options as string[] | undefined;
-      if (options && options.length > 0 && !options.includes(str)) {
+      const options = allowedOptions(field, responses);
+      const cascading = Boolean(config.optionsDependOn);
+      if (options && (options.length > 0 || cascading) && !options.includes(str)) {
         errors.push(`${label} must be one of the allowed options`);
       }
       return str;
     }
     case "multiple_choice": {
       const arr = Array.isArray(value) ? value.map(String) : [String(value)];
-      const options = config.options as string[] | undefined;
-      if (options && options.length > 0) {
+      const options = allowedOptions(field, responses);
+      if (options && (options.length > 0 || Boolean(config.optionsDependOn))) {
         for (const item of arr) {
           if (!options.includes(item)) errors.push(`${label} contains an invalid option`);
         }
@@ -197,7 +234,18 @@ export function validateAndNormalizeResponses(
       continue;
     }
 
-    cleaned[field.fieldKey] = validateFieldValue(field, rawResponses[field.fieldKey], errors);
+    const value = validateFieldValue(field, rawResponses[field.fieldKey], errors, rawResponses);
+    cleaned[field.fieldKey] = value;
+
+    const chosen = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
+    if (chosen.some((option) => isOtherOption(String(option)))) {
+      const otherText = String(rawResponses[otherTextKey(field.fieldKey)] ?? "").trim();
+      if (!otherText) errors.push(`Please specify your answer for ${field.label}`);
+      else if (otherText.length > OTHER_TEXT_MAX_LENGTH) {
+        errors.push(`${field.label}: your answer must be at most ${OTHER_TEXT_MAX_LENGTH} characters`);
+      }
+      cleaned[otherTextKey(field.fieldKey)] = otherText || null;
+    }
   }
 
   if (errors.length > 0) {
@@ -211,20 +259,32 @@ export function extractApplicantContact(
   fields: FieldRow[],
   responses: Record<string, unknown>,
 ): { name: string | null; email: string | null; phone: string | null } {
-  let name: string | null = null;
   let email: string | null = null;
   let phone: string | null = null;
+  let fullName: string | null = null;
+  let anyName: string | null = null;
+  const parts: { first?: string; middle?: string; last?: string } = {};
 
   for (const field of fields) {
     const value = responses[field.fieldKey];
-    if (value === null || value === undefined) continue;
+    if (value === null || value === undefined || value === "") continue;
 
     if (field.type === "email" && !email) email = String(value);
     if (field.type === "phone" && !phone) phone = String(value);
-    if (!name && field.type === "short_text" && /name/i.test(field.fieldKey)) {
-      name = String(value);
-    }
+    if (field.type !== "short_text") continue;
+
+    const key = field.fieldKey.toLowerCase();
+    const text = String(value).trim();
+    if (!/name/.test(key) || /(org|company|institution|school|employer|contact|emergency|next_of_kin)/.test(key)) continue;
+
+    if (/full_?name|^name$/.test(key)) fullName ??= text;
+    else if (/first|given|fore/.test(key)) parts.first ??= text;
+    else if (/middle|other_?names?/.test(key)) parts.middle ??= text;
+    else if (/last|sur|family/.test(key)) parts.last ??= text;
+    anyName ??= text;
   }
 
-  return { name, email, phone };
+  // Forms often split names (first / middle / last); combine them into one display name.
+  const combined = [parts.first, parts.middle, parts.last].filter(Boolean).join(" ");
+  return { name: fullName ?? (combined || anyName), email, phone };
 }

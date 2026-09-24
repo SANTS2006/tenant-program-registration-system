@@ -1,5 +1,5 @@
 import { apiFetch } from "@/lib/api";
-import type { PaginatedResult, Program } from "@/types/api";
+import type { PaginatedResult, Program, RegistrationNumberConfig } from "@/types/api";
 
 export interface ListProgramsParams {
   page?: number;
@@ -39,7 +39,16 @@ export function createProgram(input: CreateProgramInput) {
   return apiFetch<Program>("/programs", { method: "POST", body: input });
 }
 
-export function updateProgram(programId: string, input: Partial<CreateProgramInput> & { registrationEnabled?: boolean; idCardEnabled?: boolean; thumbnailUrl?: string }) {
+export function updateProgram(
+  programId: string,
+  input: Partial<CreateProgramInput> & {
+    registrationEnabled?: boolean;
+    idCardEnabled?: boolean;
+    ticketEnabled?: boolean;
+    thumbnailUrl?: string;
+    registrationNumberConfig?: RegistrationNumberConfig;
+  },
+) {
   return apiFetch<Program>(`/programs/${programId}`, { method: "PATCH", body: input });
 }
 

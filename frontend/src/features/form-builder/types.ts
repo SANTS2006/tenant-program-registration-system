@@ -30,6 +30,7 @@ export interface EditableFormPayload {
   confirmationMessage?: string;
   requireConsent: boolean;
   consentText?: string;
+  showRegistrationNumber: boolean;
   layoutMode: FormLayoutMode;
   sections: EditableSection[];
   fields: EditableField[];

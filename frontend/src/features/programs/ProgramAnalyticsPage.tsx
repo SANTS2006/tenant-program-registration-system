@@ -4,6 +4,7 @@ import { useProgramOutletContext } from "./ProgramDetailLayout";
 import { useProgramStats } from "../registrations/hooks";
 import { getProgramDemographics, getProgramTrend } from "../analytics/api";
 import { DemographicBarChart, RegistrationTrendChart, StatusPieChart } from "../analytics/charts";
+import { FieldAnalyticsSection } from "../analytics/FieldAnalyticsSection";
 
 export function ProgramAnalyticsPage() {
   const { program } = useProgramOutletContext();
@@ -64,6 +65,8 @@ export function ProgramAnalyticsPage() {
           </Card>
         ))}
       </div>
+
+      <FieldAnalyticsSection programId={program.id} />
     </div>
   );
 }
