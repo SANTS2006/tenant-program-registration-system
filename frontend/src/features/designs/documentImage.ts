@@ -2,7 +2,7 @@ import poppinsRegular from "@fontsource/poppins/files/poppins-latin-400-normal.w
 import poppinsBold from "@fontsource/poppins/files/poppins-latin-700-normal.woff2?url";
 import poppinsItalic from "@fontsource/poppins/files/poppins-latin-400-italic.woff2?url";
 import poppinsBoldItalic from "@fontsource/poppins/files/poppins-latin-700-italic.woff2?url";
-import { ApiError, getAccessToken } from "@/lib/api";
+import { ApiError, downloadAuthenticatedFile, getAccessToken } from "@/lib/api";
 
 export type DocumentKind = "id-card" | "ticket";
 
@@ -76,7 +76,7 @@ async function svgToImage(svg: string, fonts: string): Promise<{ image: HTMLImag
   return { image, width: width * SCALE, height: height * SCALE };
 }
 
-/** Draws the pieces side by side (an ID card's front and back) into one PNG and saves it. */
+/** Draws the pieces side by side into one PNG and saves it. */
 async function savePng(svgs: string[], fileName: string) {
   const fonts = await embeddedFontCss();
   const images = await Promise.all(svgs.map((svg) => svgToImage(svg, fonts)));
@@ -112,21 +112,18 @@ async function savePng(svgs: string[], fileName: string) {
 }
 
 /**
- * Downloads a registrant's ID card (front and back together) or ticket as a PNG named
- * "<Name>-ID-Card-<code>.png" or "<Name>-Ticket-<code>.png".
+ * Downloads a registrant's document: the ID card as a two-page PDF (front and back),
+ * named "<Name>-ID-Card-<code>.pdf", and the ticket as a PNG, "<Name>-Ticket-<code>.png".
  */
-export async function downloadDocumentImage(
+export async function downloadRegistrantDocument(
   kind: DocumentKind,
   basePath: string,
   { authenticated = false }: { authenticated?: boolean } = {},
 ) {
-  if (kind === "ticket") {
-    const ticket = await fetchDocumentSvg(`${basePath}/ticket?format=svg`, authenticated);
-    return savePng([ticket.svg], ticket.fileName);
+  if (kind === "id-card") {
+    // The server names the PDF; the fallback only applies if that header is missing.
+    return downloadAuthenticatedFile(`${basePath}/id-card`, "ID-Card.pdf");
   }
-  const [front, back] = await Promise.all([
-    fetchDocumentSvg(`${basePath}/id-card?format=svg&side=front`, authenticated),
-    fetchDocumentSvg(`${basePath}/id-card?format=svg&side=back`, authenticated),
-  ]);
-  return savePng([front.svg, back.svg], front.fileName);
+  const ticket = await fetchDocumentSvg(`${basePath}/ticket?format=svg`, authenticated);
+  return savePng([ticket.svg], ticket.fileName);
 }

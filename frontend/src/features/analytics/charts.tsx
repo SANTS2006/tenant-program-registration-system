@@ -48,17 +48,30 @@ function formatDateLabel(dateStr: string) {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-export function RegistrationTrendChart({ data, height = 260 }: { data: TrendPoint[]; height?: number }) {
+export function RegistrationTrendChart({
+  data,
+  height = 260,
+  name = "Registrations",
+  color = SEQUENTIAL_BLUE,
+}: {
+  data: TrendPoint[];
+  height?: number;
+  /** Series label in the tooltip, e.g. "Scans". */
+  name?: string;
+  color?: string;
+}) {
   const { ink, grid } = useChartInk();
+  // Unique per chart, so two trend charts on one page keep their own fills.
+  const fillId = `trendFill${React.useId().replace(/:/g, "")}`;
   const chartData = data.map((d) => ({ ...d, label: formatDateLabel(d.date) }));
 
   return (
     <ResponsiveContainer width="100%" height={height}>
       <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
         <defs>
-          <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={SEQUENTIAL_BLUE} stopOpacity={0.35} />
-            <stop offset="100%" stopColor={SEQUENTIAL_BLUE} stopOpacity={0} />
+          <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity={0.35} />
+            <stop offset="100%" stopColor={color} stopOpacity={0} />
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke={grid} vertical={false} />
@@ -68,10 +81,10 @@ export function RegistrationTrendChart({ data, height = 260 }: { data: TrendPoin
         <Area
           type="monotone"
           dataKey="count"
-          name="Registrations"
-          stroke={SEQUENTIAL_BLUE}
+          name={name}
+          stroke={color}
           strokeWidth={2}
-          fill="url(#trendFill)"
+          fill={`url(#${fillId})`}
           activeDot={{ r: 4 }}
         />
       </AreaChart>

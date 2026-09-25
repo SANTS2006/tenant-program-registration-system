@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { DesignSvg } from "../designs/DesignSvg";
-import { downloadDocumentImage, type DocumentKind } from "../designs/documentImage";
+import { downloadRegistrantDocument, type DocumentKind } from "../designs/documentImage";
 import type { SubmitRegistrationResult } from "./api";
 
 function downloadUrl(slug: string, registrationNumber: string, kind: "id-card" | "ticket") {
@@ -49,7 +49,7 @@ export function ConfirmationPage() {
     if (!slug || !result) return;
     setDownloading(kind);
     try {
-      await downloadDocumentImage(
+      await downloadRegistrantDocument(
         kind,
         `/public/programs/${encodeURIComponent(slug)}/registrations/${encodeURIComponent(result.registrationNumber)}`,
       );

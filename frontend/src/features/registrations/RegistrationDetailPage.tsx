@@ -11,7 +11,7 @@ import { ApiError } from "@/lib/api";
 import { useProgramOutletContext } from "../programs/ProgramDetailLayout";
 import { RegistrationVerifications } from "../verifications/VerificationsPage";
 import { isOtherOption, otherTextKey } from "../public-registration/DynamicForm";
-import { downloadDocumentImage } from "../designs/documentImage";
+import { downloadRegistrantDocument } from "../designs/documentImage";
 import { downloadRegistrationFile } from "./api";
 import { useRegistration, useUpdateRegistrationStatus } from "./hooks";
 import type { RegistrationFile, RegistrationStatus } from "@/types/api";
@@ -57,7 +57,7 @@ export function RegistrationDetailPage() {
   const handleDownload = async (kind: "id-card" | "ticket") => {
     setDownloading(kind);
     try {
-      await downloadDocumentImage(kind, `/programs/${program.id}/registrations/${data.registration.id}`, {
+      await downloadRegistrantDocument(kind, `/programs/${program.id}/registrations/${data.registration.id}`, {
         authenticated: true,
       });
     } catch (err) {
