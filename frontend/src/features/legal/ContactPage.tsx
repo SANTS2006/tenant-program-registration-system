@@ -49,7 +49,7 @@ export function ContactPage() {
           </p>
         }
       />
-      <div className="mx-auto grid max-w-5xl gap-5 px-4 py-12 sm:px-6 md:grid-cols-3">
+      <div className="site-container grid gap-5 py-12 md:grid-cols-3">
         {CHANNELS.map((channel) => {
           const content = (
             <>
@@ -79,12 +79,12 @@ export function ContactPage() {
           );
         })}
       </div>
-      <div className="mx-auto max-w-5xl px-4 pb-8 sm:px-6">
+      <div className="site-container pb-8">
         <div id="message" className="scroll-mt-24 rounded-2xl border border-border/70 bg-card p-6 shadow-sm sm:p-8">
           <ContactForm />
         </div>
       </div>
-      <div className="mx-auto max-w-5xl px-4 pb-16 sm:px-6">
+      <div className="site-container pb-16">
         <div className="rounded-2xl border border-border/70 bg-card/60 p-6 text-sm text-muted-foreground">
           <p className="font-semibold text-foreground">
             {COMPANY_NAME}, {COUNTRY}

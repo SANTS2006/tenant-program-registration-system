@@ -156,7 +156,7 @@ export function RegistrationNumberCard({ program }: { program: Program }) {
           <Switch id="regYear" checked={config.includeYear} onCheckedChange={(v) => set({ includeYear: v })} />
         </div>
 
-        <Button onClick={save} disabled={!dirty || updateProgram.isPending} className="w-fit">
+        <Button onClick={save} loading={updateProgram.isPending} disabled={!dirty} className="w-fit">
           {updateProgram.isPending ? "Saving..." : "Save format"}
         </Button>
       </CardContent>

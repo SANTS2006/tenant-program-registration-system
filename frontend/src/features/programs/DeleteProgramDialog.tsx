@@ -1,5 +1,5 @@
 import * as React from "react";
-import { AlertTriangle, Loader2, Trash2 } from "lucide-react";
+import { AlertTriangle, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -62,8 +62,8 @@ export function DeleteProgramDialog({
             <Button variant="outline" onClick={() => setOpen(false)} disabled={deleting}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirm} disabled={deleting}>
-              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+            <Button variant="destructive" onClick={confirm} loading={deleting}>
+              <Trash2 className="h-4 w-4" />
               {deleting ? "Deleting..." : "Delete program"}
             </Button>
           </DialogFooter>

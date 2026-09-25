@@ -1,11 +1,20 @@
 import * as React from "react";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { LayoutDashboard } from "lucide-react";
 import { useAuth } from "@/app/AuthContext";
 import { BrandLogo } from "@/components/BrandLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LinkButton } from "@/components/ui/link-button";
+import { cn } from "@/lib/utils";
 import { SiteFooter } from "./SiteFooter";
+
+const SITE_NAV = [
+  { to: "/", label: "Home" },
+  { to: "/#features", label: "Features" },
+  { to: "/#designs", label: "Designs" },
+  { to: "/#faq", label: "FAQ" },
+  { to: "/contact", label: "Contact" },
+];
 
 /** Header and footer for the website's legal and support pages. */
 export function LegalLayout() {
@@ -20,11 +29,28 @@ export function LegalLayout() {
   return (
     <div className="flex min-h-screen flex-col bg-transparent">
       <header className="sticky top-0 z-40 border-b border-border/70 bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+        <div className="site-container flex h-16 items-center justify-between gap-4">
           <Link to="/" className="flex items-center gap-2 font-semibold tracking-tight">
             <BrandLogo className="h-9" />
             <span className="gradient-text hidden whitespace-nowrap text-lg sm:inline">Program Registration</span>
           </Link>
+          <nav className="hidden items-center gap-1 lg:flex">
+            {SITE_NAV.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end
+                className={({ isActive }) =>
+                  cn(
+                    "whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-colors hover:bg-gradient-brand-soft hover:text-primary",
+                    isActive ? "bg-gradient-brand-soft text-primary" : "text-muted-foreground",
+                  )
+                }
+              >
+                {item.label}
+              </NavLink>
+            ))}
+          </nav>
           <div className="flex items-center gap-2">
             <ThemeToggle />
             {user ? (

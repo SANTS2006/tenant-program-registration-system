@@ -159,7 +159,7 @@ export function ProgramOverviewPage() {
                   <img src={program.thumbnailUrl} alt="" className="mt-2 h-32 w-full rounded-md object-cover" />
                 )}
               </div>
-              <Button type="submit" disabled={!isDirty || updateProgram.isPending} className="w-fit">
+              <Button type="submit" loading={updateProgram.isPending} disabled={!isDirty} className="w-fit">
                 {updateProgram.isPending ? "Saving..." : "Save changes"}
               </Button>
             </form>
@@ -172,42 +172,57 @@ export function ProgramOverviewPage() {
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             {program.status === "draft" && (
-              <Button onClick={() => runAction("Program published", () => publish.mutateAsync(program.id))}>
+              <Button loading={publish.isPending} onClick={() => runAction("Program published", () => publish.mutateAsync(program.id))}>
                 Publish program
               </Button>
             )}
             {program.status === "published" && (
               <>
-                <Button variant="outline" onClick={() => runAction("Program unpublished", () => unpublish.mutateAsync(program.id))}>
+                <Button
+                  variant="outline"
+                  loading={unpublish.isPending}
+                  onClick={() => runAction("Program unpublished", () => unpublish.mutateAsync(program.id))}
+                >
                   Unpublish
                 </Button>
                 {program.registrationEnabled ? (
                   <Button
                     variant="outline"
+                    loading={closeRegistration.isPending}
                     onClick={() => runAction("Registration closed", () => closeRegistration.mutateAsync(program.id))}
                   >
                     Close registration
                   </Button>
                 ) : (
-                  <Button onClick={() => runAction("Registration reopened", () => reopenRegistration.mutateAsync(program.id))}>
+                  <Button
+                    loading={reopenRegistration.isPending}
+                    onClick={() => runAction("Registration reopened", () => reopenRegistration.mutateAsync(program.id))}
+                  >
                     Open registration
                   </Button>
                 )}
               </>
             )}
             {program.status === "closed" && (
-              <Button onClick={() => runAction("Registration reopened", () => reopenRegistration.mutateAsync(program.id))}>
+              <Button
+                loading={reopenRegistration.isPending}
+                onClick={() => runAction("Registration reopened", () => reopenRegistration.mutateAsync(program.id))}
+              >
                 Reopen registration
               </Button>
             )}
             {program.status !== "archived" && (
-              <Button variant="outline" onClick={() => runAction("Program archived", () => archiveProgram.mutateAsync(program.id))}>
+              <Button
+                variant="outline"
+                loading={archiveProgram.isPending}
+                onClick={() => runAction("Program archived", () => archiveProgram.mutateAsync(program.id))}
+              >
                 Archive program
               </Button>
             )}
             <Button
               variant="outline"
-              disabled={duplicateProgram.isPending}
+              loading={duplicateProgram.isPending}
               onClick={async () => {
                 try {
                   const copy = await duplicateProgram.mutateAsync(program.id);

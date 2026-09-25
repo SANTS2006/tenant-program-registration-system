@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, MailCheck } from "lucide-react";
+import { ArrowLeft, MailCheck } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { useAuth } from "@/app/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -138,7 +138,7 @@ export function VerifyEmailPage() {
                   onChange={(e) => setNewEmail(e.target.value)}
                 />
               </div>
-              <Button type="submit" size="lg" className="h-12 rounded-full" disabled={submitting || !newEmail.includes("@")}>
+              <Button type="submit" size="lg" className="h-12 rounded-full" loading={submitting} disabled={!newEmail.includes("@")}>
                 {submitting ? "Sending..." : "Send verification code"}
               </Button>
               <button
@@ -168,10 +168,10 @@ export function VerifyEmailPage() {
               <Button
                 size="lg"
                 className="h-12 rounded-full"
-                disabled={submitting || code.length !== CODE_LENGTH}
+                loading={submitting}
+                disabled={code.length !== CODE_LENGTH}
                 onClick={() => submitCode(code)}
               >
-                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 {submitting ? "Verifying..." : "Verify email"}
               </Button>
 
@@ -204,7 +204,7 @@ export function VerifyEmailPage() {
               type="button"
               onClick={async () => {
                 await logout();
-                navigate("/login", { replace: true });
+                navigate("/", { replace: true });
               }}
               className="text-sm text-muted-foreground hover:text-foreground"
             >

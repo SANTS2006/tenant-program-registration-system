@@ -35,7 +35,7 @@ export function UploadDesignTile({
         <Upload className="h-5 w-5 text-muted-foreground" />
       )}
       <div className="flex flex-wrap items-center justify-center gap-1">
-        <Button variant="outline" size="sm" className="relative h-7 px-2 text-xs" disabled={uploading}>
+        <Button variant="outline" size="sm" className="relative h-7 px-2 text-xs" loading={uploading}>
           {uploading ? "Uploading..." : imageUrl ? "Replace" : "Your own design"}
           <input
             type="file"

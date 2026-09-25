@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { CreditCard, Download, Eye, FileText, Loader2, Ticket as TicketIcon } from "lucide-react";
+import { CreditCard, Download, Eye, FileText, Ticket as TicketIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -99,13 +99,13 @@ export function RegistrationDetailPage() {
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
               {program.idCardEnabled && (
-                <Button variant="outline" size="sm" onClick={() => handleDownload("id-card")} disabled={downloading !== null}>
+                <Button variant="outline" size="sm" onClick={() => handleDownload("id-card")} loading={downloading === "id-card"} disabled={downloading !== null}>
                   <CreditCard className="h-4 w-4" />
                   {downloading === "id-card" ? "Preparing..." : "ID Card"}
                 </Button>
               )}
               {program.ticketEnabled && (
-                <Button variant="outline" size="sm" onClick={() => handleDownload("ticket")} disabled={downloading !== null}>
+                <Button variant="outline" size="sm" onClick={() => handleDownload("ticket")} loading={downloading === "ticket"} disabled={downloading !== null}>
                   <TicketIcon className="h-4 w-4" />
                   {downloading === "ticket" ? "Preparing..." : "Ticket"}
                 </Button>
@@ -160,7 +160,7 @@ export function RegistrationDetailPage() {
               </SelectContent>
             </Select>
             <Textarea placeholder="Optional note" value={note} onChange={(e) => setNote(e.target.value)} rows={3} />
-            <Button onClick={handleUpdateStatus} disabled={!nextStatus || updateStatus.isPending}>
+            <Button onClick={handleUpdateStatus} loading={updateStatus.isPending} disabled={!nextStatus}>
               {updateStatus.isPending ? "Updating..." : "Update status"}
             </Button>
           </CardContent>
@@ -259,7 +259,7 @@ function FileRow({ file, onDownload }: { file: RegistrationFile; onDownload: (fi
       <Button
         variant="outline"
         size="sm"
-        disabled={busy}
+        loading={busy}
         aria-label={`Download ${file.originalFilename}`}
         onClick={async () => {
           setBusy(true);
@@ -270,7 +270,7 @@ function FileRow({ file, onDownload }: { file: RegistrationFile; onDownload: (fi
           }
         }}
       >
-        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+        <Download className="h-4 w-4" />
         Download
       </Button>
     </div>

@@ -278,3 +278,12 @@
     transform: rotateY(-360deg);
   }
 }
+
+/* The public website spans 90% of the window, whatever its size. */
+@layer components {
+  .site-container {
+    width: 90%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}

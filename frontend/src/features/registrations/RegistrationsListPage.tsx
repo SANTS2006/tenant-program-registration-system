@@ -131,6 +131,7 @@ export function RegistrationsListPage() {
           <Button
             variant="outline"
             size="sm"
+            loading={exporting === "csv"}
             disabled={exporting !== null}
             onClick={() => handleExport("csv")}
           >
@@ -140,6 +141,7 @@ export function RegistrationsListPage() {
           <Button
             variant="outline"
             size="sm"
+            loading={exporting === "xlsx"}
             disabled={exporting !== null}
             onClick={() => handleExport("xlsx")}
           >

@@ -17,7 +17,7 @@ export function PageHero({ eyebrow, title, intro }: { eyebrow: string; title: st
   return (
     <section className="relative overflow-hidden border-b border-border/70">
       <div className="pointer-events-none absolute -top-32 left-1/2 h-72 w-[720px] -translate-x-1/2 rounded-full bg-gradient-brand opacity-[0.12] blur-3xl" />
-      <div className="relative mx-auto flex max-w-4xl flex-col gap-3 px-4 py-14 sm:px-6 sm:py-16">
+      <div className="site-container relative flex flex-col gap-3 py-14 sm:py-16">
         <span className="w-fit rounded-full bg-gradient-brand-soft px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
           {eyebrow}
         </span>
@@ -45,7 +45,7 @@ export function LegalDocument({
   return (
     <>
       <PageHero eyebrow="Legal" title={title} intro={<p>Last updated: {LEGAL_LAST_UPDATED}</p>} />
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[240px_1fr]">
+      <div className="site-container grid gap-10 py-12 lg:grid-cols-[240px_1fr]">
         <aside className="lg:sticky lg:top-24 lg:self-start">
           <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">On this page</p>
           <ol className="flex flex-col gap-1.5 text-sm">
@@ -67,7 +67,7 @@ export function LegalDocument({
           </div>
         </aside>
 
-        <article className="flex max-w-3xl flex-col gap-10">
+        <article className="flex flex-col gap-10">
           <div className={prose}>{intro}</div>
           {sections.map((section, i) => (
             <section key={section.id} id={section.id} className="scroll-mt-24">

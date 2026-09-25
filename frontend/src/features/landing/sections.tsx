@@ -455,7 +455,7 @@ const FAQS = [
 
 export function Faq() {
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-3">
+    <div className="grid items-start gap-3 lg:grid-cols-2">
       {FAQS.map((item, i) => (
         <Reveal key={item.q} delay={i * 70}>
         <details

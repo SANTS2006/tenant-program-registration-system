@@ -76,7 +76,7 @@ export function ReportPage() {
           </p>
         }
       />
-      <div className="mx-auto grid max-w-5xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[1fr_280px]">
+      <div className="site-container grid gap-8 py-12 lg:grid-cols-[1fr_280px]">
         <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-sm sm:p-8">
           {sent ? (
             <div className="flex flex-col items-center gap-4 py-8 text-center">
@@ -159,7 +159,7 @@ export function ReportPage() {
                 .
               </p>
 
-              <Button type="submit" disabled={isSubmitting} className="w-fit">
+              <Button type="submit" loading={isSubmitting} className="w-fit">
                 <Send className="h-4 w-4" />
                 {isSubmitting ? "Sending..." : "Send report"}
               </Button>

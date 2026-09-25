@@ -102,7 +102,7 @@ function CreateUserDialog() {
             </select>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={createUser.isPending}>
+            <Button type="submit" loading={createUser.isPending}>
               {createUser.isPending ? "Creating..." : "Create user"}
             </Button>
           </DialogFooter>

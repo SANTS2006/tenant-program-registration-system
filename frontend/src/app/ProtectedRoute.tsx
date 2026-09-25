@@ -3,7 +3,7 @@ import { useAuth } from "./AuthContext";
 import type { UserRole } from "@/types/api";
 
 export function ProtectedRoute({ roles }: { roles?: UserRole[] }) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, logoutRedirect } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -15,6 +15,9 @@ export function ProtectedRoute({ roles }: { roles?: UserRole[] }) {
   }
 
   if (!user) {
+    // After signing out on purpose, go where the sign-out asked (the website);
+    // otherwise (an expired session, a bookmarked link) ask the visitor to sign in.
+    if (logoutRedirect) return <Navigate to={logoutRedirect} replace />;
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

@@ -76,6 +76,7 @@ export function TenantDetailPage() {
                     <Button
                       size="sm"
                       variant={user.status === "active" ? "outline" : "default"}
+                      loading={updateStatus.isPending && updateStatus.variables?.userId === user.id}
                       disabled={updateStatus.isPending}
                       onClick={() => toggleStatus(user.id, user.name, user.status)}
                     >

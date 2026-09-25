@@ -102,7 +102,7 @@ export function ContactForm() {
         </Link>
         .
       </p>
-      <Button type="submit" disabled={isSubmitting} className="w-fit">
+      <Button type="submit" loading={isSubmitting} className="w-fit">
         <Send className="h-4 w-4" />
         {isSubmitting ? "Sending..." : "Send message"}
       </Button>

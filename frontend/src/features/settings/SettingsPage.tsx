@@ -99,7 +99,7 @@ function ChangeEmailSection({ currentEmail }: { currentEmail: string }) {
             We&apos;ll email a 6-character code to the new address. Your email only changes once you confirm it.
           </p>
           <div className="flex gap-2">
-            <Button type="button" onClick={sendCode} disabled={busy || !newEmail.includes("@")}>
+            <Button type="button" onClick={sendCode} loading={busy} disabled={!newEmail.includes("@")}>
               {busy ? "Sending..." : "Send code"}
             </Button>
             <Button type="button" variant="ghost" onClick={reset} disabled={busy}>
@@ -117,7 +117,7 @@ function ChangeEmailSection({ currentEmail }: { currentEmail: string }) {
           </p>
           <CodeInput value={code} onChange={setCode} onComplete={confirm} disabled={busy} autoFocus />
           <div className="flex flex-wrap items-center gap-2">
-            <Button type="button" onClick={() => confirm(code)} disabled={busy || code.length !== 6}>
+            <Button type="button" onClick={() => confirm(code)} loading={busy} disabled={code.length !== 6}>
               {busy ? "Verifying..." : "Confirm new email"}
             </Button>
             <Button type="button" variant="ghost" onClick={reset} disabled={busy}>
@@ -199,7 +199,8 @@ export function SettingsPage() {
       await changePassword({ currentPassword: values.currentPassword, newPassword: values.newPassword });
       toast.success("Password changed. Please log in again.");
       passwordForm.reset();
-      await logout();
+      // The new password has to be used straight away, so this sign-out goes to the sign-in page.
+      await logout({ redirectTo: "/login" });
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Failed to change password");
     }
@@ -245,7 +246,7 @@ export function SettingsPage() {
                   <p className="text-sm text-destructive">{profileForm.formState.errors.name.message}</p>
                 )}
               </div>
-              <Button type="submit" disabled={!profileForm.formState.isDirty || profileForm.formState.isSubmitting} className="w-fit">
+              <Button type="submit" loading={profileForm.formState.isSubmitting} disabled={!profileForm.formState.isDirty} className="w-fit">
                 Save profile
               </Button>
             </form>
@@ -285,7 +286,7 @@ export function SettingsPage() {
                   <p className="text-sm text-destructive">{passwordForm.formState.errors.confirmPassword.message}</p>
                 )}
               </div>
-              <Button type="submit" variant="destructive" disabled={passwordForm.formState.isSubmitting} className="w-fit">
+              <Button type="submit" variant="destructive" loading={passwordForm.formState.isSubmitting} className="w-fit">
                 Change password
               </Button>
             </form>

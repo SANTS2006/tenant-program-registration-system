@@ -112,7 +112,8 @@ export function ResetPasswordPage() {
           type="submit"
           size="lg"
           className="h-12 rounded-full"
-          disabled={submitting || password.length < MIN_LENGTH || password !== confirm}
+          loading={submitting}
+          disabled={password.length < MIN_LENGTH || password !== confirm}
         >
           {submitting ? "Saving..." : "Save new password"}
         </Button>

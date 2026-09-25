@@ -539,7 +539,7 @@ export function DynamicForm({
         )}
 
         {isSingle || isLastStep ? (
-          <Button type="submit" disabled={submitting}>
+          <Button type="submit" loading={submitting}>
             {submitting ? "Submitting..." : (submitLabel ?? "Submit registration")}
           </Button>
         ) : (

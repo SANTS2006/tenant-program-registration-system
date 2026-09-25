@@ -328,11 +328,11 @@ export function FormBuilderPage() {
           </Button>
           {canEdit && (
             <>
-              <Button variant="outline" onClick={handleSave} disabled={saving}>
+              <Button variant="outline" onClick={handleSave} loading={saving}>
                 <Save className="h-4 w-4" />
                 {saving ? "Saving..." : "Save Draft"}
               </Button>
-              <Button onClick={handlePublish} disabled={publishing || fields.length === 0}>
+              <Button onClick={handlePublish} loading={publishing} disabled={fields.length === 0}>
                 <UploadCloud className="h-4 w-4" />
                 {publishing ? "Publishing..." : "Publish"}
               </Button>

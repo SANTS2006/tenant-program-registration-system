@@ -105,7 +105,7 @@ export function ProgramCreateDialog() {
             <Textarea id="description" rows={4} {...register("description")} />
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={createProgram.isPending}>
+            <Button type="submit" loading={createProgram.isPending}>
               {createProgram.isPending ? "Creating..." : "Create program"}
             </Button>
           </DialogFooter>

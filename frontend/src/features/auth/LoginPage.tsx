@@ -5,6 +5,7 @@ import { z } from "zod";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
+import { BackToWebsiteButton } from "@/components/BackToWebsiteButton";
 import { BrandLogo } from "@/components/BrandLogo";
 import { useAuth } from "@/app/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -103,11 +104,14 @@ export function LoginPage() {
         {/* Form panel */}
         <div className="flex flex-col p-6 sm:p-10 lg:p-12">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-base font-semibold">
+            <Link to="/" className="flex items-center gap-2 text-base font-semibold">
               <BrandLogo className="h-9" />
-              <span className="gradient-text">Program Registration</span>
+              <span className="gradient-text hidden whitespace-nowrap sm:inline">Program Registration</span>
+            </Link>
+            <div className="flex items-center gap-2">
+              <BackToWebsiteButton />
+              <ThemeToggle />
             </div>
-            <ThemeToggle />
           </div>
 
           <div className="flex flex-1 items-center justify-center py-8">
@@ -159,7 +163,7 @@ export function LoginPage() {
                     Forgot password?
                   </Link>
                 </div>
-                <Button type="submit" disabled={submitting} size="lg" className="mt-2 h-12 rounded-full">
+                <Button type="submit" loading={submitting} size="lg" className="mt-2 h-12 rounded-full">
                   {submitting ? "Signing in..." : "Sign in"}
                   {!submitting && <ArrowRight className="h-4 w-4" />}
                 </Button>

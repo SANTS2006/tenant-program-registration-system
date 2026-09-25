@@ -17,7 +17,10 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (input: RegisterInput) => Promise<void>;
-  logout: () => Promise<void>;
+  /** Signs out; protected pages then send the visitor to `redirectTo` (the website by default). */
+  logout: (options?: { redirectTo?: string }) => Promise<void>;
+  /** Where a protected page should go after a deliberate sign-out, instead of the sign-in page. */
+  logoutRedirect: string | null;
   updateLocalUser: (patch: Partial<AuthUser>) => void;
 }
 
@@ -26,6 +29,7 @@ const AuthContext = React.createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = React.useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [logoutRedirect, setLogoutRedirect] = React.useState<string | null>(null);
   const queryClient = useQueryClient();
 
   React.useEffect(() => {
@@ -57,6 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // previously logged-in account must never leak into this session.
       queryClient.clear();
       setAccessToken(data.accessToken);
+      setLogoutRedirect(null);
       setUser(data.user);
     },
     [queryClient],
@@ -71,27 +76,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       queryClient.clear();
       setAccessToken(data.accessToken);
+      setLogoutRedirect(null);
       setUser(data.user);
     },
     [queryClient],
   );
 
-  const logout = React.useCallback(async () => {
-    try {
-      await apiFetch("/auth/logout", { method: "POST" });
-    } finally {
-      setAccessToken(null);
-      setUser(null);
-      queryClient.clear();
-    }
-  }, [queryClient]);
+  const logout = React.useCallback(
+    async ({ redirectTo = "/" }: { redirectTo?: string } = {}) => {
+      try {
+        await apiFetch("/auth/logout", { method: "POST" });
+      } finally {
+        setAccessToken(null);
+        setLogoutRedirect(redirectTo);
+        setUser(null);
+        queryClient.clear();
+      }
+    },
+    [queryClient],
+  );
 
   const updateLocalUser = React.useCallback((patch: Partial<AuthUser>) => {
     setUser((u) => (u ? { ...u, ...patch } : u));
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout, updateLocalUser }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, logout, logoutRedirect, updateLocalUser }}>
       {children}
     </AuthContext.Provider>
   );

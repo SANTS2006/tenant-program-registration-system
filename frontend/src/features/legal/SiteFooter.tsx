@@ -16,7 +16,7 @@ const linkClass = "text-muted-foreground transition-colors hover:text-primary";
 export function SiteFooter() {
   return (
     <footer className="border-t border-border/70 bg-card/40">
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:grid-cols-2 sm:px-6 lg:grid-cols-[1.5fr_1fr_1fr_1fr_1.2fr]">
+      <div className="site-container grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr_1.2fr]">
         <div className="flex flex-col gap-3">
           <Link to="/" className="flex items-center gap-2 font-semibold">
             <BrandLogo className="h-9" />

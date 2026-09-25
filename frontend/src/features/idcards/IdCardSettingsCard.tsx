@@ -129,7 +129,7 @@ export function ImagePickerField({
       <Label>{label}</Label>
       <div className="flex items-center gap-3">
         {value && <img src={value} alt="" className="h-10 w-16 rounded-md border border-border object-contain p-1" />}
-        <Button variant="outline" size="sm" className="relative" disabled={uploading}>
+        <Button variant="outline" size="sm" className="relative" loading={uploading}>
           {value ? <ImagePlus className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
           {uploading ? "Uploading..." : value ? "Replace" : "Upload"}
           <input
@@ -458,7 +458,7 @@ export function IdCardSettingsCard({ program }: { program: Program }) {
               thing="ID card"
             />
 
-            <Button onClick={handleSave} disabled={updateConfig.isPending} className="w-fit">
+            <Button onClick={handleSave} loading={updateConfig.isPending} className="w-fit">
               {updateConfig.isPending ? "Saving..." : "Save ID card design"}
             </Button>
           </div>

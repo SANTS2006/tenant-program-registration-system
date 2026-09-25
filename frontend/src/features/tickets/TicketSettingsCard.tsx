@@ -340,7 +340,7 @@ export function TicketSettingsCard({ program }: { program: Program }) {
             thing="ticket"
           />
 
-          <Button onClick={handleSave} disabled={updateConfig.isPending} className="w-fit">
+          <Button onClick={handleSave} loading={updateConfig.isPending} className="w-fit">
             {updateConfig.isPending ? "Saving..." : "Save ticket design"}
           </Button>
         </CardContent>
