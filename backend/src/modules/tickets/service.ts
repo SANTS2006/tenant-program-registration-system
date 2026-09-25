@@ -9,6 +9,7 @@ import {
   resolveExtraFields,
   verifyUrlFor,
   type GeneratedDocument,
+  type RenderedImage,
 } from "../idcards/service.js";
 import * as programsRepo from "../programs/repository.js";
 import type * as registrationsRepo from "../registrations/repository.js";
@@ -42,6 +43,10 @@ function formatProgramDate(program: programsRepo.ProgramRow): string | undefined
   if (!start) return undefined;
   const end = cardDate(program.endDate);
   return !end || start === end ? start : `${start} - ${end}`;
+}
+
+export function ticketFileName(registration: registrationsRepo.RegistrationRow, extension: "pdf" | "png") {
+  return participantFileName(registration.applicantName, `ticket:${registration.id}`, extension, "Ticket");
 }
 
 async function renderProgramTicket(program: programsRepo.ProgramRow, registration: registrationsRepo.RegistrationRow) {
@@ -87,7 +92,7 @@ async function buildTicketPdf(
 ): Promise<GeneratedDocument> {
   const svg = await renderProgramTicket(program, registration);
   const pdf = await svgPagesToPdf([svg], TICKET_WIDTH_PT, TICKET_HEIGHT_PT);
-  return { pdf, fileName: participantFileName(registration.applicantName, `ticket:${registration.id}`) };
+  return { pdf, fileName: ticketFileName(registration, "pdf") };
 }
 
 async function publicRegistrationWithTicket(slug: string, registrationNumber: string) {
@@ -106,12 +111,12 @@ export async function generateForPublicRegistration(slug: string, registrationNu
   return buildTicketPdf(program, registration);
 }
 
-export async function svgForRegistrationInProgram(programId: string, registrationId: string) {
+export async function svgForRegistrationInProgram(programId: string, registrationId: string): Promise<RenderedImage> {
   const { program, registration } = await findAdminRegistration(programId, registrationId);
-  return renderProgramTicket(program, registration);
+  return { svg: await renderProgramTicket(program, registration), fileName: ticketFileName(registration, "png") };
 }
 
-export async function svgForPublicRegistration(slug: string, registrationNumber: string) {
+export async function svgForPublicRegistration(slug: string, registrationNumber: string): Promise<RenderedImage> {
   const { program, registration } = await publicRegistrationWithTicket(slug, registrationNumber);
-  return renderProgramTicket(program, registration);
+  return { svg: await renderProgramTicket(program, registration), fileName: ticketFileName(registration, "png") };
 }

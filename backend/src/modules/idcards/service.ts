@@ -7,6 +7,7 @@ import * as programsRepo from "../programs/repository.js";
 import { getProgramRole } from "../programs/access.js";
 import * as registrationsRepo from "../registrations/repository.js";
 import type { AuthenticatedUser } from "../users/types.js";
+import { resolveTicketConfig } from "../tickets/schemas.js";
 import * as verificationsRepo from "../verifications/repository.js";
 import type { VerificationDocument } from "../verifications/repository.js";
 import {
@@ -99,6 +100,10 @@ export async function updateConfig(programId: string, config: IdCardConfig) {
   return resolveIdCardConfig(updated.idCardConfig);
 }
 
+export function idCardFileName(registration: registrationsRepo.RegistrationRow, extension: "pdf" | "png") {
+  return participantFileName(registration.applicantName, `id-card:${registration.id}`, extension, "ID Card");
+}
+
 async function renderCard(program: programsRepo.ProgramRow, registration: registrationsRepo.RegistrationRow) {
   if (!program.idCardEnabled) throw AppError.conflict("ID cards are not enabled for this program");
 
@@ -152,7 +157,7 @@ async function buildCardPdf(
 ): Promise<GeneratedDocument> {
   const { front, back } = await renderCard(program, registration);
   const pdf = await svgPagesToPdf([front, back], CARD_WIDTH_PT, CARD_HEIGHT_PT);
-  return { pdf, fileName: participantFileName(registration.applicantName, `id-card:${registration.id}`) };
+  return { pdf, fileName: idCardFileName(registration, "pdf") };
 }
 
 async function publicRegistrationWithCard(slug: string, registrationNumber: string) {
@@ -172,14 +177,28 @@ export async function generateForPublicRegistration(slug: string, registrationNu
   return buildCardPdf(program, registration);
 }
 
-export async function svgForRegistrationInProgram(programId: string, registrationId: string, side: DocumentSide) {
-  const { program, registration } = await findAdminRegistration(programId, registrationId);
-  return (await renderCard(program, registration))[side];
+export interface RenderedImage {
+  svg: string;
+  /** What the image should be saved as, e.g. "Name-ID-Card-CODE.png". */
+  fileName: string;
 }
 
-export async function svgForPublicRegistration(slug: string, registrationNumber: string, side: DocumentSide) {
+export async function svgForRegistrationInProgram(
+  programId: string,
+  registrationId: string,
+  side: DocumentSide,
+): Promise<RenderedImage> {
+  const { program, registration } = await findAdminRegistration(programId, registrationId);
+  return { svg: (await renderCard(program, registration))[side], fileName: idCardFileName(registration, "png") };
+}
+
+export async function svgForPublicRegistration(
+  slug: string,
+  registrationNumber: string,
+  side: DocumentSide,
+): Promise<RenderedImage> {
   const { program, registration } = await publicRegistrationWithCard(slug, registrationNumber);
-  return (await renderCard(program, registration))[side];
+  return { svg: (await renderCard(program, registration))[side], fileName: idCardFileName(registration, "png") };
 }
 
 export interface VerificationResult {
@@ -191,6 +210,8 @@ export interface VerificationResult {
   documentType: VerificationDocument;
   verifiedAt: string;
   scannedByTeamMember: boolean;
+  details: { label: string; value: string }[];
+  submittedAt: string;
 }
 
 export interface VerificationContext {
@@ -215,16 +236,28 @@ export async function verifyRegistration(
   // Only credit the scan to a signed-in person who is on this program's team.
   const verifiedBy = context.user && (await getProgramRole(context.user, program.id)) ? context.user.id : null;
 
-  await verificationsRepo.recordVerification({
-    programId: program.id,
-    registrationId: registration.id,
-    documentType: context.documentType,
-    valid,
-    registrationStatus: registration.status,
-    verifiedBy,
-    ipAddress: context.ipAddress,
-    userAgent: context.userAgent?.slice(0, 400),
-  });
+  try {
+    await verificationsRepo.recordVerification({
+      programId: program.id,
+      registrationId: registration.id,
+      documentType: context.documentType,
+      valid,
+      registrationStatus: registration.status,
+      verifiedBy,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent?.slice(0, 400),
+    });
+  } catch (err) {
+    // The check itself succeeded; a logging problem must not turn it into "not found".
+    console.error("Could not record verification:", err);
+  }
+
+  // The same details the scanned document prints, so the checker can compare them.
+  const visibleFields =
+    context.documentType === "ticket" || (context.documentType === "link" && !program.idCardEnabled)
+      ? resolveTicketConfig(program.ticketConfig).visibleFields
+      : resolveIdCardConfig(program.idCardConfig).visibleFields;
+  const details = await resolveExtraFields(registration, visibleFields).catch(() => []);
 
   return {
     registrationNumber: registration.registrationNumber,
@@ -235,5 +268,7 @@ export async function verifyRegistration(
     documentType: context.documentType,
     verifiedAt: new Date().toISOString(),
     scannedByTeamMember: Boolean(verifiedBy),
+    details,
+    submittedAt: registration.submittedAt.toISOString(),
   };
 }

@@ -75,20 +75,6 @@ export function exportRegistrations(programId: string, programName: string, para
   return downloadAuthenticatedFile(`/programs/${programId}/registrations/export${query}`, fallbackName);
 }
 
-export function downloadIdCard(programId: string, registrationId: string, registrationNumber: string) {
-  return downloadAuthenticatedFile(
-    `/programs/${programId}/registrations/${registrationId}/id-card`,
-    `id-card-${registrationNumber}.pdf`,
-  );
-}
-
-export function downloadTicket(programId: string, registrationId: string, registrationNumber: string) {
-  return downloadAuthenticatedFile(
-    `/programs/${programId}/registrations/${registrationId}/ticket`,
-    `ticket-${registrationNumber}.pdf`,
-  );
-}
-
 export function downloadRegistrationFile(programId: string, registrationId: string, file: RegistrationFile) {
   return downloadAuthenticatedFile(
     `/programs/${programId}/registrations/${registrationId}/files/${file.id}/download`,

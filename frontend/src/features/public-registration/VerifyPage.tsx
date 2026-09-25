@@ -82,6 +82,18 @@ export function VerifyPage() {
             <span className="text-muted-foreground">Status: </span>
             <span className="font-medium capitalize">{data.status.replace("_", " ")}</span>
           </p>
+          {data.details.map((detail) => (
+            <p key={detail.label}>
+              <span className="text-muted-foreground">{detail.label}: </span>
+              <span className="font-medium">{detail.value}</span>
+            </p>
+          ))}
+          <p>
+            <span className="text-muted-foreground">Registered: </span>
+            <span className="font-medium">
+              {new Date(data.submittedAt).toLocaleDateString(undefined, { dateStyle: "medium" })}
+            </span>
+          </p>
         </div>
         {data.scannedByTeamMember && (
           <p className="mt-2 flex items-center gap-1.5 rounded-lg bg-gradient-brand-soft px-3 py-2 text-xs font-medium text-primary">

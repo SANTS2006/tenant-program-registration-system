@@ -11,7 +11,8 @@ import { ApiError } from "@/lib/api";
 import { useProgramOutletContext } from "../programs/ProgramDetailLayout";
 import { RegistrationVerifications } from "../verifications/VerificationsPage";
 import { isOtherOption, otherTextKey } from "../public-registration/DynamicForm";
-import { downloadIdCard, downloadRegistrationFile, downloadTicket } from "./api";
+import { downloadDocumentImage } from "../designs/documentImage";
+import { downloadRegistrationFile } from "./api";
 import { useRegistration, useUpdateRegistrationStatus } from "./hooks";
 import type { RegistrationFile, RegistrationStatus } from "@/types/api";
 
@@ -56,8 +57,9 @@ export function RegistrationDetailPage() {
   const handleDownload = async (kind: "id-card" | "ticket") => {
     setDownloading(kind);
     try {
-      const download = kind === "id-card" ? downloadIdCard : downloadTicket;
-      await download(program.id, data.registration.id, data.registration.registrationNumber);
+      await downloadDocumentImage(kind, `/programs/${program.id}/registrations/${data.registration.id}`, {
+        authenticated: true,
+      });
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : `Failed to download the ${kind === "id-card" ? "ID card" : "ticket"}`);
     } finally {

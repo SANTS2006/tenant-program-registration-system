@@ -15,8 +15,10 @@ export function wantsSvg(request: FastifyRequest): { svg: boolean; side: idCardS
   return { svg: format === "svg", side: side === "back" ? "back" : "front" };
 }
 
-export function sendSvg(reply: FastifyReply, svg: string) {
+export function sendSvg(reply: FastifyReply, { svg, fileName }: idCardService.RenderedImage) {
   reply.header("Content-Type", "image/svg+xml; charset=utf-8");
+  // The name the browser should give the image when it's saved as a PNG.
+  reply.header("X-Download-Name", encodeURIComponent(fileName));
   reply.header("Cache-Control", "private, max-age=60");
   // Opened on its own, the image may only show itself: no scripts, no outside requests.
   reply.header("Content-Security-Policy", "default-src 'none'; img-src data:; style-src 'unsafe-inline'");

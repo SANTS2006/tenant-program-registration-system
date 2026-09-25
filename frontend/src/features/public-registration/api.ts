@@ -40,6 +40,9 @@ export interface VerificationResult {
   documentType: "id_card" | "ticket" | "link";
   verifiedAt: string;
   scannedByTeamMember: boolean;
+  /** The details printed on the scanned card or ticket. */
+  details: { label: string; value: string }[];
+  submittedAt: string;
 }
 
 export function verifyRegistration(slug: string, registrationNumber: string, doc?: string | null) {

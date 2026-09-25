@@ -10,6 +10,7 @@ import { RegistrationStatusBadge } from "@/components/StatusBadge";
 import { StatCard } from "@/components/StatCard";
 import { useProgramOutletContext } from "../programs/ProgramDetailLayout";
 import { DOCUMENT_LABELS, useVerifications, type Verification, type VerificationDocument } from "./api";
+import { QrScannerDialog } from "./QrScannerDialog";
 
 export function DocumentBadge({ type }: { type: VerificationDocument }) {
   const Icon = type === "ticket" ? Ticket : type === "id_card" ? CreditCard : QrCode;
@@ -36,6 +37,7 @@ export function VerificationsPage() {
   const [documentType, setDocumentType] = React.useState("all");
   const [result, setResult] = React.useState("all");
   const [page, setPage] = React.useState(1);
+  const [scannerOpen, setScannerOpen] = React.useState(false);
 
   const { data, isLoading } = useVerifications(program.id, {
     page,
@@ -116,7 +118,18 @@ export function VerificationsPage() {
           </SelectContent>
         </Select>
         <span className="text-sm text-muted-foreground">{data?.total ?? 0} scans</span>
+        <Button className="ml-auto" onClick={() => setScannerOpen(true)}>
+          <ScanLine className="h-4 w-4" />
+          Scan QR code
+        </Button>
       </div>
+
+      <QrScannerDialog
+        open={scannerOpen}
+        onOpenChange={setScannerOpen}
+        programId={program.id}
+        programSlug={program.slug}
+      />
 
       <div className="overflow-x-auto rounded-xl border border-border/70 bg-card/60 backdrop-blur-sm">
         <Table>

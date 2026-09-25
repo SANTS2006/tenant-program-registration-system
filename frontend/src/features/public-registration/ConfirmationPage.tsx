@@ -1,10 +1,12 @@
 import * as React from "react";
-import { CheckCircle2, IdCard, Printer, Ticket } from "lucide-react";
+import { toast } from "sonner";
+import { CheckCircle2, IdCard, Ticket } from "lucide-react";
 import { useLocation, useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { DesignSvg } from "../designs/DesignSvg";
+import { downloadDocumentImage, type DocumentKind } from "../designs/documentImage";
 import type { SubmitRegistrationResult } from "./api";
 
 function downloadUrl(slug: string, registrationNumber: string, kind: "id-card" | "ticket") {
@@ -41,6 +43,22 @@ export function ConfirmationPage() {
   const { slug } = useParams<{ slug: string }>();
   const location = useLocation();
   const result = location.state as SubmitRegistrationResult | undefined;
+  const [downloading, setDownloading] = React.useState<DocumentKind | null>(null);
+
+  const download = async (kind: DocumentKind) => {
+    if (!slug || !result) return;
+    setDownloading(kind);
+    try {
+      await downloadDocumentImage(
+        kind,
+        `/public/programs/${encodeURIComponent(slug)}/registrations/${encodeURIComponent(result.registrationNumber)}`,
+      );
+    } catch {
+      toast.error("The download didn't work. Please try again.");
+    } finally {
+      setDownloading(null);
+    }
+  };
 
   if (!result) {
     return (
@@ -94,24 +112,27 @@ export function ConfirmationPage() {
             )}
           </div>
         )}
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          {result.idCardAvailable && slug && (
-            <a href={downloadUrl(slug, result.registrationNumber, "id-card")} className={buttonVariants({ variant: "success" })}>
-              <IdCard className="h-4 w-4" />
-              Download ID Card
-            </a>
-          )}
-          {result.ticketAvailable && slug && (
-            <a href={downloadUrl(slug, result.registrationNumber, "ticket")} className={buttonVariants({ variant: "default" })}>
-              <Ticket className="h-4 w-4" />
-              Download Ticket
-            </a>
-          )}
-          <Button onClick={() => window.print()} variant="outline">
-            <Printer className="h-4 w-4" />
-            Print this page
-          </Button>
-        </div>
+        {slug && (result.idCardAvailable || result.ticketAvailable) && (
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {result.idCardAvailable && (
+              <Button
+                variant="success"
+                loading={downloading === "id-card"}
+                disabled={downloading !== null}
+                onClick={() => download("id-card")}
+              >
+                <IdCard className="h-4 w-4" />
+                Download ID Card
+              </Button>
+            )}
+            {result.ticketAvailable && (
+              <Button loading={downloading === "ticket"} disabled={downloading !== null} onClick={() => download("ticket")}>
+                <Ticket className="h-4 w-4" />
+                Download Ticket
+              </Button>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

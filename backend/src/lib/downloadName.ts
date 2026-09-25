@@ -13,10 +13,18 @@ export function stableCode(seed: string, length = 10): string {
   return code;
 }
 
-/** e.g. "Kezia-Sia-Sam-7K3P9QX2MA.pdf" -- the participant's name plus a stable code. */
-export function participantFileName(name: string | null, seed: string, extension = "pdf"): string {
-  const base = (name ?? "Participant").trim().replace(/[\\/:*?"<>|\s]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
-  return `${base || "Participant"}-${stableCode(seed)}.${extension}`;
+/** e.g. "Kezia-Sia-Sam-ID-Card-7K3P9QX2MA.png": the participant's name, the document, and a stable code. */
+export function participantFileName(
+  name: string | null,
+  seed: string,
+  extension = "pdf",
+  documentLabel?: string,
+): string {
+  const clean = (value: string) =>
+    value.trim().replace(/[\\/:*?"<>|\s]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+  const base = clean(name ?? "Participant") || "Participant";
+  const label = documentLabel ? `-${clean(documentLabel)}` : "";
+  return `${base}${label}-${stableCode(seed)}.${extension}`;
 }
 
 /**
