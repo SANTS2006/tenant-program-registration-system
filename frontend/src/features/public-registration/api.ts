@@ -37,11 +37,15 @@ export interface VerificationResult {
   applicantName: string | null;
   status: string;
   valid: boolean;
+  documentType: "id_card" | "ticket" | "link";
+  verifiedAt: string;
+  scannedByTeamMember: boolean;
 }
 
-export function verifyRegistration(slug: string, registrationNumber: string) {
+export function verifyRegistration(slug: string, registrationNumber: string, doc?: string | null) {
+  const query = doc ? `?doc=${encodeURIComponent(doc)}` : "";
   return apiFetch<VerificationResult>(
-    `/public/verify/${encodeURIComponent(slug)}/${encodeURIComponent(registrationNumber)}`,
+    `/public/verify/${encodeURIComponent(slug)}/${encodeURIComponent(registrationNumber)}${query}`,
   );
 }
 

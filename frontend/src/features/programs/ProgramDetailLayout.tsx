@@ -16,6 +16,7 @@ const tabs = [
   { to: "form", label: "Form Builder", end: false },
   { to: "analytics", label: "Analytics", end: false },
   { to: "registrations", label: "Registrations", end: false },
+  { to: "verifications", label: "Verifications", end: false },
 ];
 
 export function ProgramDetailLayout() {

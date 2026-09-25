@@ -1,19 +1,32 @@
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "react-router-dom";
-import { AlertTriangle, BadgeCheck, ShieldX } from "lucide-react";
+import { useParams, useSearchParams } from "react-router-dom";
+import { AlertTriangle, BadgeCheck, CreditCard, QrCode, ShieldX, Ticket, UserCheck } from "lucide-react";
+import { useAuth } from "@/app/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
-import { verifyRegistration } from "./api";
+import { verifyRegistration, type VerificationResult } from "./api";
+
+const DOCUMENTS: Record<VerificationResult["documentType"], { label: string; icon: typeof Ticket }> = {
+  id_card: { label: "ID card", icon: CreditCard },
+  ticket: { label: "Ticket", icon: Ticket },
+  link: { label: "Registration", icon: QrCode },
+};
 
 export function VerifyPage() {
   const { slug, registrationNumber } = useParams<{ slug: string; registrationNumber: string }>();
+  const [params] = useSearchParams();
+  const doc = params.get("doc");
+  // Wait for any saved sign-in, so a team member's scan is credited to them in the scan log.
+  const { isLoading: authLoading } = useAuth();
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ["verify", slug, registrationNumber],
-    queryFn: () => verifyRegistration(slug!, registrationNumber!),
-    enabled: !!slug && !!registrationNumber,
+    queryKey: ["verify", slug, registrationNumber, doc],
+    queryFn: () => verifyRegistration(slug!, registrationNumber!, doc),
+    enabled: !!slug && !!registrationNumber && !authLoading,
     retry: false,
+    staleTime: Infinity,
   });
 
-  if (isLoading) return <p className="text-sm text-muted-foreground">Verifying...</p>;
+  if (authLoading || isLoading) return <p className="text-sm text-muted-foreground">Verifying...</p>;
 
   if (error || !data) {
     return (
@@ -31,6 +44,8 @@ export function VerifyPage() {
     );
   }
 
+  const document = DOCUMENTS[data.documentType];
+
   return (
     <Card>
       <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
@@ -41,7 +56,13 @@ export function VerifyPage() {
         >
           {data.valid ? <BadgeCheck className="h-7 w-7" /> : <AlertTriangle className="h-7 w-7" />}
         </span>
-        <h1 className="text-xl font-semibold">{data.valid ? "Valid Registration" : "Registration Not Valid"}</h1>
+        <h1 className="text-xl font-semibold">
+          {data.valid ? `Valid ${document.label}` : `${document.label} Not Valid`}
+        </h1>
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 px-3 py-1 text-xs font-medium text-muted-foreground">
+          <document.icon className="h-3.5 w-3.5" />
+          Verified {new Date(data.verifiedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
+        </span>
         <div className="mt-2 flex flex-col gap-1 text-sm">
           <p>
             <span className="text-muted-foreground">Program: </span>
@@ -62,6 +83,12 @@ export function VerifyPage() {
             <span className="font-medium capitalize">{data.status.replace("_", " ")}</span>
           </p>
         </div>
+        {data.scannedByTeamMember && (
+          <p className="mt-2 flex items-center gap-1.5 rounded-lg bg-gradient-brand-soft px-3 py-2 text-xs font-medium text-primary">
+            <UserCheck className="h-4 w-4" />
+            This check was recorded in the program&apos;s Verifications log under your name.
+          </p>
+        )}
       </CardContent>
     </Card>
   );

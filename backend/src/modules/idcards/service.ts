@@ -4,7 +4,11 @@ import { AppError } from "../../lib/errors.js";
 import { code128, renderIdCard, type IdCardContent } from "../../shared/designs/index.js";
 import * as formsRepo from "../forms/repository.js";
 import * as programsRepo from "../programs/repository.js";
+import { getProgramRole } from "../programs/access.js";
 import * as registrationsRepo from "../registrations/repository.js";
+import type { AuthenticatedUser } from "../users/types.js";
+import * as verificationsRepo from "../verifications/repository.js";
+import type { VerificationDocument } from "../verifications/repository.js";
 import {
   BACKGROUND_TRANSFORM,
   cardDate,
@@ -47,8 +51,13 @@ export async function resolveExtraFields(
     .filter((f): f is { label: string; value: string } => f !== null);
 }
 
-export function verifyUrlFor(program: programsRepo.ProgramRow, registration: registrationsRepo.RegistrationRow): string {
-  return `${env.APP_URL}/verify/${encodeURIComponent(program.slug)}/${encodeURIComponent(registration.registrationNumber)}`;
+/** The verification link in a document's QR code; `doc` tells the scan log which document was scanned. */
+export function verifyUrlFor(
+  program: programsRepo.ProgramRow,
+  registration: registrationsRepo.RegistrationRow,
+  doc: "id-card" | "ticket",
+): string {
+  return `${env.APP_URL}/verify/${encodeURIComponent(program.slug)}/${encodeURIComponent(registration.registrationNumber)}?doc=${doc}`;
 }
 
 export async function organizationName(program: programsRepo.ProgramRow): Promise<string> {
@@ -121,7 +130,7 @@ async function renderCard(program: programsRepo.ProgramRow, registration: regist
     validUntil: cardDate(program.endDate),
     // Without a photo field the card shows the neutral silhouette, as in the preview.
     photo,
-    qr: config.showQrCode ? qrMatrix(verifyUrlFor(program, registration)) : null,
+    qr: config.showQrCode ? qrMatrix(verifyUrlFor(program, registration, "id-card")) : null,
     barcode: code128(registration.registrationNumber),
     terms: config.termsList,
     contact: {
@@ -179,19 +188,52 @@ export interface VerificationResult {
   applicantName: string | null;
   status: string;
   valid: boolean;
+  documentType: VerificationDocument;
+  verifiedAt: string;
+  scannedByTeamMember: boolean;
 }
 
-export async function verifyRegistration(slug: string, registrationNumber: string): Promise<VerificationResult> {
+export interface VerificationContext {
+  documentType: VerificationDocument;
+  user?: AuthenticatedUser;
+  ipAddress?: string;
+  userAgent?: string;
+}
+
+/** Checks a scanned QR code and logs the scan for the program's Verifications tab. */
+export async function verifyRegistration(
+  slug: string,
+  registrationNumber: string,
+  context: VerificationContext,
+): Promise<VerificationResult> {
   const program = await programsRepo.findProgramBySlug(slug);
   if (!program) throw AppError.notFound("Registration not found");
   const registration = await registrationsRepo.findRegistrationByNumber(program.id, registrationNumber);
   if (!registration) throw AppError.notFound("Registration not found");
+
+  const valid = registration.status !== "rejected" && registration.status !== "cancelled";
+  // Only credit the scan to a signed-in person who is on this program's team.
+  const verifiedBy = context.user && (await getProgramRole(context.user, program.id)) ? context.user.id : null;
+
+  await verificationsRepo.recordVerification({
+    programId: program.id,
+    registrationId: registration.id,
+    documentType: context.documentType,
+    valid,
+    registrationStatus: registration.status,
+    verifiedBy,
+    ipAddress: context.ipAddress,
+    userAgent: context.userAgent?.slice(0, 400),
+  });
 
   return {
     registrationNumber: registration.registrationNumber,
     programName: program.name,
     applicantName: registration.applicantName,
     status: registration.status,
-    valid: registration.status !== "rejected" && registration.status !== "cancelled",
+    valid,
+    documentType: context.documentType,
+    verifiedAt: new Date().toISOString(),
+    scannedByTeamMember: Boolean(verifiedBy),
   };
 }

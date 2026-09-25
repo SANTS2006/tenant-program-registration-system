@@ -56,8 +56,16 @@ export async function downloadPublicIdCardHandler(request: FastifyRequest, reply
   return sendPdf(reply, await idCardService.generateForPublicRegistration(slug, registrationNumber));
 }
 
+const DOCUMENT_TYPES = { "id-card": "id_card", ticket: "ticket" } as const;
+
 export async function verifyHandler(request: FastifyRequest, reply: FastifyReply) {
   const { slug, registrationNumber } = request.params as { slug: string; registrationNumber: string };
-  const result = await idCardService.verifyRegistration(slug, registrationNumber);
+  const { doc } = (request.query ?? {}) as { doc?: string };
+  const result = await idCardService.verifyRegistration(slug, registrationNumber, {
+    documentType: DOCUMENT_TYPES[doc as keyof typeof DOCUMENT_TYPES] ?? "link",
+    user: request.user,
+    ipAddress: request.ip,
+    userAgent: request.headers["user-agent"],
+  });
   return sendSuccess(reply, result);
 }

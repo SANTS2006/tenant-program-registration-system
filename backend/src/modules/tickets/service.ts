@@ -71,7 +71,7 @@ async function renderProgramTicket(program: programsRepo.ProgramRow, registratio
       phone: config.contactPhone,
       website: config.website,
       terms: config.terms,
-      qr: config.showQrCode ? qrMatrix(verifyUrlFor(program, registration)) : null,
+      qr: config.showQrCode ? qrMatrix(verifyUrlFor(program, registration, "ticket")) : null,
       barcode: code128(registration.registrationNumber),
       background,
       textColor: config.textColor,

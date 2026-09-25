@@ -23,6 +23,7 @@ import { ProgramDetailLayout } from "@/features/programs/ProgramDetailLayout";
 import { ProgramOverviewPage } from "@/features/programs/ProgramOverviewPage";
 import { FormBuilderPage } from "@/features/form-builder/FormBuilderPage";
 import { RegistrationsListPage } from "@/features/registrations/RegistrationsListPage";
+import { VerificationsPage } from "@/features/verifications/VerificationsPage";
 import { RegistrationDetailPage } from "@/features/registrations/RegistrationDetailPage";
 import { UsersPage } from "@/features/users/UsersPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
@@ -70,6 +71,7 @@ export function AppRoutes() {
             <Route path="form" element={<FormBuilderPage />} />
             <Route path="analytics" element={<ProgramAnalyticsPage />} />
             <Route path="registrations" element={<RegistrationsListPage />} />
+            <Route path="verifications" element={<VerificationsPage />} />
             <Route path="registrations/:registrationId" element={<RegistrationDetailPage />} />
           </Route>
         </Route>

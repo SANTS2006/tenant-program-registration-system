@@ -57,6 +57,13 @@
       "when": 1790466447382,
       "tag": "0007_warm_inhumans",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790312629368,
+      "tag": "0008_harsh_professor_monster",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,9 @@
 import {
   BarChart3,
   BellRing,
+  ScanLine,
+  ListChecks,
+  Gauge,
   CheckCircle2,
   ClipboardCheck,
   Download,
@@ -31,7 +34,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Reveal, Tilt } from "./motion";
-import { AnalyticsMock, DocumentsShowcase, FormBuilderMock } from "./visuals";
+import { AnalyticsMock, DocumentsShowcase, FormBuilderMock, VerificationsMock } from "./visuals";
 
 export function SectionHeading({
   eyebrow,
@@ -130,6 +133,21 @@ const FEATURES: { icon: LucideIcon; title: string; description: string }[] = [
     icon: BellRing,
     title: "Branded email",
     description: "Registrants get a confirmation with their number; your team gets polished invitation, verification, and security emails.",
+  },
+  {
+    icon: ScanLine,
+    title: "ID card & ticket verification",
+    description: "Scan the QR code on any ID card or ticket with a phone camera. No app needed: you instantly see who it belongs to and whether it's valid.",
+  },
+  {
+    icon: ListChecks,
+    title: "Verification log",
+    description: "Every scan is recorded in a table: the person, the document, the result, who scanned it, and when. Search and filter it anytime.",
+  },
+  {
+    icon: Gauge,
+    title: "Live check-in numbers",
+    description: "See total scans, people verified, scans today, and invalid attempts at a glance while your event is running.",
   },
 ];
 
@@ -283,7 +301,7 @@ export function Spotlights() {
           "Eight two-sided ID card designs and two ticket designs, recolored to your brand",
           "Upload your own logo, or your own card or ticket artwork",
           "Participant photos, chosen form answers, venue, dates, terms, and a barcode",
-          "Scan any QR code to check a registration's status instantly",
+          "Scan any QR code to check a registration's status instantly, with every scan logged",
           "Choose whether registrants can download them right after registering",
         ]}
         visual={<DocumentsShowcase />}
@@ -305,6 +323,25 @@ export function Spotlights() {
             <AnalyticsMock />
           </Tilt>
         }
+      />
+      <Spotlight
+        id="verification"
+        eyebrow="Verification & check-in"
+        title="Know exactly who has been checked in"
+        description="When a QR code on an ID card or ticket is scanned, the platform checks the registration on the spot and records the check in the program's Verifications tab, just like your registrations table."
+        points={[
+          "Works with any phone camera: scan, and the verification page opens straight away",
+          "Shows whether the document is valid, who it belongs to, and their registration status",
+          "Every scan logged with the document type, result, time, and the team member who scanned it",
+          "Search and filter by name, number, ID card or ticket, and valid or not valid",
+          "Each registration shows its own scan history",
+        ]}
+        visual={
+          <Tilt max={6} innerClassName="rounded-2xl">
+            <VerificationsMock />
+          </Tilt>
+        }
+        reverse
       />
     </div>
   );
@@ -441,7 +478,7 @@ const FAQS = [
   },
   {
     q: "How do ID card and ticket QR codes work?",
-    a: "Each code links to a verification page for that registration. Scanning it shows who it belongs to and whether the registration is still valid.",
+    a: "Each code links to a verification page for that registration. Scanning it with any phone camera shows who it belongs to and whether the registration is still valid, and the scan is added to the program's Verifications log with the time and, for signed-in team members, who scanned it.",
   },
   {
     q: "How do I give my team access?",

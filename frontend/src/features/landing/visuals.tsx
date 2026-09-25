@@ -354,3 +354,63 @@ export function AnalyticsMock() {
     </BrowserFrame>
   );
 }
+
+/** Verifications: summary tiles and the scan log, as a program's Verifications tab shows them. */
+export function VerificationsMock() {
+  const scans = [
+    { name: "Aminata K.", number: "YLP-2026-000123", doc: "ID card", valid: true, by: "Gate A · Musa", time: "09:14" },
+    { name: "Daniel O.", number: "YLP-2026-000087", doc: "Ticket", valid: true, by: "Public scan", time: "09:12" },
+    { name: "Grace M.", number: "YLP-2026-000045", doc: "Ticket", valid: false, by: "Gate B · Fatu", time: "09:09" },
+    { name: "Ibrahim S.", number: "YLP-2026-000131", doc: "ID card", valid: true, by: "Gate A · Musa", time: "09:05" },
+  ];
+  return (
+    <BrowserFrame>
+      <div className="flex flex-col gap-3 p-4">
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: "Scans today", value: "248" },
+            { label: "People verified", value: "231" },
+            { label: "Not valid", value: "3" },
+          ].map((tile) => (
+            <div key={tile.label} className="rounded-lg border border-border/70 p-2">
+              <p className="truncate text-[9px] uppercase tracking-wide text-muted-foreground">{tile.label}</p>
+              <p className="text-sm font-bold sm:text-base">{tile.value}</p>
+            </div>
+          ))}
+        </div>
+        <div className="overflow-hidden rounded-lg border border-border/70">
+          <div className="grid grid-cols-[1.4fr_0.8fr_0.7fr_1fr] gap-2 bg-gradient-brand-soft px-3 py-2 text-[9px] font-semibold uppercase tracking-wide text-primary">
+            <span>Participant</span>
+            <span>Document</span>
+            <span>Result</span>
+            <span className="text-right">Scanned by</span>
+          </div>
+          {scans.map((scan) => (
+            <div
+              key={scan.number}
+              className="grid grid-cols-[1.4fr_0.8fr_0.7fr_1fr] items-center gap-2 border-t border-border/70 px-3 py-2"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-[11px] font-semibold">{scan.name}</p>
+                <p className="truncate text-[9px] text-muted-foreground">{scan.number}</p>
+              </div>
+              <span className="text-[10px] text-muted-foreground">{scan.doc}</span>
+              <span
+                className={cn(
+                  "w-fit rounded-full px-2 py-0.5 text-[9px] font-semibold",
+                  scan.valid ? STATUS_STYLES.Approved : "bg-rose-500/15 text-rose-600 dark:text-rose-400",
+                )}
+              >
+                {scan.valid ? "Valid" : "Not valid"}
+              </span>
+              <div className="min-w-0 text-right">
+                <p className="truncate text-[10px]">{scan.by}</p>
+                <p className="text-[9px] text-muted-foreground">{scan.time}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </BrowserFrame>
+  );
+}

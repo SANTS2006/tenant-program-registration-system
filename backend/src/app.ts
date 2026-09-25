@@ -18,6 +18,7 @@ import { formRoutes } from "./modules/forms/routes.js";
 import { registrationRoutes } from "./modules/registrations/routes.js";
 import { publicRoutes } from "./modules/public/routes.js";
 import { supportRoutes } from "./modules/support/routes.js";
+import { verificationRoutes } from "./modules/verifications/routes.js";
 import { dashboardRoutes } from "./modules/dashboard/routes.js";
 import { auditRoutes } from "./modules/audit/routes.js";
 import { idCardRoutes } from "./modules/idcards/routes.js";
@@ -102,6 +103,7 @@ export function buildApp() {
       protectedApp.register(registrationRoutes, { prefix: "/programs" });
       protectedApp.register(idCardRoutes, { prefix: "/programs" });
       protectedApp.register(ticketRoutes, { prefix: "/programs" });
+      protectedApp.register(verificationRoutes, { prefix: "/programs" });
       protectedApp.register(analyticsRoutes, { prefix: "/programs" });
       protectedApp.register(dashboardRoutes, { prefix: "/dashboard" });
       protectedApp.register(auditRoutes, { prefix: "/audit-logs" });

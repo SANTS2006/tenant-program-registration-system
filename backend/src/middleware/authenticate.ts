@@ -12,6 +12,16 @@ declare module "fastify" {
   }
 }
 
+/** Like authenticate, but for public routes: identifies a signed-in user if there is one, and never rejects. */
+export async function optionalAuthenticate(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  if (!request.headers.authorization?.startsWith("Bearer ")) return;
+  try {
+    await authenticate(request, reply);
+  } catch {
+    request.user = undefined;
+  }
+}
+
 export async function authenticate(request: FastifyRequest, _reply: FastifyReply): Promise<void> {
   const header = request.headers.authorization;
   if (!header?.startsWith("Bearer ")) {

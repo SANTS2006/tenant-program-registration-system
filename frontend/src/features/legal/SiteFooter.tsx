@@ -35,6 +35,9 @@ export function SiteFooter() {
           <Link to="/#designs" className={linkClass}>
             Designs
           </Link>
+          <Link to="/#verification" className={linkClass}>
+            Verification
+          </Link>
           <Link to="/#security" className={linkClass}>
             Security
           </Link>

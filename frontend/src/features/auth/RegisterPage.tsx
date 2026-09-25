@@ -5,7 +5,6 @@ import { z } from "zod";
 import { Link, Navigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
-import { BackToWebsiteButton } from "@/components/BackToWebsiteButton";
 import { BrandLogo } from "@/components/BrandLogo";
 import { useAuth } from "@/app/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -131,10 +130,7 @@ export function RegisterPage() {
               <BrandLogo className="h-9" />
               <span className="gradient-text hidden whitespace-nowrap sm:inline">Program Registration</span>
             </Link>
-            <div className="flex items-center gap-2">
-              <BackToWebsiteButton />
-              <ThemeToggle />
-            </div>
+            <ThemeToggle />
           </div>
 
           <div className="flex flex-1 items-center justify-center py-8">

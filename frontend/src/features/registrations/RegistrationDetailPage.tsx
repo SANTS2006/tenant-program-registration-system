@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RegistrationStatusBadge } from "@/components/StatusBadge";
 import { ApiError } from "@/lib/api";
 import { useProgramOutletContext } from "../programs/ProgramDetailLayout";
+import { RegistrationVerifications } from "../verifications/VerificationsPage";
 import { isOtherOption, otherTextKey } from "../public-registration/DynamicForm";
 import { downloadIdCard, downloadRegistrationFile, downloadTicket } from "./api";
 import { useRegistration, useUpdateRegistrationStatus } from "./hooks";
@@ -165,6 +166,17 @@ export function RegistrationDetailPage() {
             </Button>
           </CardContent>
         </Card>
+        )}
+
+        {(program.idCardEnabled || program.ticketEnabled) && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">ID card &amp; ticket scans</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RegistrationVerifications programId={program.id} registrationId={registrationId!} />
+            </CardContent>
+          </Card>
         )}
 
         <Card>
