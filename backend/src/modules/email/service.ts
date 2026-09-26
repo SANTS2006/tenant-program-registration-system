@@ -5,6 +5,8 @@ interface SendEmailInput {
   toName?: string;
   subject: string;
   html: string;
+  /** Where replies should go, e.g. the person who submitted a report. */
+  replyTo?: { email: string; name?: string };
 }
 
 const BREVO_ENDPOINT = "https://api.brevo.com/v3/smtp/email";
@@ -36,6 +38,7 @@ export async function sendEmail(input: SendEmailInput): Promise<void> {
         to: [{ email: input.to, name: input.toName ?? input.to }],
         subject: input.subject,
         htmlContent: input.html,
+        ...(input.replyTo ? { replyTo: { email: input.replyTo.email, name: input.replyTo.name ?? input.replyTo.email } } : {}),
       }),
     });
 

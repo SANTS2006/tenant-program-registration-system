@@ -10,6 +10,9 @@ export const registerSchema = z.object({
   name: z.string().min(2).max(200),
   email: z.string().email(),
   password: z.string().min(8).max(128),
+  acceptTerms: z.literal(true, {
+    errorMap: () => ({ message: "You must agree to the Terms of Service and Privacy Policy to create an account" }),
+  }),
 });
 
 export const verificationCodeSchema = z.object({

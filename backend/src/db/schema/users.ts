@@ -16,6 +16,8 @@ export const users = pgTable(
     // program_admin, viewer) always belongs to exactly one tenant.
     tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+    // When the account owner agreed to the Terms of Service and Privacy Policy at sign-up.
+    termsAcceptedAt: timestamp("terms_accepted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),

@@ -17,6 +17,7 @@ import { programRoutes } from "./modules/programs/routes.js";
 import { formRoutes } from "./modules/forms/routes.js";
 import { registrationRoutes } from "./modules/registrations/routes.js";
 import { publicRoutes } from "./modules/public/routes.js";
+import { supportRoutes } from "./modules/support/routes.js";
 import { dashboardRoutes } from "./modules/dashboard/routes.js";
 import { auditRoutes } from "./modules/audit/routes.js";
 import { idCardRoutes } from "./modules/idcards/routes.js";
@@ -113,6 +114,7 @@ export function buildApp() {
   app.register(publicRoutes, { prefix: "/api/public" });
   app.register(publicIdCardRoutes, { prefix: "/api/public" });
   app.register(publicTicketRoutes, { prefix: "/api/public" });
+  app.register(supportRoutes, { prefix: "/api/public" });
 
   return app;
 }

@@ -8,6 +8,8 @@ export interface RegisterInput {
   name: string;
   email: string;
   password: string;
+  /** Agreement to the Terms of Service and Privacy Policy; the server refuses sign-ups without it. */
+  acceptTerms: true;
 }
 
 interface AuthContextValue {

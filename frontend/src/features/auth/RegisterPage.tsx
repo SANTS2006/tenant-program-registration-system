@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Link, Navigate } from "react-router-dom";
@@ -8,6 +8,7 @@ import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { useAuth } from "@/app/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -20,6 +21,9 @@ const registerSchema = z
     email: z.string().email("Enter a valid email address"),
     password: z.string().min(8, "At least 8 characters"),
     confirmPassword: z.string().min(1, "Confirm your password"),
+    acceptTerms: z.boolean().refine((accepted) => accepted, {
+      message: "You must agree to the Terms of Service and Privacy Policy to create an account",
+    }),
   })
   .refine((values) => values.password === values.confirmPassword, {
     message: "Passwords don't match",
@@ -55,9 +59,10 @@ export function RegisterPage() {
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors },
-  } = useForm<RegisterForm>({ resolver: zodResolver(registerSchema) });
+  } = useForm<RegisterForm>({ resolver: zodResolver(registerSchema), defaultValues: { acceptTerms: false } });
 
   if (!isLoading && user) {
     return justRegisteredRef.current ? (
@@ -76,6 +81,7 @@ export function RegisterPage() {
         name: values.name,
         email: values.email,
         password: values.password,
+        acceptTerms: true,
       });
     } catch (err) {
       justRegisteredRef.current = false;
@@ -217,6 +223,42 @@ export function RegisterPage() {
                   />
                   {errors.confirmPassword && (
                     <p className="px-2 text-sm text-destructive">{errors.confirmPassword.message}</p>
+                  )}
+                </div>
+                <div className="flex flex-col gap-1.5 px-1 pt-1">
+                  <Controller
+                    control={control}
+                    name="acceptTerms"
+                    render={({ field }) => (
+                      <div className="flex items-start gap-2.5">
+                        <Checkbox
+                          id="acceptTerms"
+                          checked={field.value}
+                          onCheckedChange={(checked) => field.onChange(checked === true)}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                          aria-invalid={Boolean(errors.acceptTerms)}
+                          aria-describedby={errors.acceptTerms ? "acceptTerms-error" : undefined}
+                          className="mt-0.5"
+                        />
+                        <Label htmlFor="acceptTerms" className="text-sm font-normal leading-snug text-muted-foreground">
+                          I have read and agree to the{" "}
+                          <Link to="/terms" target="_blank" rel="noopener" className="font-medium text-primary hover:opacity-80">
+                            Terms of Service
+                          </Link>{" "}
+                          and{" "}
+                          <Link to="/privacy" target="_blank" rel="noopener" className="font-medium text-primary hover:opacity-80">
+                            Privacy Policy
+                          </Link>
+                          .
+                        </Label>
+                      </div>
+                    )}
+                  />
+                  {errors.acceptTerms && (
+                    <p id="acceptTerms-error" className="text-sm text-destructive">
+                      {errors.acceptTerms.message}
+                    </p>
                   )}
                 </div>
                 <Button type="submit" disabled={submitting} size="lg" className="mt-2 h-12 rounded-full">

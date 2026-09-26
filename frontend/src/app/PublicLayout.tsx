@@ -2,6 +2,7 @@ import { Link, Outlet } from "react-router-dom";
 import { BrandLogo } from "@/components/BrandLogo";
 import { LinkButton } from "@/components/ui/link-button";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { PublicFormFooter } from "@/features/legal/SiteFooter";
 
 export function PublicLayout() {
   return (
@@ -23,9 +24,9 @@ export function PublicLayout() {
       <main className="page-enter mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:py-8">
         <Outlet />
       </main>
-      <footer className="border-t border-border/70 py-6 text-center text-xs text-muted-foreground">
-        &copy; {new Date().getFullYear()} Program Registration Platform
-      </footer>
+      <div className="border-t border-border/70 pt-2">
+        <PublicFormFooter agreementText="Use of this site is subject to our" />
+      </div>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { ArrowRight, LayoutDashboard, Menu, X } from "lucide-react";
 import { useAuth } from "@/app/AuthContext";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -9,6 +9,7 @@ import { LinkButton } from "@/components/ui/link-button";
 import { cn } from "@/lib/utils";
 import { IdCardPreview } from "../idcards/IdCardPreview";
 import { TicketPreview } from "../tickets/TicketPreview";
+import { SiteFooter } from "../legal/SiteFooter";
 import { CountUp, Reveal, Stage } from "./motion";
 import {
   CAPABILITIES,
@@ -331,51 +332,16 @@ function FinalCta() {
   );
 }
 
-function Footer() {
-  return (
-    <footer className="border-t border-border/70 bg-card/40">
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr]">
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2 font-semibold">
-            <BrandLogo className="h-9" />
-            <span className="gradient-text text-lg">Program Registration</span>
-          </div>
-          <p className="max-w-sm text-sm text-muted-foreground">
-            The all-in-one platform for running program registrations: forms, applicants, documents, and insights.
-          </p>
-        </div>
-        <div className="flex flex-col gap-2 text-sm">
-          <p className="font-semibold">Product</p>
-          {NAV.slice(0, 6).map((item) => (
-            <a key={item.href} href={item.href} className="text-muted-foreground transition-colors hover:text-primary">
-              {item.label}
-            </a>
-          ))}
-        </div>
-        <div className="flex flex-col gap-2 text-sm">
-          <p className="font-semibold">Account</p>
-          <Link to="/register" className="text-muted-foreground transition-colors hover:text-primary">
-            Create an account
-          </Link>
-          <Link to="/login" className="text-muted-foreground transition-colors hover:text-primary">
-            Sign in
-          </Link>
-          <Link to="/forgot-password" className="text-muted-foreground transition-colors hover:text-primary">
-            Reset your password
-          </Link>
-          <a href="#faq" className="text-muted-foreground transition-colors hover:text-primary">
-            FAQ
-          </a>
-        </div>
-      </div>
-      <div className="border-t border-border/70 py-5 text-center text-xs text-muted-foreground">
-        &copy; {new Date().getFullYear()} Program Registration Platform. All rights reserved.
-      </div>
-    </footer>
-  );
-}
-
 export function LandingPage() {
+  const { hash } = useLocation();
+
+  // Links such as /#features from other pages land here; scroll once the section exists.
+  React.useEffect(() => {
+    if (!hash) return;
+    const timer = window.setTimeout(() => document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: "smooth" }), 60);
+    return () => window.clearTimeout(timer);
+  }, [hash]);
+
   React.useEffect(() => {
     document.title = "Program Registration Platform | Registration forms, applicants, ID cards and tickets";
     document.getElementById("robots-meta")?.setAttribute("content", "index, follow");
@@ -469,7 +435,7 @@ export function LandingPage() {
           <FinalCta />
         </div>
       </main>
-      <Footer />
+      <SiteFooter />
     </div>
   );
 }

@@ -9,6 +9,10 @@ import { VerifyEmailPage } from "@/features/auth/VerifyEmailPage";
 import { ForgotPasswordPage } from "@/features/auth/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/features/auth/ResetPasswordPage";
 import { LandingPage } from "@/features/landing/LandingPage";
+import { LegalLayout } from "@/features/legal/LegalLayout";
+import { AcceptableUsePage, CookiePolicyPage, PrivacyPage, TermsPage } from "@/features/legal/policies";
+import { ContactPage } from "@/features/legal/ContactPage";
+import { ReportPage } from "@/features/legal/ReportPage";
 import { PublicProgramPage } from "@/features/public-registration/PublicProgramPage";
 import { PublicRegistrationPage } from "@/features/public-registration/PublicRegistrationPage";
 import { ConfirmationPage } from "@/features/public-registration/ConfirmationPage";
@@ -35,6 +39,15 @@ export function AppRoutes() {
       <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+      <Route element={<LegalLayout />}>
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/cookies" element={<CookiePolicyPage />} />
+        <Route path="/acceptable-use" element={<AcceptableUsePage />} />
+        <Route path="/contact" element={<ContactPage />} />
+        <Route path="/report" element={<ReportPage />} />
+      </Route>
 
       <Route element={<PublicLayout />}>
         <Route path="/programs/:slug" element={<PublicProgramPage />} />

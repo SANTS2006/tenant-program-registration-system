@@ -196,6 +196,7 @@ export async function createTenantAndAdmin(params: {
         passwordHash: params.passwordHash,
         role: "admin",
         tenantId: tenant!.id,
+        termsAcceptedAt: new Date(),
       })
       .returning();
 

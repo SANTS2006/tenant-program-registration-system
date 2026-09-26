@@ -2,6 +2,7 @@ import * as React from "react";
 import { Outlet } from "react-router-dom";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PublicFormFooter } from "@/features/legal/SiteFooter";
 
 type Theme = "light" | "dark";
 
@@ -74,6 +75,7 @@ export function BareLayout() {
       <div className="mx-auto w-full max-w-5xl px-4 pb-6 sm:pb-10">
         <Outlet />
       </div>
+      <PublicFormFooter />
     </div>
   );
 }

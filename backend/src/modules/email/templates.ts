@@ -317,3 +317,35 @@ export function registrationConfirmationEmail(params: {
     body,
   });
 }
+
+export function reportEmail(params: {
+  category: string;
+  name?: string;
+  email: string;
+  link?: string;
+  message: string;
+  submittedAt: Date;
+  ipAddress?: string;
+}): { subject: string; html: string } {
+  const message = escapeHtml(params.message).replace(/\r?\n/g, "<br />");
+  const body = [
+    paragraph("A new report was submitted through the report form on the website."),
+    detailsTable([
+      { label: "Category", value: params.category },
+      { label: "Name", value: params.name || "Not given" },
+      { label: "Email", value: params.email },
+      ...(params.link ? [{ label: "Link or program", value: params.link }] : []),
+      { label: "Submitted", value: params.submittedAt.toUTCString() },
+      ...(params.ipAddress ? [{ label: "IP address", value: params.ipAddress, mono: true }] : []),
+    ]),
+    `<div style="margin-top:20px;border-left:3px solid ${BRAND.border};padding:4px 0 4px 16px;">
+       <p style="margin:0;font-family:${FONT};font-size:15px;line-height:1.65;color:${BRAND.body};">${message}</p>
+     </div>`,
+    paragraph(`<span style="color:${BRAND.muted};font-size:13px;">Reply to this email to answer the person who sent the report.</span>`),
+  ].join("");
+
+  return {
+    subject: `New report: ${params.category}`,
+    html: layout({ preheader: `New report: ${params.category}`, eyebrow: "Report form", heading: "New report received", body }),
+  };
+}

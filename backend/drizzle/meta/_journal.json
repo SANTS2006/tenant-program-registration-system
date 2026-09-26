@@ -50,6 +50,13 @@
       "when": 1790258319210,
       "tag": "0006_white_randall",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790466447382,
+      "tag": "0007_warm_inhumans",
+      "breakpoints": true
     }
   ]
 }
