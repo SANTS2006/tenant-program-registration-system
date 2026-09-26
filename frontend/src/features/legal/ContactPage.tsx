@@ -2,6 +2,7 @@ import * as React from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Flag, Mail, Phone } from "lucide-react";
 import { COMPANY_NAME, COUNTRY, SUPPORT_EMAIL, SUPPORT_PHONE, SUPPORT_PHONE_LINK } from "@/lib/contact";
+import { ContactForm } from "./ContactForm";
 import { PageHero } from "./LegalDocument";
 
 const CHANNELS = [
@@ -77,6 +78,11 @@ export function ContactPage() {
             </Link>
           );
         })}
+      </div>
+      <div className="mx-auto max-w-5xl px-4 pb-8 sm:px-6">
+        <div id="message" className="scroll-mt-24 rounded-2xl border border-border/70 bg-card p-6 shadow-sm sm:p-8">
+          <ContactForm />
+        </div>
       </div>
       <div className="mx-auto max-w-5xl px-4 pb-16 sm:px-6">
         <div className="rounded-2xl border border-border/70 bg-card/60 p-6 text-sm text-muted-foreground">

@@ -349,3 +349,33 @@ export function reportEmail(params: {
     html: layout({ preheader: `New report: ${params.category}`, eyebrow: "Report form", heading: "New report received", body }),
   };
 }
+
+export function contactMessageEmail(params: {
+  name: string;
+  email: string;
+  phone?: string;
+  subject: string;
+  message: string;
+  submittedAt: Date;
+}): { subject: string; html: string } {
+  const message = escapeHtml(params.message).replace(/\r?\n/g, "<br />");
+  const body = [
+    paragraph("A new message was sent through the contact form on the website."),
+    detailsTable([
+      { label: "Name", value: params.name },
+      { label: "Email", value: params.email },
+      ...(params.phone ? [{ label: "Phone", value: params.phone }] : []),
+      { label: "Subject", value: params.subject },
+      { label: "Sent", value: params.submittedAt.toUTCString() },
+    ]),
+    `<div style="margin-top:20px;border-left:3px solid ${BRAND.border};padding:4px 0 4px 16px;">
+       <p style="margin:0;font-family:${FONT};font-size:15px;line-height:1.65;color:${BRAND.body};">${message}</p>
+     </div>`,
+    paragraph(`<span style="color:${BRAND.muted};font-size:13px;">Reply to this email to answer ${escapeHtml(params.name)} directly.</span>`),
+  ].join("");
+
+  return {
+    subject: `Contact form: ${params.subject}`,
+    html: layout({ preheader: `Message from ${params.name}`, eyebrow: "Contact form", heading: "New message received", body }),
+  };
+}
