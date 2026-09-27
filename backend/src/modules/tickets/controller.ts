@@ -17,12 +17,14 @@ export async function updateTicketConfigHandler(request: FastifyRequest, reply: 
 
 export async function downloadAdminTicketHandler(request: FastifyRequest, reply: FastifyReply) {
   const { programId, registrationId } = request.params as { programId: string; registrationId: string };
-  if (wantsSvg(request).svg) return sendSvg(reply, await ticketService.svgForRegistrationInProgram(programId, registrationId));
+  const { svg, side } = wantsSvg(request);
+  if (svg) return sendSvg(reply, await ticketService.svgForRegistrationInProgram(programId, registrationId, side));
   return sendPdf(reply, await ticketService.generateForRegistrationInProgram(programId, registrationId));
 }
 
 export async function downloadPublicTicketHandler(request: FastifyRequest, reply: FastifyReply) {
   const { slug, registrationNumber } = request.params as { slug: string; registrationNumber: string };
-  if (wantsSvg(request).svg) return sendSvg(reply, await ticketService.svgForPublicRegistration(slug, registrationNumber));
+  const { svg, side } = wantsSvg(request);
+  if (svg) return sendSvg(reply, await ticketService.svgForPublicRegistration(slug, registrationNumber, side));
   return sendPdf(reply, await ticketService.generateForPublicRegistration(slug, registrationNumber));
 }

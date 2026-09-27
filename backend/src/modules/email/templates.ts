@@ -379,3 +379,36 @@ export function contactMessageEmail(params: {
     html: layout({ preheader: `Message from ${params.name}`, eyebrow: "Contact form", heading: "New message received", body }),
   };
 }
+
+export function feedbackEmail(params: {
+  category: string;
+  subject: string;
+  message: string;
+  name: string;
+  email: string;
+  organizationName?: string;
+  programName?: string;
+  submittedAt: Date;
+}): { subject: string; html: string } {
+  const message = escapeHtml(params.message).replace(/\r?\n/g, "<br />");
+  const body = [
+    paragraph("New feedback was sent from inside the platform."),
+    detailsTable([
+      { label: "Type", value: params.category },
+      { label: "Subject", value: params.subject },
+      { label: "From", value: `${params.name} (${params.email})` },
+      ...(params.organizationName ? [{ label: "Account", value: params.organizationName }] : []),
+      ...(params.programName ? [{ label: "Program", value: params.programName }] : []),
+      { label: "Sent", value: params.submittedAt.toUTCString() },
+    ]),
+    `<div style="margin-top:20px;border-left:3px solid ${BRAND.border};padding:4px 0 4px 16px;">
+       <p style="margin:0;font-family:${FONT};font-size:15px;line-height:1.65;color:${BRAND.body};">${message}</p>
+     </div>`,
+    paragraph(`<span style="color:${BRAND.muted};font-size:13px;">Reply to this email to answer ${escapeHtml(params.name)} directly.</span>`),
+  ].join("");
+
+  return {
+    subject: `Feedback (${params.category}): ${params.subject}`,
+    html: layout({ preheader: `Feedback from ${params.name}`, eyebrow: "Platform feedback", heading: "New feedback received", body }),
+  };
+}

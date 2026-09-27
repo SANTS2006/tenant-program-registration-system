@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DEFAULT_ID_CARD_TERMS, ID_CARD_DESIGN_IDS, idCardDesign } from "../../shared/designs/index.js";
+import { DEFAULT_ID_CARD_TERMS, DEFAULT_ROLE_OPTIONS, ID_CARD_DESIGN_IDS, idCardDesign } from "../../shared/designs/index.js";
 
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a hex color like #2563eb");
 
@@ -22,6 +22,11 @@ export const idCardConfigSchema = z.object({
   visibleFields: z.array(z.string()).max(3).default([]),
   showQrCode: z.boolean().default(true),
   photoFieldKey: optionalText(100),
+  // Where the photo comes from: the registrant's uploaded photo, one event flyer for everyone, or none.
+  photoSource: z.enum(["field", "flyer", "none"]).default("field"),
+  flyerUrl: z.string().url().optional(),
+  // Presets for giving each registrant a role on their card from the registration page.
+  roleOptions: z.array(z.string().trim().min(1).max(40)).max(30).optional(),
   logoUrl: z.string().url().optional(),
   // Used by the "custom" template: the organization's own uploaded card design.
   backgroundImageUrl: z.string().url().optional(),
@@ -31,16 +36,38 @@ export const idCardConfigSchema = z.object({
   contactWebsite: optionalText(120),
   contactAddress: optionalText(160),
   signatureLabel: z.string().trim().max(40).default("Authorized Signature"),
+  // What appears on the card.
+  showRegistrationNumber: z.boolean().default(true),
+  showRole: z.boolean().default(true),
+  showDates: z.boolean().default(true),
+  showTerms: z.boolean().default(true),
+  showContact: z.boolean().default(true),
+  showSignature: z.boolean().default(true),
+  showBarcode: z.boolean().default(true),
   // Offer the card on the public registration success page (and allow its public download).
   showOnConfirmation: z.boolean().default(true),
 });
 
 export type IdCardConfig = z.input<typeof idCardConfigSchema>;
 
+/** Admin changes to one registrant's ID card. */
+export const documentOverridesSchema = z.object({
+  role: z.string().trim().max(40).nullish(),
+  photoUrl: z.string().url().nullish(),
+});
+
+export type DocumentOverrides = z.infer<typeof documentOverridesSchema>;
+
+export function readOverrides(raw: unknown): DocumentOverrides {
+  const parsed = documentOverridesSchema.safeParse(raw ?? {});
+  return parsed.success ? parsed.data : {};
+}
+
 export interface ResolvedIdCardConfig extends z.output<typeof idCardConfigSchema> {
   primaryColor: string;
   secondaryColor: string;
   termsList: string[];
+  roleOptions: string[];
 }
 
 /** Stored config with defaults applied; unknown designs and configs saved before designs existed fall back sensibly. */
@@ -68,6 +95,7 @@ export function resolveIdCardConfig(raw: unknown): ResolvedIdCardConfig {
     ...config,
     template,
     terms,
+    roleOptions: config.roleOptions?.length ? config.roleOptions : DEFAULT_ROLE_OPTIONS,
     primaryColor: (!legacy && config.primaryColor) || defaults.primary,
     secondaryColor: (!legacy && config.secondaryColor) || defaults.secondary,
     termsList,

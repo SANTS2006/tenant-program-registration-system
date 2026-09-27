@@ -28,6 +28,7 @@ export const updateProgramSchema = z.object({
   registrationEnabled: z.boolean().optional(),
   idCardEnabled: z.boolean().optional(),
   ticketEnabled: z.boolean().optional(),
+  oneRegistrationPerEmail: z.boolean().optional(),
   registrationNumberConfig: registrationNumberConfigSchema.optional(),
 });
 

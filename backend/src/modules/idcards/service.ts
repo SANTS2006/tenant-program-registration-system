@@ -14,12 +14,13 @@ import {
   BACKGROUND_TRANSFORM,
   cardDate,
   fetchImageDataUri,
+  FLYER_TRANSFORM,
   LOGO_TRANSFORM,
   PHOTO_TRANSFORM,
   qrMatrix,
   svgPagesToPdf,
 } from "./pdf.js";
-import { resolveIdCardConfig, type IdCardConfig, type ResolvedIdCardConfig } from "./schemas.js";
+import { readOverrides, resolveIdCardConfig, type DocumentOverrides, type IdCardConfig, type ResolvedIdCardConfig } from "./schemas.js";
 
 // Portrait CR-80 card, 2.125in x 3.375in, in PDF points.
 const CARD_WIDTH_PT = 153;
@@ -108,19 +109,24 @@ async function renderCard(program: programsRepo.ProgramRow, registration: regist
   if (!program.idCardEnabled) throw AppError.conflict("ID cards are not enabled for this program");
 
   const config = resolveIdCardConfig(program.idCardConfig);
+  const overrides = readOverrides(registration.documentOverrides);
   const responses = (registration.responses as Record<string, unknown>) ?? {};
   const roleAnswer = config.roleFieldKey ? responses[config.roleFieldKey] : undefined;
+  const answeredRole = typeof roleAnswer === "string" && roleAnswer.trim() ? roleAnswer.trim() : undefined;
 
-  let photoUrl: string | undefined;
-  if (config.photoFieldKey) {
+  // A photo set for this registrant wins; otherwise the card's photo setting decides.
+  let photoUrl = overrides.photoUrl ?? undefined;
+  if (!photoUrl && config.photoSource === "flyer") photoUrl = config.flyerUrl;
+  if (!photoUrl && config.photoSource === "field" && config.photoFieldKey) {
     const files = await registrationsRepo.getRegistrationFiles(registration.id);
     photoUrl = files.find((f) => f.fieldKey === config.photoFieldKey)?.secureUrl;
   }
+  const hidePhoto = !photoUrl && config.photoSource === "none";
 
   const [orgName, fields, photo, logoImage, background] = await Promise.all([
     organizationName(program),
     resolveExtraFields(registration, config.visibleFields),
-    fetchImageDataUri(photoUrl, PHOTO_TRANSFORM),
+    fetchImageDataUri(photoUrl, config.photoSource === "flyer" && !overrides.photoUrl ? FLYER_TRANSFORM : PHOTO_TRANSFORM),
     fetchImageDataUri(config.logoUrl, LOGO_TRANSFORM),
     config.template === "custom" ? fetchImageDataUri(config.backgroundImageUrl, BACKGROUND_TRANSFORM) : null,
   ]);
@@ -128,23 +134,26 @@ async function renderCard(program: programsRepo.ProgramRow, registration: regist
   const content: IdCardContent = {
     logo: { image: logoImage, orgName, tagline: program.name },
     name: registration.applicantName ?? "Registered Participant",
-    role: typeof roleAnswer === "string" && roleAnswer.trim() ? roleAnswer.trim() : config.roleText,
-    registrationNumber: registration.registrationNumber,
+    role: config.showRole ? (overrides.role || answeredRole || config.roleText) : "",
+    registrationNumber: config.showRegistrationNumber ? registration.registrationNumber : "",
     fields,
-    issued: cardDate(registration.createdAt),
-    validUntil: cardDate(program.endDate),
-    // Without a photo field the card shows the neutral silhouette, as in the preview.
+    issued: config.showDates ? cardDate(registration.createdAt) : undefined,
+    validUntil: config.showDates ? cardDate(program.endDate) : undefined,
+    // Without a photo the card shows a neutral silhouette, as in the preview.
     photo,
+    hidePhoto,
     qr: config.showQrCode ? qrMatrix(verifyUrlFor(program, registration, "id-card")) : null,
-    barcode: code128(registration.registrationNumber),
-    terms: config.termsList,
-    contact: {
-      phone: config.contactPhone,
-      email: config.contactEmail,
-      website: config.contactWebsite,
-      address: config.contactAddress,
-    },
-    signatureLabel: config.signatureLabel,
+    barcode: config.showBarcode ? code128(registration.registrationNumber) : null,
+    terms: config.showTerms ? config.termsList : [],
+    contact: config.showContact
+      ? {
+          phone: config.contactPhone,
+          email: config.contactEmail,
+          website: config.contactWebsite,
+          address: config.contactAddress,
+        }
+      : {},
+    signatureLabel: config.showSignature ? config.signatureLabel : "",
     background,
   };
 
@@ -167,6 +176,15 @@ async function publicRegistrationWithCard(slug: string, registrationNumber: stri
   return found;
 }
 
+/** Saves an admin's changes to one registrant's ID card (role, photo); null clears a change. */
+export async function updateDocumentOverrides(programId: string, registrationId: string, input: DocumentOverrides) {
+  const { registration } = await findAdminRegistration(programId, registrationId);
+  const next = { ...readOverrides(registration.documentOverrides), ...input };
+  const cleaned = Object.fromEntries(Object.entries(next).filter(([, value]) => value !== null && value !== undefined && value !== ""));
+  await registrationsRepo.updateDocumentOverrides(registration.id, cleaned);
+  return cleaned;
+}
+
 export async function generateForRegistrationInProgram(programId: string, registrationId: string) {
   const { program, registration } = await findAdminRegistration(programId, registrationId);
   return buildCardPdf(program, registration);
@@ -179,8 +197,10 @@ export async function generateForPublicRegistration(slug: string, registrationNu
 
 export interface RenderedImage {
   svg: string;
-  /** What the image should be saved as, e.g. "Name-ID-Card-CODE.png". */
+  /** What the download should be saved as, e.g. "Name-Ticket-CODE.png". */
   fileName: string;
+  /** How many sides the document has; two-sided tickets download as PDFs. */
+  sides?: number;
 }
 
 export async function svgForRegistrationInProgram(
@@ -212,6 +232,9 @@ export interface VerificationResult {
   scannedByTeamMember: boolean;
   details: { label: string; value: string }[];
   submittedAt: string;
+  /** True when this document was scanned before; only the first scan is logged. */
+  alreadyVerified: boolean;
+  firstVerifiedAt: string;
 }
 
 export interface VerificationContext {
@@ -236,8 +259,10 @@ export async function verifyRegistration(
   // Only credit the scan to a signed-in person who is on this program's team.
   const verifiedBy = context.user && (await getProgramRole(context.user, program.id)) ? context.user.id : null;
 
+  let firstVerifiedAt = new Date();
+  let alreadyVerified = false;
   try {
-    await verificationsRepo.recordVerification({
+    ({ firstVerifiedAt, alreadyVerified } = await verificationsRepo.recordVerification({
       programId: program.id,
       registrationId: registration.id,
       documentType: context.documentType,
@@ -246,7 +271,7 @@ export async function verifyRegistration(
       verifiedBy,
       ipAddress: context.ipAddress,
       userAgent: context.userAgent?.slice(0, 400),
-    });
+    }));
   } catch (err) {
     // The check itself succeeded; a logging problem must not turn it into "not found".
     console.error("Could not record verification:", err);
@@ -270,5 +295,7 @@ export async function verifyRegistration(
     scannedByTeamMember: Boolean(verifiedBy),
     details,
     submittedAt: registration.submittedAt.toISOString(),
+    alreadyVerified,
+    firstVerifiedAt: firstVerifiedAt.toISOString(),
   };
 }

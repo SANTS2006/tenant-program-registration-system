@@ -25,6 +25,8 @@ export async function fetchImageDataUri(url: string | undefined, transform: stri
 }
 
 export const PHOTO_TRANSFORM = "c_fill,g_face,w_480,h_480,f_jpg,q_85";
+// An event flyer keeps its whole design rather than being cropped to a face.
+export const FLYER_TRANSFORM = "c_fill,g_center,w_600,h_600,f_jpg,q_85";
 export const LOGO_TRANSFORM = "c_limit,w_600,h_300,f_png";
 export const BACKGROUND_TRANSFORM = "c_limit,w_1600,h_1600,f_jpg,q_85";
 

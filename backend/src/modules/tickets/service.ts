@@ -1,6 +1,6 @@
 import { participantFileName } from "../../lib/downloadName.js";
 import { AppError } from "../../lib/errors.js";
-import { code128, renderTicket } from "../../shared/designs/index.js";
+import { code128, formatLeones, renderTicketSides, ticketHasBack } from "../../shared/designs/index.js";
 import { BACKGROUND_TRANSFORM, cardDate, fetchImageDataUri, LOGO_TRANSFORM, qrMatrix, svgPagesToPdf } from "../idcards/pdf.js";
 import {
   findAdminRegistration,
@@ -9,6 +9,7 @@ import {
   resolveExtraFields,
   verifyUrlFor,
   type GeneratedDocument,
+  type DocumentSide,
   type RenderedImage,
 } from "../idcards/service.js";
 import * as programsRepo from "../programs/repository.js";
@@ -60,24 +61,34 @@ async function renderProgramTicket(program: programsRepo.ProgramRow, registratio
     config.template === "custom" ? fetchImageDataUri(config.backgroundImageUrl, BACKGROUND_TRANSFORM) : null,
   ]);
 
-  return renderTicket(
+  const price = config.showPrice
+    ? config.isPaid && config.priceAmount !== undefined
+      ? formatLeones(config.priceAmount)
+      : config.isPaid
+        ? undefined
+        : "FREE"
+    : undefined;
+  const details = config.showEventDetails;
+
+  return renderTicketSides(
     config.template,
     {
       logo: { image: logoImage, orgName, tagline: program.name },
       kicker: config.kicker ?? orgName,
       title: config.eventTitle ?? program.name,
       subtitle: config.tagline ?? program.shortDescription ?? "",
-      date: config.eventDate ?? formatProgramDate(program),
-      time: config.eventTime,
-      venue: config.venue,
-      participantName: registration.applicantName ?? "Registered Participant",
-      registrationNumber: registration.registrationNumber,
+      date: details ? (config.eventDate ?? formatProgramDate(program)) : undefined,
+      time: details ? config.eventTime : undefined,
+      venue: details ? config.venue : undefined,
+      price,
+      participantName: config.showParticipantName ? (registration.applicantName ?? "Registered Participant") : "",
+      registrationNumber: config.showRegistrationNumber ? registration.registrationNumber : "",
       fields,
-      phone: config.contactPhone,
-      website: config.website,
+      phone: config.showContact ? config.contactPhone : undefined,
+      website: config.showContact ? config.website : undefined,
       terms: config.terms,
       qr: config.showQrCode ? qrMatrix(verifyUrlFor(program, registration, "ticket")) : null,
-      barcode: code128(registration.registrationNumber),
+      barcode: config.showBarcode ? code128(registration.registrationNumber) : null,
       background,
       textColor: config.textColor,
       overlayOpacity: config.overlayOpacity,
@@ -86,12 +97,27 @@ async function renderProgramTicket(program: programsRepo.ProgramRow, registratio
   );
 }
 
+/** One side of the ticket as SVG. Two-sided tickets are saved as PDFs, one-sided ones as images. */
+async function ticketImage(
+  program: programsRepo.ProgramRow,
+  registration: registrationsRepo.RegistrationRow,
+  side: DocumentSide,
+): Promise<RenderedImage> {
+  const { front, back } = await renderProgramTicket(program, registration);
+  const twoSided = ticketHasBack(resolveTicketConfig(program.ticketConfig).template);
+  return {
+    svg: side === "back" && back ? back : front,
+    fileName: ticketFileName(registration, twoSided ? "pdf" : "png"),
+    sides: back ? 2 : 1,
+  };
+}
+
 async function buildTicketPdf(
   program: programsRepo.ProgramRow,
   registration: registrationsRepo.RegistrationRow,
 ): Promise<GeneratedDocument> {
-  const svg = await renderProgramTicket(program, registration);
-  const pdf = await svgPagesToPdf([svg], TICKET_WIDTH_PT, TICKET_HEIGHT_PT);
+  const { front, back } = await renderProgramTicket(program, registration);
+  const pdf = await svgPagesToPdf(back ? [front, back] : [front], TICKET_WIDTH_PT, TICKET_HEIGHT_PT);
   return { pdf, fileName: ticketFileName(registration, "pdf") };
 }
 
@@ -111,12 +137,20 @@ export async function generateForPublicRegistration(slug: string, registrationNu
   return buildTicketPdf(program, registration);
 }
 
-export async function svgForRegistrationInProgram(programId: string, registrationId: string): Promise<RenderedImage> {
+export async function svgForRegistrationInProgram(
+  programId: string,
+  registrationId: string,
+  side: DocumentSide,
+): Promise<RenderedImage> {
   const { program, registration } = await findAdminRegistration(programId, registrationId);
-  return { svg: await renderProgramTicket(program, registration), fileName: ticketFileName(registration, "png") };
+  return ticketImage(program, registration, side);
 }
 
-export async function svgForPublicRegistration(slug: string, registrationNumber: string): Promise<RenderedImage> {
+export async function svgForPublicRegistration(
+  slug: string,
+  registrationNumber: string,
+  side: DocumentSide,
+): Promise<RenderedImage> {
   const { program, registration } = await publicRegistrationWithTicket(slug, registrationNumber);
-  return { svg: await renderProgramTicket(program, registration), fileName: ticketFileName(registration, "png") };
+  return ticketImage(program, registration, side);
 }

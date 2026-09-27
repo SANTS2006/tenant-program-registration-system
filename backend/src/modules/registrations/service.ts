@@ -45,6 +45,12 @@ export async function submitRegistration(slug: string, input: SubmitRegistration
   const cleanedResponses = validateAndNormalizeResponses(published.fields, input.responses, files);
   const contact = extractApplicantContact(published.fields, cleanedResponses);
 
+  if (program.oneRegistrationPerEmail && contact.email && (await registrationsRepo.emailAlreadyRegistered(program.id, contact.email))) {
+    throw AppError.conflict(
+      "Registration failed: this email address has already been used to register for this program. You cannot submit more than one registration.",
+    );
+  }
+
   const numbering = resolveNumberingConfig(program.registrationNumberConfig);
   const year = new Date().getFullYear();
 

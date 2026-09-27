@@ -1,4 +1,4 @@
-import { and, count, countDistinct, desc, eq, gte, ilike, or, sql } from "drizzle-orm";
+import { and, count, countDistinct, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { documentVerifications, registrations, users } from "../../db/schema/index.js";
 import { toOffsetLimit, type PaginationInput } from "../../lib/pagination.js";
@@ -6,26 +6,30 @@ import { toOffsetLimit, type PaginationInput } from "../../lib/pagination.js";
 export type VerificationDocument = (typeof documentVerifications.$inferInsert)["documentType"];
 export type NewVerification = typeof documentVerifications.$inferInsert;
 
-// Reloading the verification page (or a phone opening it twice) shouldn't count as a new scan.
-const DUPLICATE_WINDOW_MS = 2 * 60 * 1000;
+/**
+ * Logs the first scan of a registration's ID card or ticket. Every later scan of the same
+ * document is only checked, not logged again, so the table holds one row per document.
+ * Returns when that document was first verified.
+ */
+export async function recordVerification(values: NewVerification): Promise<{ firstVerifiedAt: Date; alreadyVerified: boolean }> {
+  const [inserted] = await db
+    .insert(documentVerifications)
+    .values(values)
+    .onConflictDoNothing({ target: [documentVerifications.registrationId, documentVerifications.documentType] })
+    .returning({ createdAt: documentVerifications.createdAt });
+  if (inserted) return { firstVerifiedAt: inserted.createdAt, alreadyVerified: false };
 
-export async function recordVerification(values: NewVerification): Promise<void> {
-  const since = new Date(Date.now() - DUPLICATE_WINDOW_MS);
-  const conditions = [
-    eq(documentVerifications.registrationId, values.registrationId),
-    eq(documentVerifications.documentType, values.documentType),
-    gte(documentVerifications.createdAt, since),
-  ];
-  if (values.ipAddress) conditions.push(eq(documentVerifications.ipAddress, values.ipAddress));
-
-  const [recent] = await db
-    .select({ id: documentVerifications.id })
+  const [existing] = await db
+    .select({ createdAt: documentVerifications.createdAt })
     .from(documentVerifications)
-    .where(and(...conditions))
+    .where(
+      and(
+        eq(documentVerifications.registrationId, values.registrationId),
+        eq(documentVerifications.documentType, values.documentType),
+      ),
+    )
     .limit(1);
-  if (recent) return;
-
-  await db.insert(documentVerifications).values(values);
+  return { firstVerifiedAt: existing?.createdAt ?? new Date(), alreadyVerified: true };
 }
 
 export interface VerificationFilters {

@@ -29,6 +29,8 @@ export const registrations = pgTable(
     applicantEmail: text("applicant_email"),
     applicantPhone: text("applicant_phone"),
     responses: jsonb("responses").notNull().default({}),
+    // Admin changes to this registrant's ID card, such as their role or a different photo.
+    documentOverrides: jsonb("document_overrides").notNull().default({}),
     submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

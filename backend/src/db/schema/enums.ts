@@ -52,3 +52,6 @@ export const registrationStatusEnum = pgEnum("registration_status", [
 
 // Which document's QR code was scanned; "link" covers codes issued before this was recorded.
 export const verificationDocumentEnum = pgEnum("verification_document", ["id_card", "ticket", "link"]);
+
+export const supportMessageKindEnum = pgEnum("support_message_kind", ["feedback", "contact", "report"]);
+export const supportMessageStatusEnum = pgEnum("support_message_status", ["new", "read", "resolved"]);

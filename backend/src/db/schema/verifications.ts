@@ -1,4 +1,4 @@
-import { boolean, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { registrationStatusEnum, verificationDocumentEnum } from "./enums";
 import { programs } from "./programs";
 import { registrations } from "./registrations";
@@ -28,5 +28,7 @@ export const documentVerifications = pgTable(
   (table) => [
     index("document_verifications_program_created_idx").on(table.programId, table.createdAt),
     index("document_verifications_registration_idx").on(table.registrationId),
+    // Each ID card and each ticket is logged once: its first successful scan.
+    uniqueIndex("document_verifications_registration_document_unique").on(table.registrationId, table.documentType),
   ],
 );

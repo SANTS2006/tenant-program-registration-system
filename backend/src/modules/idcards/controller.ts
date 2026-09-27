@@ -2,7 +2,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { attachmentDisposition } from "../../lib/downloadName.js";
 import { sendSuccess } from "../../lib/response.js";
 import * as idCardService from "./service.js";
-import { idCardConfigSchema } from "./schemas.js";
+import { documentOverridesSchema, idCardConfigSchema } from "./schemas.js";
 
 interface DocumentQuery {
   format?: string;
@@ -15,10 +15,11 @@ export function wantsSvg(request: FastifyRequest): { svg: boolean; side: idCardS
   return { svg: format === "svg", side: side === "back" ? "back" : "front" };
 }
 
-export function sendSvg(reply: FastifyReply, { svg, fileName }: idCardService.RenderedImage) {
+export function sendSvg(reply: FastifyReply, { svg, fileName, sides }: idCardService.RenderedImage) {
   reply.header("Content-Type", "image/svg+xml; charset=utf-8");
   // The name the browser should give the image when it's saved as a PNG.
   reply.header("X-Download-Name", encodeURIComponent(fileName));
+  reply.header("X-Document-Sides", String(sides ?? 1));
   reply.header("Cache-Control", "private, max-age=60");
   // Opened on its own, the image may only show itself: no scripts, no outside requests.
   reply.header("Content-Security-Policy", "default-src 'none'; img-src data:; style-src 'unsafe-inline'");
@@ -42,6 +43,13 @@ export function sendPdf(reply: FastifyReply, { pdf, fileName }: idCardService.Ge
   reply.header("Content-Type", "application/pdf");
   reply.header("Content-Disposition", attachmentDisposition(fileName));
   return reply.send(pdf);
+}
+
+export async function updateDocumentOverridesHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { programId, registrationId } = request.params as { programId: string; registrationId: string };
+  const input = documentOverridesSchema.parse(request.body);
+  const overrides = await idCardService.updateDocumentOverrides(programId, registrationId, input);
+  return sendSuccess(reply, overrides, "ID card updated for this registrant");
 }
 
 export async function downloadAdminIdCardHandler(request: FastifyRequest, reply: FastifyReply) {

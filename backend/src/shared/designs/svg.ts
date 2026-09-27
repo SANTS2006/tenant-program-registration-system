@@ -233,7 +233,12 @@ export function photo(
   cx: number,
   cy: number,
   r: number,
-  { border, borderWidth = 0, h = r }: { border?: string; borderWidth?: number; h?: number } = {},
+  {
+    border,
+    borderWidth = 0,
+    h = r,
+    monogram,
+  }: { border?: string; borderWidth?: number; h?: number; monogram?: string } = {},
 ) {
   let out = "";
   if (border && borderWidth) {
@@ -243,6 +248,16 @@ export function photo(
   }
   const clip = ctx.clip(shapeMarkup(shape, cx, cy, r, h));
   if (href) return out + image(href, cx - r, cy - h, r * 2, h * 2, "slice", clip);
+  if (monogram) {
+    // The card was set up without photos: show the person's initials in the frame instead.
+    const bg = ctx.linear(["#e8edf5", "#cfd8e6"], [0, 0, 0, 1]);
+    const s = Math.min(r, h);
+    return (
+      out +
+      `<g clip-path="${clip}">${rect(cx - r, cy - h, r * 2, h * 2, bg)}</g>` +
+      text(cx, cy + s * 0.25, monogram, { size: s * 0.72, fill: "#5b6b86", bold: true, anchor: "middle" })
+    );
+  }
 
   const bg = ctx.linear(["#e5e9f0", "#c7ceda"], [0, 0, 0, 1]);
   const s = Math.min(r, h);
@@ -453,6 +468,7 @@ export function bullets(
 }
 
 export function signature(x: number, y: number, width: number, label: string, color: string, anchor: "middle" | "end" = "middle") {
+  if (!label) return "";
   const left = anchor === "middle" ? x - width / 2 : x - width;
   const labelX = anchor === "middle" ? x : x - width / 2;
   return (

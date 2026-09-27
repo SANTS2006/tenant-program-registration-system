@@ -7,6 +7,7 @@ import {
   listTenantsHandler,
   updateUserStatusHandler,
 } from "./controller.js";
+import { getSupportMessageHandler, listSupportMessagesHandler, updateSupportMessageHandler } from "./inbox.js";
 
 // Cross-account administration for the platform super_admin. Program, form and
 // registration management goes through the normal /programs routes, where the
@@ -19,4 +20,9 @@ export async function platformRoutes(app: FastifyInstance) {
   app.get("/tenants/:tenantId/users", listTenantUsersHandler);
   app.get("/tenants/:tenantId/programs", listTenantProgramsHandler);
   app.patch("/users/:userId/status", updateUserStatusHandler);
+
+  // Inbox: feedback, contact form messages, and reports.
+  app.get("/messages", listSupportMessagesHandler);
+  app.get("/messages/:messageId", getSupportMessageHandler);
+  app.patch("/messages/:messageId", updateSupportMessageHandler);
 }

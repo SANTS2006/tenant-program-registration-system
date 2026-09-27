@@ -88,6 +88,20 @@ export async function findRegistrationInProgram(
   return row ?? null;
 }
 
+export async function updateDocumentOverrides(registrationId: string, overrides: Record<string, unknown>) {
+  await db.update(registrations).set({ documentOverrides: overrides, updatedAt: new Date() }).where(eq(registrations.id, registrationId));
+}
+
+/** Whether this email address has already been used to register for the program (any letter case). */
+export async function emailAlreadyRegistered(programId: string, email: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: registrations.id })
+    .from(registrations)
+    .where(and(eq(registrations.programId, programId), sql`lower(${registrations.applicantEmail}) = ${email.trim().toLowerCase()}`))
+    .limit(1);
+  return Boolean(row);
+}
+
 export async function findRegistrationByNumber(
   programId: string,
   registrationNumber: string,

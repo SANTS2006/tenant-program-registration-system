@@ -19,6 +19,16 @@ export const ticketConfigSchema = z.object({
   contactPhone: optionalText(60),
   website: optionalText(120),
   visibleFields: z.array(z.string()).max(2).default([]),
+  // Free, or a price in leones shown on the ticket.
+  isPaid: z.boolean().default(false),
+  priceAmount: z.number().min(0).max(100_000_000).optional(),
+  // What appears on the ticket.
+  showPrice: z.boolean().default(true),
+  showParticipantName: z.boolean().default(true),
+  showRegistrationNumber: z.boolean().default(true),
+  showBarcode: z.boolean().default(true),
+  showEventDetails: z.boolean().default(true),
+  showContact: z.boolean().default(true),
   logoUrl: z.string().url().optional(),
   // An uploaded design sample used by the "custom" template, with the details laid over it.
   backgroundImageUrl: z.string().url().optional(),
