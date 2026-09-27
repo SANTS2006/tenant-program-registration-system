@@ -19,6 +19,34 @@ export interface IdCardConfig {
   contactAddress?: string;
   signatureLabel: string;
   showOnConfirmation: boolean;
+  /** Where the photo comes from: each registrant's upload, one event flyer, or no photo. */
+  photoSource: "field" | "flyer" | "none";
+  flyerUrl?: string;
+  roleOptions?: string[];
+  showRegistrationNumber: boolean;
+  showRole: boolean;
+  showDates: boolean;
+  showTerms: boolean;
+  showContact: boolean;
+  showSignature: boolean;
+  showBarcode: boolean;
+}
+
+/** One registrant's ID card changes, set from their registration page. */
+export interface DocumentOverrides {
+  role?: string;
+  photoUrl?: string;
+}
+
+export function updateDocumentOverrides(
+  programId: string,
+  registrationId: string,
+  input: { role?: string | null; photoUrl?: string | null },
+) {
+  return apiFetch<DocumentOverrides>(`/programs/${programId}/registrations/${registrationId}/document-overrides`, {
+    method: "PATCH",
+    body: input,
+  });
 }
 
 export interface IdCardConfigResponse {

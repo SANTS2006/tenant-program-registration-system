@@ -30,6 +30,7 @@ export interface Program {
   registrationEnabled: boolean;
   idCardEnabled: boolean;
   ticketEnabled: boolean;
+  oneRegistrationPerEmail: boolean;
   registrationNumberConfig: Partial<RegistrationNumberConfig>;
   createdAt: string;
   updatedAt: string;
@@ -175,6 +176,8 @@ export interface Registration {
   applicantPhone: string | null;
   responses: Record<string, unknown>;
   submittedAt: string;
+  /** Admin changes to this registrant's ID card. */
+  documentOverrides?: { role?: string; photoUrl?: string };
 }
 
 export interface RegistrationFile {

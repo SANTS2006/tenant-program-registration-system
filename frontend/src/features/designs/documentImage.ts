@@ -9,6 +9,8 @@ export type DocumentKind = "id-card" | "ticket";
 interface RenderedDocument {
   svg: string;
   fileName: string;
+  /** 2 for two-sided tickets, which download as PDFs. */
+  sides: number;
 }
 
 /** Pixels per design unit: cards and tickets are saved at print-friendly resolution. */
@@ -16,7 +18,7 @@ const SCALE = 4;
 const GAP = 48;
 
 /** Fetches a rendered card side or ticket as SVG, with the file name the server chose for it. */
-async function fetchDocumentSvg(path: string, authenticated: boolean): Promise<RenderedDocument> {
+export async function fetchDocumentSvg(path: string, authenticated: boolean): Promise<RenderedDocument> {
   const token = authenticated ? getAccessToken() : null;
   const response = await fetch(`/api${path}`, {
     credentials: "include",
@@ -27,7 +29,11 @@ async function fetchDocumentSvg(path: string, authenticated: boolean): Promise<R
     throw new ApiError("DOWNLOAD_FAILED", "This document isn't available to download", response.status);
   }
   const header = response.headers.get("x-download-name");
-  return { svg: await response.text(), fileName: header ? decodeURIComponent(header) : "document.png" };
+  return {
+    svg: await response.text(),
+    fileName: header ? decodeURIComponent(header) : "document.png",
+    sides: Number(response.headers.get("x-document-sides") ?? 1),
+  };
 }
 
 let fontCss: Promise<string> | null = null;
@@ -113,7 +119,8 @@ async function savePng(svgs: string[], fileName: string) {
 
 /**
  * Downloads a registrant's document: the ID card as a two-page PDF (front and back),
- * named "<Name>-ID-Card-<code>.pdf", and the ticket as a PNG, "<Name>-Ticket-<code>.png".
+ * "<Name>-ID-Card-<code>.pdf"; a two-sided ticket as a PDF too; a one-sided ticket as a
+ * PNG image, "<Name>-Ticket-<code>.png".
  */
 export async function downloadRegistrantDocument(
   kind: DocumentKind,
@@ -125,5 +132,6 @@ export async function downloadRegistrantDocument(
     return downloadAuthenticatedFile(`${basePath}/id-card`, "ID-Card.pdf");
   }
   const ticket = await fetchDocumentSvg(`${basePath}/ticket?format=svg`, authenticated);
+  if (ticket.sides > 1) return downloadAuthenticatedFile(`${basePath}/ticket`, ticket.fileName);
   return savePng([ticket.svg], ticket.fileName);
 }

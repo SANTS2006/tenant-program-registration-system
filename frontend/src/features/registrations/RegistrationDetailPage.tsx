@@ -10,6 +10,7 @@ import { RegistrationStatusBadge } from "@/components/StatusBadge";
 import { ApiError } from "@/lib/api";
 import { useProgramOutletContext } from "../programs/ProgramDetailLayout";
 import { RegistrationVerifications } from "../verifications/VerificationsPage";
+import { RegistrantIdCardPanel } from "../idcards/RegistrantIdCardPanel";
 import { isOtherOption, otherTextKey } from "../public-registration/DynamicForm";
 import { downloadRegistrantDocument } from "../designs/documentImage";
 import { downloadRegistrationFile } from "./api";
@@ -168,6 +169,10 @@ export function RegistrationDetailPage() {
             </Button>
           </CardContent>
         </Card>
+        )}
+
+        {program.idCardEnabled && (
+          <RegistrantIdCardPanel program={program} registration={registration} canEdit={canEdit} />
         )}
 
         {(program.idCardEnabled || program.ticketEnabled) && (

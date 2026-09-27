@@ -14,6 +14,15 @@ export interface TicketConfig {
   contactPhone?: string;
   website?: string;
   visibleFields: string[];
+  /** Free, or a price in leones. */
+  isPaid: boolean;
+  priceAmount?: number;
+  showPrice: boolean;
+  showParticipantName: boolean;
+  showRegistrationNumber: boolean;
+  showBarcode: boolean;
+  showEventDetails: boolean;
+  showContact: boolean;
   logoUrl?: string;
   backgroundImageUrl?: string;
   textColor: "light" | "dark";

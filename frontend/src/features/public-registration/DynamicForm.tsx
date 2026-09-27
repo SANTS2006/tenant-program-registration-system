@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertCircle, ChevronLeft, ChevronRight, Loader2, ShieldCheck, UploadCloud } from "lucide-react";
+import { AlertCircle, ChevronLeft, ChevronRight, Eraser, Loader2, ShieldCheck, UploadCloud } from "lucide-react";
 import type { ConditionalRule, FormField, FormSection } from "@/types/api";
 import { cn } from "@/lib/utils";
 
@@ -165,6 +165,14 @@ export function DynamicForm({
   const steps = isSingle ? [{ id: "all", title: "Registration", fields: groups.flatMap((g) => g.fields) }] : groups;
   const currentStep = steps[stepIndex]!;
   const isLastStep = stepIndex === steps.length - 1;
+
+  // Empties every answer and upload at once, and returns to the first step.
+  const clearForm = () => {
+    setResponses({});
+    setUploadedFiles({});
+    setStepErrors([]);
+    setStepIndex(0);
+  };
 
   const setValue = (key: string, value: unknown) =>
     setResponses((r) => pruneDependentAnswers(fields, { ...r, [key]: value }));
@@ -538,16 +546,22 @@ export function DynamicForm({
           <span />
         )}
 
-        {isSingle || isLastStep ? (
-          <Button type="submit" loading={submitting}>
-            {submitting ? "Submitting..." : (submitLabel ?? "Submit registration")}
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="ghost" onClick={clearForm} disabled={submitting}>
+            <Eraser className="h-4 w-4" />
+            Clear form
           </Button>
-        ) : (
-          <Button type="button" onClick={handleNext}>
-            Next
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        )}
+          {isSingle || isLastStep ? (
+            <Button type="submit" loading={submitting}>
+              {submitting ? "Submitting..." : (submitLabel ?? "Submit registration")}
+            </Button>
+          ) : (
+            <Button type="button" onClick={handleNext}>
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
     </form>
   );

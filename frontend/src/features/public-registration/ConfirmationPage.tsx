@@ -15,7 +15,18 @@ function downloadUrl(slug: string, registrationNumber: string, kind: "id-card" |
 
 /** The registrant's own card or ticket, drawn by the server in the program's chosen design. */
 // Drawn inline rather than as an <img> so the card uses the page's Poppins font.
-function DocumentImage({ src, alt, className }: { src: string; alt: string; className: string }) {
+function DocumentImage({
+  src,
+  alt,
+  className,
+  onSides,
+}: {
+  src: string;
+  alt: string;
+  className: string;
+  /** Reports how many sides the document has, so a ticket's back can be shown too. */
+  onSides?: (sides: number) => void;
+}) {
   const [svg, setSvg] = React.useState<string | null>(null);
   const [failed, setFailed] = React.useState(false);
 
@@ -25,6 +36,7 @@ function DocumentImage({ src, alt, className }: { src: string; alt: string; clas
       .then((res) => {
         const type = res.headers.get("content-type") ?? "";
         if (!res.ok || !type.startsWith("image/svg+xml")) throw new Error("unavailable");
+        onSides?.(Number(res.headers.get("x-document-sides") ?? 1));
         return res.text();
       })
       .then((text) => !cancelled && setSvg(text))
@@ -44,6 +56,7 @@ export function ConfirmationPage() {
   const location = useLocation();
   const result = location.state as SubmitRegistrationResult | undefined;
   const [downloading, setDownloading] = React.useState<DocumentKind | null>(null);
+  const [ticketSides, setTicketSides] = React.useState(1);
 
   const download = async (kind: DocumentKind) => {
     if (!slug || !result) return;
@@ -107,6 +120,14 @@ export function ConfirmationPage() {
               <DocumentImage
                 src={`${downloadUrl(slug, result.registrationNumber, "ticket")}?format=svg`}
                 alt="Your ticket"
+                className="aspect-[3/1] w-full max-w-xl"
+                onSides={setTicketSides}
+              />
+            )}
+            {result.ticketAvailable && ticketSides > 1 && (
+              <DocumentImage
+                src={`${downloadUrl(slug, result.registrationNumber, "ticket")}?format=svg&side=back`}
+                alt="Your ticket (back)"
                 className="aspect-[3/1] w-full max-w-xl"
               />
             )}

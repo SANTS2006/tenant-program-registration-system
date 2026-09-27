@@ -1,7 +1,7 @@
 import * as React from "react";
 import { toast } from "sonner";
 import { Ticket } from "lucide-react";
-import { renderTicket, sampleQrMatrix, TICKET_DESIGNS, ticketDesign, code128 } from "@designs";
+import { formatLeones, renderTicket, sampleQrMatrix, TICKET_DESIGNS, ticketDesign, ticketHasBack, code128 } from "@designs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ import { getAdminForm } from "../form-builder/api";
 import { uploadIdCardBackground } from "../idcards/api";
 import { DesignColorsField, ImagePickerField, ShowOnConfirmationToggle } from "../idcards/IdCardSettingsCard";
 import { useUpdateProgram } from "../programs/hooks";
+import { ContentChecklist } from "../designs/ContentChecklist";
 import { DesignGallery } from "../designs/DesignGallery";
 import { UploadDesignTile } from "../designs/UploadDesignTile";
 import type { TicketConfig } from "./api";
@@ -63,6 +64,7 @@ export function TicketSettingsCard({ program }: { program: Program }) {
   const [config, setConfig] = React.useState<TicketConfig | null>(null);
   const [availableFields, setAvailableFields] = React.useState<{ fieldKey: string; label: string }[]>([]);
   const [uploading, setUploading] = React.useState<"logo" | "background" | null>(null);
+  const [side, setSide] = React.useState<"front" | "back">("front");
 
   React.useEffect(() => {
     if (data) setConfig(data.config);
@@ -179,6 +181,10 @@ export function TicketSettingsCard({ program }: { program: Program }) {
   };
 
   const handleSave = async () => {
+    if (config.isPaid && config.priceAmount === undefined) {
+      toast.error("Enter the ticket price in leones, or set the ticket to Free");
+      return;
+    }
     if (customActive && !config.backgroundImageUrl) {
       toast.error("Upload your ticket design first, or pick one of the designs");
       return;
@@ -225,9 +231,86 @@ export function TicketSettingsCard({ program }: { program: Program }) {
           </section>
 
           <div className="flex flex-col gap-2">
-            <p className="text-xs font-medium text-muted-foreground">Live preview</p>
-            <TicketPreview config={config} context={context} />
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-medium text-muted-foreground">
+                Live preview
+                {ticketHasBack(config.template)
+                  ? " · two-sided, downloads as a PDF"
+                  : " · one-sided, downloads as an image"}
+              </p>
+              {ticketHasBack(config.template) && (
+                <div className="flex rounded-full border border-border p-0.5 text-xs font-medium">
+                  {(["front", "back"] as const).map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setSide(s)}
+                      className={cn(
+                        "rounded-full px-3 py-0.5 capitalize transition-colors",
+                        side === s ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <TicketPreview config={config} context={context} side={ticketHasBack(config.template) ? side : "front"} />
           </div>
+
+          <section className="flex flex-col gap-2">
+            <Label>Price</Label>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex rounded-lg border border-border p-0.5">
+                {(
+                  [
+                    [false, "Free"],
+                    [true, "Paid"],
+                  ] as const
+                ).map(([paid, label]) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => set({ isPaid: paid })}
+                    className={cn(
+                      "rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
+                      config.isPaid === paid ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {config.isPaid && (
+                <div className="relative w-44">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">
+                    Le
+                  </span>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    inputMode="decimal"
+                    className="pl-9"
+                    placeholder="Amount"
+                    value={config.priceAmount ?? ""}
+                    onChange={(e) => set({ priceAmount: e.target.value === "" ? undefined : Math.max(0, Number(e.target.value)) })}
+                    aria-label="Ticket price in leones"
+                  />
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {config.showPrice === false
+                  ? "The price is hidden on the ticket."
+                  : config.isPaid
+                    ? config.priceAmount !== undefined
+                      ? `Tickets show ${formatLeones(config.priceAmount)}.`
+                      : "Enter the price in leones."
+                    : "Tickets show FREE."}
+              </p>
+            </div>
+          </section>
 
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             {customActive ? (
@@ -328,10 +411,22 @@ export function TicketSettingsCard({ program }: { program: Program }) {
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm">
-            <Checkbox checked={config.showQrCode} onCheckedChange={(v) => set({ showQrCode: v === true })} />
-            Show verification QR code
-          </label>
+          <section className="flex flex-col gap-2">
+            <Label>What&apos;s on the ticket</Label>
+            <ContentChecklist
+              items={[
+                { key: "showPrice", label: "Price" },
+                { key: "showParticipantName", label: "Registrant's name" },
+                { key: "showRegistrationNumber", label: "Registration number" },
+                { key: "showQrCode", label: "Verification QR code", hint: "On designs that print one" },
+                { key: "showBarcode", label: "Barcode", hint: "On designs that print one" },
+                { key: "showEventDetails", label: "Date, time, and venue" },
+                { key: "showContact", label: "Contact phone and website" },
+              ]}
+              values={config}
+              onChange={(key, checked) => set({ [key]: checked })}
+            />
+          </section>
 
           <ShowOnConfirmationToggle
             id="ticketShowOnConfirmation"

@@ -22,6 +22,7 @@ import {
 import * as programsApi from "./api";
 import { useProgramStats } from "../registrations/hooks";
 import { IdCardSettingsCard } from "../idcards/IdCardSettingsCard";
+import { RegistrationRulesCard } from "./RegistrationRulesCard";
 import { TicketSettingsCard } from "../tickets/TicketSettingsCard";
 import { DeleteProgramDialog } from "./DeleteProgramDialog";
 import { RegistrationNumberCard } from "./RegistrationNumberCard";
@@ -255,6 +256,9 @@ export function ProgramOverviewPage() {
 
         <div className="lg:col-span-2">
           <RegistrationNumberCard program={program} />
+        </div>
+        <div className="lg:col-span-3">
+          <RegistrationRulesCard program={program} />
         </div>
         <div className="lg:col-span-3">
           <IdCardSettingsCard program={program} />

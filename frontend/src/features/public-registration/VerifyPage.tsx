@@ -95,7 +95,14 @@ export function VerifyPage() {
             </span>
           </p>
         </div>
-        {data.scannedByTeamMember && (
+        {data.alreadyVerified && (
+          <p className="mt-2 rounded-lg border border-border/70 px-3 py-2 text-xs text-muted-foreground">
+            First checked in{" "}
+            {new Date(data.firstVerifiedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}. Later
+            scans are checked but not logged again.
+          </p>
+        )}
+        {data.scannedByTeamMember && !data.alreadyVerified && (
           <p className="mt-2 flex items-center gap-1.5 rounded-lg bg-gradient-brand-soft px-3 py-2 text-xs font-medium text-primary">
             <UserCheck className="h-4 w-4" />
             This check was recorded in the program&apos;s Verifications log under your name.

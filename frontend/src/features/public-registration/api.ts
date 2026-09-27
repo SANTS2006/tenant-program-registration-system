@@ -43,6 +43,9 @@ export interface VerificationResult {
   /** The details printed on the scanned card or ticket. */
   details: { label: string; value: string }[];
   submittedAt: string;
+  /** Scanned before: only the first scan of each document is logged. */
+  alreadyVerified: boolean;
+  firstVerifiedAt: string;
 }
 
 export function verifyRegistration(slug: string, registrationNumber: string, doc?: string | null) {

@@ -28,6 +28,14 @@ export function sampleTicket(template: string): TicketConfig {
     overlayOpacity: 0.35,
     showQrCode: true,
     showOnConfirmation: true,
+    isPaid: true,
+    priceAmount: 150,
+    showPrice: true,
+    showParticipantName: true,
+    showRegistrationNumber: true,
+    showBarcode: true,
+    showEventDetails: true,
+    showContact: true,
   };
 }
 
@@ -46,6 +54,14 @@ export function sampleIdCard(template: string): IdCardConfig {
     contactWebsite: "www.brightfutures.org",
     signatureLabel: "Program Director",
     showOnConfirmation: true,
+    photoSource: "field",
+    showRegistrationNumber: true,
+    showRole: true,
+    showDates: true,
+    showTerms: true,
+    showContact: true,
+    showSignature: true,
+    showBarcode: true,
   };
 }
 

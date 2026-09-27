@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useNavigate } from "react-router-dom";
-import { CalendarCheck, CreditCard, QrCode, ScanLine, Search, ShieldAlert, Ticket, UserCheck } from "lucide-react";
+import { Barcode, CalendarCheck, CreditCard, QrCode, ScanLine, Search, ShieldAlert, Ticket, UserCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { RegistrationStatusBadge } from "@/components/StatusBadge";
 import { StatCard } from "@/components/StatCard";
 import { useProgramOutletContext } from "../programs/ProgramDetailLayout";
 import { DOCUMENT_LABELS, useVerifications, type Verification, type VerificationDocument } from "./api";
-import { QrScannerDialog } from "./QrScannerDialog";
+import { QrScannerDialog, type ScanMode } from "./QrScannerDialog";
 
 export function DocumentBadge({ type }: { type: VerificationDocument }) {
   const Icon = type === "ticket" ? Ticket : type === "id_card" ? CreditCard : QrCode;
@@ -37,7 +37,7 @@ export function VerificationsPage() {
   const [documentType, setDocumentType] = React.useState("all");
   const [result, setResult] = React.useState("all");
   const [page, setPage] = React.useState(1);
-  const [scannerOpen, setScannerOpen] = React.useState(false);
+  const [scanner, setScanner] = React.useState<ScanMode | null>(null);
 
   const { data, isLoading } = useVerifications(program.id, {
     page,
@@ -118,17 +118,24 @@ export function VerificationsPage() {
           </SelectContent>
         </Select>
         <span className="text-sm text-muted-foreground">{data?.total ?? 0} scans</span>
-        <Button className="ml-auto" onClick={() => setScannerOpen(true)}>
-          <ScanLine className="h-4 w-4" />
-          Scan QR code
-        </Button>
+        <div className="ml-auto flex flex-wrap gap-2">
+          <Button onClick={() => setScanner("qr")}>
+            <ScanLine className="h-4 w-4" />
+            Scan QR code
+          </Button>
+          <Button variant="outline" onClick={() => setScanner("barcode")}>
+            <Barcode className="h-4 w-4" />
+            Scan barcode
+          </Button>
+        </div>
       </div>
 
       <QrScannerDialog
-        open={scannerOpen}
-        onOpenChange={setScannerOpen}
+        open={scanner !== null}
+        onOpenChange={(open) => !open && setScanner(null)}
         programId={program.id}
         programSlug={program.slug}
+        mode={scanner ?? "qr"}
       />
 
       <div className="overflow-x-auto rounded-xl border border-border/70 bg-card/60 backdrop-blur-sm">

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { NavLink, Outlet } from "react-router-dom";
-import { Building2, LayoutDashboard, ListChecks, LogOut, Menu, Settings, Users, X } from "lucide-react";
+import { Building2, Inbox, LayoutDashboard, ListChecks, LogOut, Menu, MessageSquarePlus, Settings, Users, X } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { useAuth } from "./AuthContext";
 import { cn } from "@/lib/utils";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { Avatar } from "@/components/Avatar";
+import { FeedbackDialog } from "@/features/support/FeedbackDialog";
 
 const navItems = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -17,6 +18,8 @@ const navItems = [
   { to: "/admin/settings", label: "Settings", icon: Settings, end: false },
   // Cross-tenant, read-only oversight -- only the one platform super_admin sees this.
   { to: "/admin/tenants", label: "Accounts", icon: Building2, end: false, platformOnly: true },
+  // Feedback, contact messages, and reports sent to the platform team.
+  { to: "/admin/inbox", label: "Inbox", icon: Inbox, end: false, platformOnly: true },
 ];
 
 function BrandMark() {
@@ -71,6 +74,16 @@ function ProfileFooter({ onLogout }: { onLogout: () => void }) {
           </p>
         </div>
       </div>
+      {user.role !== "super_admin" && (
+        <FeedbackDialog
+          trigger={
+            <Button variant="ghost" size="sm" className="justify-start">
+              <MessageSquarePlus className="h-4 w-4" />
+              Send feedback
+            </Button>
+          }
+        />
+      )}
       <Button variant="ghost" size="sm" className="justify-start text-destructive hover:bg-destructive/10" onClick={onLogout}>
         <LogOut className="h-4 w-4" />
         Log out

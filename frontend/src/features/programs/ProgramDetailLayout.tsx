@@ -1,5 +1,8 @@
 import { NavLink, Outlet, useOutletContext, useParams } from "react-router-dom";
-import { ArrowLeft, ImageIcon } from "lucide-react";
+import { ArrowLeft, ImageIcon, MessageSquarePlus } from "lucide-react";
+import { useAuth } from "@/app/AuthContext";
+import { Button } from "@/components/ui/button";
+import { FeedbackDialog } from "../support/FeedbackDialog";
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/lib/api";
 import { ProgramStatusBadge } from "@/components/StatusBadge";
@@ -22,6 +25,7 @@ const tabs = [
 export function ProgramDetailLayout() {
   const { programId } = useParams<{ programId: string }>();
   const { data: program, isLoading, error } = useProgram(programId);
+  const { user } = useAuth();
 
   if (error) {
     const message =
@@ -56,6 +60,20 @@ export function ProgramDetailLayout() {
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+        {user && user.role !== "super_admin" && (
+          <div className="absolute right-3 top-3">
+            <FeedbackDialog
+              programId={program.id}
+              programName={program.name}
+              trigger={
+                <Button size="sm" variant="outline" className="border-white/40 bg-black/30 text-white backdrop-blur hover:bg-black/50 hover:text-white">
+                  <MessageSquarePlus className="h-4 w-4" />
+                  Feedback
+                </Button>
+              }
+            />
+          </div>
+        )}
         <div className="absolute inset-x-0 bottom-0 flex flex-col gap-2 p-4 sm:p-6">
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow sm:text-3xl">{program.name}</h1>

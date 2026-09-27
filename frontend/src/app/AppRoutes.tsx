@@ -30,6 +30,7 @@ import { SettingsPage } from "@/features/settings/SettingsPage";
 import { ProgramAnalyticsPage } from "@/features/programs/ProgramAnalyticsPage";
 import { TenantsListPage } from "@/features/platform/TenantsListPage";
 import { TenantDetailPage } from "@/features/platform/TenantDetailPage";
+import { InboxPage } from "@/features/support/InboxPage";
 
 export function AppRoutes() {
   return (
@@ -87,6 +88,7 @@ export function AppRoutes() {
         <Route element={<AdminLayout />}>
           <Route path="/admin/tenants" element={<TenantsListPage />} />
           <Route path="/admin/tenants/:tenantId" element={<TenantDetailPage />} />
+          <Route path="/admin/inbox" element={<InboxPage />} />
         </Route>
       </Route>
 

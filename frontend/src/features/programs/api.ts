@@ -47,6 +47,7 @@ export function updateProgram(
     registrationEnabled?: boolean;
     idCardEnabled?: boolean;
     ticketEnabled?: boolean;
+    oneRegistrationPerEmail?: boolean;
     thumbnailUrl?: string;
     registrationNumberConfig?: RegistrationNumberConfig;
   },

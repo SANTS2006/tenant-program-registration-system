@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import type { FieldType, Program } from "@/types/api";
 import { getAdminForm } from "../form-builder/api";
 import { useUpdateProgram } from "../programs/hooks";
+import { ContentChecklist } from "../designs/ContentChecklist";
 import { DesignGallery } from "../designs/DesignGallery";
 import { UploadDesignTile } from "../designs/UploadDesignTile";
 import { useIdCardConfig, useUpdateIdCardConfig } from "./hooks";
@@ -33,6 +34,14 @@ const THUMBNAIL_CONFIG: IdCardConfig = {
   showQrCode: true,
   signatureLabel: "Authorized Signature",
   showOnConfirmation: true,
+  photoSource: "field",
+  showRegistrationNumber: true,
+  showRole: true,
+  showDates: true,
+  showTerms: true,
+  showContact: true,
+  showSignature: true,
+  showBarcode: true,
 };
 
 /** Whether registrants can view/download the document on the public success page. */
@@ -171,7 +180,7 @@ export function IdCardSettingsCard({ program }: { program: Program }) {
   const updateProgram = useUpdateProgram(program.id);
   const [config, setConfig] = React.useState<IdCardConfig | null>(null);
   const [availableFields, setAvailableFields] = React.useState<AvailableField[]>([]);
-  const [uploading, setUploading] = React.useState<"logo" | "background" | null>(null);
+  const [uploading, setUploading] = React.useState<"logo" | "background" | "flyer" | null>(null);
   const [side, setSide] = React.useState<"front" | "back">("front");
 
   React.useEffect(() => {
@@ -237,13 +246,14 @@ export function IdCardSettingsCard({ program }: { program: Program }) {
   const chooseCustom = (backgroundImageUrl?: string) =>
     set({ template: "custom", ...(backgroundImageUrl ? { backgroundImageUrl } : {}) });
 
-  const upload = async (kind: "logo" | "background", file: File) => {
+  const upload = async (kind: "logo" | "background" | "flyer", file: File) => {
     setUploading(kind);
     try {
       const url = await uploadIdCardBackground(program.id, file);
       if (kind === "logo") set({ logoUrl: url });
+      else if (kind === "flyer") set({ flyerUrl: url, photoSource: "flyer" });
       else chooseCustom(url);
-      toast.success(kind === "logo" ? "Logo uploaded. Remember to save." : "Design uploaded. Remember to save.");
+      toast.success(`${kind === "logo" ? "Logo" : kind === "flyer" ? "Flyer" : "Design"} uploaded. Remember to save.`);
     } catch {
       toast.error("Upload failed. Please try again.");
     } finally {
@@ -273,7 +283,10 @@ export function IdCardSettingsCard({ program }: { program: Program }) {
       return;
     }
     try {
-      await updateConfig.mutateAsync(config);
+      await updateConfig.mutateAsync({
+        ...config,
+        roleOptions: (config.roleOptions ?? []).map((r) => r.trim()).filter(Boolean),
+      });
       toast.success("ID card design saved");
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Failed to save ID card design");
@@ -375,27 +388,83 @@ export function IdCardSettingsCard({ program }: { program: Program }) {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label>Participant photo</Label>
-                <Select
-                  value={config.photoFieldKey ?? "none"}
-                  onValueChange={(v) => set({ photoFieldKey: v === "none" ? undefined : v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="No photo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No photo (show a silhouette)</SelectItem>
-                    {photoFields.map((f) => (
-                      <SelectItem key={f.fieldKey} value={f.fieldKey}>
-                        {f.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {photoFields.length === 0 && (
-                  <p className="text-xs text-muted-foreground">Add an &quot;Image Upload&quot; question (e.g. &quot;Photo&quot;) to your form to use it here.</p>
+                <Label>Photo on the card</Label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {(
+                    [
+                      ["field", "Registrant photo"],
+                      ["flyer", "Event flyer"],
+                      ["none", "No photo"],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <Button
+                      key={value}
+                      type="button"
+                      size="sm"
+                      variant={config.photoSource === value ? "default" : "outline"}
+                      onClick={() => set({ photoSource: value })}
+                    >
+                      {label}
+                    </Button>
+                  ))}
+                </div>
+                {config.photoSource === "field" && (
+                  <>
+                    <Select
+                      value={config.photoFieldKey ?? "none"}
+                      onValueChange={(v) => set({ photoFieldKey: v === "none" ? undefined : v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose the photo question" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No photo question (show a silhouette)</SelectItem>
+                        {photoFields.map((f) => (
+                          <SelectItem key={f.fieldKey} value={f.fieldKey}>
+                            {f.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {photoFields.length === 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Add an &quot;Image Upload&quot; question (e.g. &quot;Photo&quot;) to your form to use it here.
+                      </p>
+                    )}
+                  </>
                 )}
+                {config.photoSource === "flyer" && (
+                  <ImagePickerField
+                    label="Event flyer or image"
+                    hint="Shown in the photo frame on every card, for events where cards aren't personal photos."
+                    value={config.flyerUrl}
+                    uploading={uploading === "flyer"}
+                    onUpload={(file) => void upload("flyer", file)}
+                    onRemove={() => set({ flyerUrl: undefined })}
+                  />
+                )}
+                {config.photoSource === "none" && (
+                  <p className="text-xs text-muted-foreground">The photo frame shows each registrant&apos;s initials instead.</p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  You can also set a photo and a role for a single registrant from their registration page.
+                </p>
               </div>
+            </section>
+
+            <section className="flex flex-col gap-1.5">
+              <Label htmlFor="roleOptions">Roles you can give registrants (one per line)</Label>
+              <Textarea
+                id="roleOptions"
+                rows={3}
+                value={(config.roleOptions ?? []).join("\n")}
+                placeholder={"Participant\nVisitor\nInvitee\nChoir\nUsher\nPastor"}
+                onChange={(e) => set({ roleOptions: e.target.value.split("\n").map((r) => r.trimStart()).slice(0, 30) })}
+              />
+              <p className="text-xs text-muted-foreground">
+                On a registration&apos;s page you pick one of these (or type another) to print on that person&apos;s card,
+                for example Participant, Visitor, Choir, Usher, or Pastor.
+              </p>
             </section>
 
             <section className="flex flex-col gap-2">
@@ -446,10 +515,23 @@ export function IdCardSettingsCard({ program }: { program: Program }) {
               <p className="text-xs text-muted-foreground">Each design shows the contact details it has room for.</p>
             </section>
 
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox checked={config.showQrCode} onCheckedChange={(v) => set({ showQrCode: v === true })} />
-              Show verification QR code
-            </label>
+            <section className="flex flex-col gap-2">
+              <Label>What&apos;s on the card</Label>
+              <ContentChecklist
+                items={[
+                  { key: "showRegistrationNumber", label: "Registration number" },
+                  { key: "showRole", label: "Role line under the name" },
+                  { key: "showQrCode", label: "Verification QR code" },
+                  { key: "showBarcode", label: "Barcode", hint: "On designs that print one" },
+                  { key: "showDates", label: "Issue and expiry dates" },
+                  { key: "showTerms", label: "Terms and conditions" },
+                  { key: "showContact", label: "Contact details" },
+                  { key: "showSignature", label: "Signature line" },
+                ]}
+                values={config}
+                onChange={(key, checked) => set({ [key]: checked })}
+              />
+            </section>
 
             <ShowOnConfirmationToggle
               id="idCardShowOnConfirmation"

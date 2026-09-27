@@ -1,17 +1,22 @@
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, BadgeCheck, CameraOff, Keyboard, ScanLine, ShieldX } from "lucide-react";
+import { AlertTriangle, BadgeCheck, Barcode, CameraOff, Keyboard, ScanLine, ShieldX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { verifyRegistration, type VerificationResult } from "../public-registration/api";
 import { DOCUMENT_LABELS } from "./api";
+
+export type ScanMode = "qr" | "barcode";
 
 type ScanState =
   | { kind: "scanning" }
   | { kind: "checking" }
   | { kind: "result"; result: VerificationResult }
   | { kind: "error"; message: string };
+
+type Decoder = (image: ImageData) => string | null;
 
 /** Reads a verification link from a scanned code: /verify/<program>/<registration number>?doc=... */
 function parseVerificationLink(text: string): { slug: string; registrationNumber: string; doc: string | null } | null {
@@ -29,21 +34,52 @@ function parseVerificationLink(text: string): { slug: string; registrationNumber
   }
 }
 
+/** Loads the decoder for the mode: jsQR for QR codes, ZXing for Code 128 barcodes. */
+async function loadDecoder(mode: ScanMode): Promise<Decoder> {
+  if (mode === "qr") {
+    const { default: jsQR } = await import("jsqr");
+    return (image) => jsQR(image.data, image.width, image.height, { inversionAttempts: "dontInvert" })?.data ?? null;
+  }
+  const zxing = await import("@zxing/library");
+  const reader = new zxing.MultiFormatReader();
+  const hints = new Map();
+  hints.set(zxing.DecodeHintType.POSSIBLE_FORMATS, [zxing.BarcodeFormat.CODE_128]);
+  hints.set(zxing.DecodeHintType.TRY_HARDER, true);
+  reader.setHints(hints);
+  return (image) => {
+    // ZXing reads greyscale: convert the camera frame's colours to brightness.
+    const luminance = new Uint8ClampedArray(image.width * image.height);
+    for (let i = 0, p = 0; i < luminance.length; i++, p += 4) {
+      luminance[i] = (image.data[p]! * 299 + image.data[p + 1]! * 587 + image.data[p + 2]! * 114) / 1000;
+    }
+    try {
+      const source = new zxing.RGBLuminanceSource(luminance, image.width, image.height);
+      return reader.decode(new zxing.BinaryBitmap(new zxing.HybridBinarizer(source))).getText();
+    } catch {
+      return null;
+    } finally {
+      reader.reset();
+    }
+  };
+}
+
 /**
- * Scans ID card and ticket QR codes with the device camera and verifies them on the spot.
- * The check goes through the same verification as a phone's own camera app, so it is
- * logged in the Verifications table, credited to the signed-in team member.
+ * Scans ID card and ticket QR codes or barcodes with the device camera and verifies them on
+ * the spot. Checks go through the same verification as a phone's own camera app, so the
+ * first scan of each document is logged in the Verifications table.
  */
 export function QrScannerDialog({
   open,
   onOpenChange,
   programId,
   programSlug,
+  mode,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   programId: string;
   programSlug: string;
+  mode: ScanMode;
 }) {
   const queryClient = useQueryClient();
   const videoRef = React.useRef<HTMLVideoElement>(null);
@@ -51,6 +87,8 @@ export function QrScannerDialog({
   const [cameraError, setCameraError] = React.useState<string | null>(null);
   const [manual, setManual] = React.useState("");
   const [round, setRound] = React.useState(0);
+  // A barcode carries only the registration number, so say which document is being scanned.
+  const [barcodeDoc, setBarcodeDoc] = React.useState<"ticket" | "id-card">("ticket");
 
   const check = React.useCallback(
     async (slug: string, registrationNumber: string, doc: string | null) => {
@@ -66,19 +104,35 @@ export function QrScannerDialog({
     [programId, queryClient],
   );
 
+  const handleCode = React.useCallback(
+    (text: string) => {
+      if (mode === "barcode") {
+        void check(programSlug, text.trim(), barcodeDoc);
+        return;
+      }
+      const link = parseVerificationLink(text);
+      if (link) void check(link.slug, link.registrationNumber, link.doc);
+      else setState({ kind: "error", message: "This QR code isn't from an ID card or ticket on this platform." });
+    },
+    [mode, programSlug, barcodeDoc, check],
+  );
+
   // Camera and decoding run only while the dialog is open and waiting for a code.
   React.useEffect(() => {
     if (!open || state.kind !== "scanning") return;
     let stopped = false;
     let stream: MediaStream | null = null;
-    let frame = 0;
+    let timer = 0;
 
     (async () => {
       try {
         if (!navigator.mediaDevices?.getUserMedia) throw new Error("unsupported");
-        const [{ default: jsQR }, media] = await Promise.all([
-          import("jsqr"),
-          navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false }),
+        const [decode, media] = await Promise.all([
+          loadDecoder(mode),
+          navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 } },
+            audio: false,
+          }),
         ]);
         stream = media;
         if (stopped) return;
@@ -93,27 +147,21 @@ export function QrScannerDialog({
         const tick = () => {
           if (stopped) return;
           if (ctx && video.readyState === video.HAVE_ENOUGH_DATA && video.videoWidth > 0) {
-            // Decode a scaled-down frame: fast enough for phones, still sharp enough for QR codes.
-            const scale = Math.min(1, 640 / video.videoWidth);
+            // Barcodes need more width to resolve their thin bars than QR codes do.
+            const maxWidth = mode === "barcode" ? 960 : 640;
+            const scale = Math.min(1, maxWidth / video.videoWidth);
             canvas.width = Math.round(video.videoWidth * scale);
             canvas.height = Math.round(video.videoHeight * scale);
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const code = jsQR(ctx.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height, {
-              inversionAttempts: "dontInvert",
-            });
-            if (code?.data) {
-              const link = parseVerificationLink(code.data);
-              if (link) {
-                void check(link.slug, link.registrationNumber, link.doc);
-              } else {
-                setState({ kind: "error", message: "This QR code isn't from an ID card or ticket on this platform." });
-              }
+            const text = decode(ctx.getImageData(0, 0, canvas.width, canvas.height));
+            if (text) {
+              handleCode(text);
               return;
             }
           }
-          frame = requestAnimationFrame(tick);
+          timer = window.setTimeout(tick, mode === "barcode" ? 120 : 60);
         };
-        frame = requestAnimationFrame(tick);
+        tick();
       } catch (err) {
         const denied = err instanceof DOMException && err.name === "NotAllowedError";
         setCameraError(
@@ -126,10 +174,10 @@ export function QrScannerDialog({
 
     return () => {
       stopped = true;
-      cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
       stream?.getTracks().forEach((track) => track.stop());
     };
-  }, [open, state.kind, round, check]);
+  }, [open, state.kind, round, mode, handleCode]);
 
   const scanAgain = () => {
     setManual("");
@@ -142,20 +190,56 @@ export function QrScannerDialog({
     onOpenChange(next);
   };
 
+  const Icon = mode === "barcode" ? Barcode : ScanLine;
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <ScanLine className="h-5 w-5 text-primary" />
-            Scan a QR code
+            <Icon className="h-5 w-5 text-primary" />
+            {mode === "barcode" ? "Scan a barcode" : "Scan a QR code"}
           </DialogTitle>
-          <DialogDescription>Point the camera at the QR code on an ID card or ticket.</DialogDescription>
+          <DialogDescription>
+            {mode === "barcode"
+              ? "Hold the barcode on an ID card or ticket flat and level inside the frame."
+              : "Point the camera at the QR code on an ID card or ticket."}
+          </DialogDescription>
         </DialogHeader>
 
         {(state.kind === "scanning" || state.kind === "checking") && (
           <div className="flex flex-col gap-3">
-            <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-black">
+            {mode === "barcode" && (
+              <div className="flex items-center justify-between gap-2 text-sm">
+                <span className="text-muted-foreground">Scanning barcodes on</span>
+                <div className="flex rounded-lg border border-border p-0.5">
+                  {(
+                    [
+                      ["ticket", "Tickets"],
+                      ["id-card", "ID cards"],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setBarcodeDoc(value)}
+                      className={cn(
+                        "rounded-md px-3 py-1 text-xs font-medium transition-colors",
+                        barcodeDoc === value ? "bg-primary text-primary-foreground" : "text-muted-foreground",
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div
+              className={cn(
+                "relative w-full overflow-hidden rounded-xl bg-black",
+                mode === "barcode" ? "aspect-[4/3]" : "aspect-square",
+              )}
+            >
               {cameraError ? (
                 <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center text-sm text-white/80">
                   <CameraOff className="h-8 w-8" />
@@ -164,7 +248,12 @@ export function QrScannerDialog({
               ) : (
                 <>
                   <video ref={videoRef} className="h-full w-full object-cover" muted playsInline />
-                  <div className="pointer-events-none absolute inset-[18%] rounded-2xl border-2 border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
+                  <div
+                    className={cn(
+                      "pointer-events-none absolute rounded-2xl border-2 border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]",
+                      mode === "barcode" ? "inset-x-[8%] inset-y-[32%]" : "inset-[18%]",
+                    )}
+                  />
                 </>
               )}
               {state.kind === "checking" && (
@@ -177,7 +266,7 @@ export function QrScannerDialog({
               className="flex gap-2"
               onSubmit={(e) => {
                 e.preventDefault();
-                if (manual.trim()) void check(programSlug, manual.trim(), null);
+                if (manual.trim()) void check(programSlug, manual.trim(), mode === "barcode" ? barcodeDoc : null);
               }}
             >
               <div className="relative flex-1">
@@ -209,7 +298,7 @@ export function QrScannerDialog({
 
         {(state.kind === "result" || state.kind === "error") && (
           <Button onClick={scanAgain} className="w-full">
-            <ScanLine className="h-4 w-4" />
+            <Icon className="h-4 w-4" />
             Scan next
           </Button>
         )}
@@ -248,7 +337,11 @@ function ScanResult({ result }: { result: VerificationResult }) {
           </React.Fragment>
         ))}
       </dl>
-      <p className="text-xs text-muted-foreground">Logged in the Verifications table.</p>
+      <p className="text-xs text-muted-foreground">
+        {result.alreadyVerified
+          ? `Already checked in on ${new Date(result.firstVerifiedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}. This scan isn't logged again.`
+          : "First check-in: logged in the Verifications table."}
+      </p>
     </div>
   );
 }
