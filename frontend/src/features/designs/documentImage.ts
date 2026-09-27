@@ -22,6 +22,7 @@ export async function fetchDocumentSvg(path: string, authenticated: boolean): Pr
   const token = authenticated ? getAccessToken() : null;
   const response = await fetch(`/api${path}`, {
     credentials: "include",
+    cache: "no-store",
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
   });
   const type = response.headers.get("content-type") ?? "";

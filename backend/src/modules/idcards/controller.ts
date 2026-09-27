@@ -20,7 +20,8 @@ export function sendSvg(reply: FastifyReply, { svg, fileName, sides }: idCardSer
   // The name the browser should give the image when it's saved as a PNG.
   reply.header("X-Download-Name", encodeURIComponent(fileName));
   reply.header("X-Document-Sides", String(sides ?? 1));
-  reply.header("Cache-Control", "private, max-age=60");
+  // Never cached: a card or ticket changes as soon as an admin edits its settings or a registrant's role.
+  reply.header("Cache-Control", "no-store");
   // Opened on its own, the image may only show itself: no scripts, no outside requests.
   reply.header("Content-Security-Policy", "default-src 'none'; img-src data:; style-src 'unsafe-inline'");
   return reply.send(svg);

@@ -278,10 +278,22 @@ export function DocumentsShowcase() {
   );
 }
 
-/** Every built-in ID card design on a slowly turning 3D ring, with the ticket designs below. */
+// The website shows a sample of the designs; admins see all of them when setting up a program.
+const SHOWCASE_ID_CARDS = ["aurora", "business", "noir", "crew-tape", "conclave", "vision", "engineer", "inauguration"];
+const SHOWCASE_TICKETS = ["horizon", "neon-pass", "boarding-pass", "vip-pass"];
+
+/** A sample of the ID card designs on a slowly turning 3D ring, with a few ticket designs below. */
 export function DesignCarousel() {
-  const cards = React.useMemo(() => ID_CARD_DESIGNS.map((d) => ({ id: d.id, name: d.name, config: sampleIdCard(d.id) })), []);
-  const tickets = React.useMemo(() => TICKET_DESIGNS.map((d) => ({ id: d.id, name: d.name, config: sampleTicket(d.id) })), []);
+  const cards = React.useMemo(
+    () =>
+      ID_CARD_DESIGNS.filter((d) => SHOWCASE_ID_CARDS.includes(d.id)).map((d) => ({ id: d.id, name: d.name, config: sampleIdCard(d.id) })),
+    [],
+  );
+  const tickets = React.useMemo(
+    () =>
+      TICKET_DESIGNS.filter((d) => SHOWCASE_TICKETS.includes(d.id)).map((d) => ({ id: d.id, name: d.name, config: sampleTicket(d.id) })),
+    [],
+  );
   const step = 360 / cards.length;
 
   return (
