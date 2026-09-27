@@ -63,7 +63,7 @@ export function TicketSettingsCard({ program }: { program: Program }) {
   const updateProgram = useUpdateProgram(program.id);
   const [config, setConfig] = React.useState<TicketConfig | null>(null);
   const [availableFields, setAvailableFields] = React.useState<{ fieldKey: string; label: string }[]>([]);
-  const [uploading, setUploading] = React.useState<"logo" | "background" | null>(null);
+  const [uploading, setUploading] = React.useState<"logo" | "background" | "event" | null>(null);
   const [side, setSide] = React.useState<"front" | "back">("front");
 
   React.useEffect(() => {
@@ -151,12 +151,14 @@ export function TicketSettingsCard({ program }: { program: Program }) {
     }
   };
 
-  const upload = async (kind: "logo" | "background", file: File) => {
+  const upload = async (kind: "logo" | "background" | "event", file: File) => {
     setUploading(kind);
     try {
       const url = await uploadIdCardBackground(program.id, file);
-      set(kind === "logo" ? { logoUrl: url } : { template: "custom", backgroundImageUrl: url });
-      toast.success(kind === "logo" ? "Logo uploaded. Remember to save." : "Design uploaded. Remember to save.");
+      if (kind === "logo") set({ logoUrl: url });
+      else if (kind === "event") set({ eventImageUrl: url });
+      else set({ template: "custom", backgroundImageUrl: url });
+      toast.success(`${kind === "logo" ? "Logo" : kind === "event" ? "Event image" : "Design"} uploaded. Remember to save.`);
     } catch {
       toast.error("Upload failed. Please try again.");
     } finally {
@@ -359,6 +361,14 @@ export function TicketSettingsCard({ program }: { program: Program }) {
               uploading={uploading === "logo"}
               onUpload={(file) => void upload("logo", file)}
               onRemove={() => set({ logoUrl: undefined })}
+            />
+            <ImagePickerField
+              label="Event image"
+              hint="A photo or flyer for designs with a picture panel. Leave empty to use the design's own artwork."
+              value={config.eventImageUrl}
+              uploading={uploading === "event"}
+              onUpload={(file) => void upload("event", file)}
+              onRemove={() => set({ eventImageUrl: undefined })}
             />
           </div>
 

@@ -1,3 +1,4 @@
+import { ID_CARD_DESIGNS, TICKET_DESIGNS } from "@designs";
 import {
   BarChart3,
   BellRing,
@@ -68,7 +69,7 @@ export function SectionHeading({
 
 export const CAPABILITIES = [
   { value: "23", label: "question types, from text to file uploads" },
-  { value: "10", label: "ready-made ID card and ticket designs" },
+  { value: String(ID_CARD_DESIGNS.length + TICKET_DESIGNS.length), label: "ready-made ID card and ticket designs" },
   { value: "3", label: "team roles with per-program access" },
   { value: "Excel", label: "& CSV exports, ready to share" },
 ];

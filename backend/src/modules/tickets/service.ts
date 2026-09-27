@@ -1,7 +1,7 @@
 import { participantFileName } from "../../lib/downloadName.js";
 import { AppError } from "../../lib/errors.js";
 import { code128, formatLeones, renderTicketSides, ticketHasBack } from "../../shared/designs/index.js";
-import { BACKGROUND_TRANSFORM, cardDate, fetchImageDataUri, LOGO_TRANSFORM, qrMatrix, svgPagesToPdf } from "../idcards/pdf.js";
+import { BACKGROUND_TRANSFORM, cardDate, fetchImageDataUri, FLYER_TRANSFORM, LOGO_TRANSFORM, qrMatrix, svgPagesToPdf } from "../idcards/pdf.js";
 import {
   findAdminRegistration,
   findPublicRegistration,
@@ -54,11 +54,12 @@ async function renderProgramTicket(program: programsRepo.ProgramRow, registratio
   if (!program.ticketEnabled) throw AppError.conflict("Tickets are not enabled for this program");
 
   const config = resolveTicketConfig(program.ticketConfig);
-  const [orgName, fields, logoImage, background] = await Promise.all([
+  const [orgName, fields, logoImage, background, eventImage] = await Promise.all([
     organizationName(program),
     resolveExtraFields(registration, config.visibleFields),
     fetchImageDataUri(config.logoUrl, LOGO_TRANSFORM),
     config.template === "custom" ? fetchImageDataUri(config.backgroundImageUrl, BACKGROUND_TRANSFORM) : null,
+    fetchImageDataUri(config.eventImageUrl, FLYER_TRANSFORM),
   ]);
 
   const price = config.showPrice
@@ -90,6 +91,7 @@ async function renderProgramTicket(program: programsRepo.ProgramRow, registratio
       qr: config.showQrCode ? qrMatrix(verifyUrlFor(program, registration, "ticket")) : null,
       barcode: config.showBarcode ? code128(registration.registrationNumber) : null,
       background,
+      image: eventImage,
       textColor: config.textColor,
       overlayOpacity: config.overlayOpacity,
     },

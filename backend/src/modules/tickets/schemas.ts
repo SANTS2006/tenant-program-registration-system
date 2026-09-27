@@ -30,6 +30,8 @@ export const ticketConfigSchema = z.object({
   showEventDetails: z.boolean().default(true),
   showContact: z.boolean().default(true),
   logoUrl: z.string().url().optional(),
+  // An event photo or flyer for designs with a picture panel.
+  eventImageUrl: z.string().url().optional(),
   // An uploaded design sample used by the "custom" template, with the details laid over it.
   backgroundImageUrl: z.string().url().optional(),
   textColor: z.enum(["light", "dark"]).default("light"),

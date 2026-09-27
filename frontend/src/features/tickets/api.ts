@@ -24,6 +24,7 @@ export interface TicketConfig {
   showEventDetails: boolean;
   showContact: boolean;
   logoUrl?: string;
+  eventImageUrl?: string;
   backgroundImageUrl?: string;
   textColor: "light" | "dark";
   overlayOpacity: number;

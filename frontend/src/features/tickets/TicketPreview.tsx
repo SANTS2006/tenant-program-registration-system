@@ -58,6 +58,7 @@ export function TicketPreview({
         qr: config.showQrCode ? SAMPLE_QR : null,
         barcode: config.showBarcode === false ? null : SAMPLE_BARCODE,
         background: config.template === "custom" ? (config.backgroundImageUrl ?? null) : null,
+        image: config.eventImageUrl ?? null,
         textColor: config.textColor,
         overlayOpacity: config.overlayOpacity,
       },

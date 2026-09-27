@@ -34,6 +34,8 @@ export interface TicketContent {
   qr: boolean[][] | null;
   barcode: string | null;
   background?: string | null;
+  /** An event photo or flyer for designs with a picture panel; they draw artwork without one. */
+  image?: string | null;
   /** Only for the "custom" template: text color over the uploaded design. */
   textColor?: "light" | "dark";
   overlayOpacity?: number;
