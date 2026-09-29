@@ -31,6 +31,8 @@ export interface Program {
   idCardEnabled: boolean;
   ticketEnabled: boolean;
   oneRegistrationPerEmail: boolean;
+  notifyOnRegistration: boolean;
+  notifyOnVerification: boolean;
   registrationNumberConfig: Partial<RegistrationNumberConfig>;
   createdAt: string;
   updatedAt: string;

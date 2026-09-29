@@ -1,6 +1,6 @@
-import { and, asc, count, desc, eq, ilike, inArray, isNull, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { programMembers, programs, tenants } from "../../db/schema/index.js";
+import { programMembers, programs, tenants, users } from "../../db/schema/index.js";
 import type { PaginationInput } from "../../lib/pagination.js";
 import { toOffsetLimit } from "../../lib/pagination.js";
 import type { ProgramRole } from "../users/types.js";
@@ -104,4 +104,34 @@ export async function listAccessibleProgramIdsForUser(userId: string): Promise<s
     .where(eq(programMembers.userId, userId))
     .orderBy(asc(programMembers.createdAt));
   return rows.map((r) => r.programId);
+}
+
+/** Published programs' public pages, for the sitemap. */
+export async function listPublishedProgramSlugs(limit = 5000): Promise<{ slug: string; updatedAt: Date }[]> {
+  return db
+    .select({ slug: programs.slug, updatedAt: programs.updatedAt })
+    .from(programs)
+    .where(and(eq(programs.status, "published"), isNull(programs.deletedAt)))
+    .orderBy(desc(programs.updatedAt))
+    .limit(limit);
+}
+
+/**
+ * The people to email about a program's activity: its admins and viewers, plus the
+ * organization's account admins, who can see every program. Only active, verified accounts.
+ */
+export async function listNotificationRecipients(program: Pick<ProgramRow, "id" | "tenantId">): Promise<{ name: string; email: string }[]> {
+  const members = db.select({ userId: programMembers.userId }).from(programMembers).where(eq(programMembers.programId, program.id));
+  return db
+    .selectDistinct({ name: users.name, email: users.email })
+    .from(users)
+    .where(
+      and(
+        eq(users.tenantId, program.tenantId),
+        eq(users.status, "active"),
+        isNotNull(users.emailVerifiedAt),
+        or(eq(users.role, "admin"), inArray(users.id, members)),
+      ),
+    )
+    .limit(50);
 }

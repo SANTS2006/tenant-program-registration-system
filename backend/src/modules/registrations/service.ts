@@ -4,6 +4,7 @@ import { buildPaginatedResult } from "../../lib/pagination.js";
 import { sendEmail } from "../email/service.js";
 import { registrationConfirmationEmail } from "../email/templates.js";
 import * as formsService from "../forms/service.js";
+import { notifyNewRegistration } from "../notifications/service.js";
 import * as programsRepo from "../programs/repository.js";
 import * as registrationsRepo from "./repository.js";
 import type { ListRegistrationsQuery, SubmitRegistrationInput, UpdateStatusInput } from "./schemas.js";
@@ -93,6 +94,9 @@ export async function submitRegistration(slug: string, input: SubmitRegistration
       console.error("Failed to send registration confirmation email", err);
     }
   }
+
+  // Sent in the background so the registrant isn't kept waiting on the team's emails.
+  void notifyNewRegistration(program, registration, published.fields, files);
 
   return {
     registration,

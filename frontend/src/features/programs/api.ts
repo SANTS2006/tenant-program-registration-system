@@ -48,6 +48,8 @@ export function updateProgram(
     idCardEnabled?: boolean;
     ticketEnabled?: boolean;
     oneRegistrationPerEmail?: boolean;
+    notifyOnRegistration?: boolean;
+    notifyOnVerification?: boolean;
     thumbnailUrl?: string;
     registrationNumberConfig?: RegistrationNumberConfig;
   },

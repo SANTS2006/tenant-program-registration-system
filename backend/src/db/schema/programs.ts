@@ -34,6 +34,9 @@ export const programs = pgTable(
     ticketConfig: jsonb("ticket_config").notNull().default({}),
     // When on, each email address can submit only one registration to this program.
     oneRegistrationPerEmail: boolean("one_registration_per_email").notNull().default(false),
+    // Emails the program's team about each new registration and each first ID card/ticket check-in.
+    notifyOnRegistration: boolean("notify_on_registration").notNull().default(true),
+    notifyOnVerification: boolean("notify_on_verification").notNull().default(true),
     // { prefix, includeYear, digits, startAt } -- empty means the default REG-{YEAR}-{000001} format.
     registrationNumberConfig: jsonb("registration_number_config").notNull().default({}),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),

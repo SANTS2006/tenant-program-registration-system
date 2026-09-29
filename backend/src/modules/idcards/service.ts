@@ -21,6 +21,7 @@ import {
   svgPagesToPdf,
 } from "./pdf.js";
 import { readOverrides, resolveIdCardConfig, type DocumentOverrides, type IdCardConfig, type ResolvedIdCardConfig } from "./schemas.js";
+import { notifyDocumentVerified } from "../notifications/service.js";
 
 // Portrait CR-80 card, 2.125in x 3.375in, in PDF points.
 const CARD_WIDTH_PT = 153;
@@ -261,6 +262,7 @@ export async function verifyRegistration(
 
   let firstVerifiedAt = new Date();
   let alreadyVerified = false;
+  let recorded = false;
   try {
     ({ firstVerifiedAt, alreadyVerified } = await verificationsRepo.recordVerification({
       programId: program.id,
@@ -272,9 +274,20 @@ export async function verifyRegistration(
       ipAddress: context.ipAddress,
       userAgent: context.userAgent?.slice(0, 400),
     }));
+    recorded = !alreadyVerified;
   } catch (err) {
     // The check itself succeeded; a logging problem must not turn it into "not found".
     console.error("Could not record verification:", err);
+  }
+
+  // The team hears about each ID card or ticket once: on its first check-in.
+  if (recorded && (context.documentType === "id_card" || context.documentType === "ticket")) {
+    void notifyDocumentVerified(program, registration, {
+      documentType: context.documentType,
+      valid,
+      verifiedAt: firstVerifiedAt,
+      verifiedBy: verifiedBy && context.user ? `${context.user.name} (${context.user.email})` : null,
+    });
   }
 
   // The same details the scanned document prints, so the checker can compare them.

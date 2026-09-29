@@ -412,3 +412,98 @@ export function feedbackEmail(params: {
     html: layout({ preheader: `Feedback from ${params.name}`, eyebrow: "Platform feedback", heading: "New feedback received", body }),
   };
 }
+
+/** "29 Sep 2026, 14:05 UTC" */
+function formatWhen(date: Date): string {
+  const day = date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  const time = date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
+  return `${day}, ${time} UTC`;
+}
+
+function mutedNote(html: string): string {
+  return paragraph(`<span style="color:${BRAND.muted};font-size:13px;">${html}</span>`);
+}
+
+function turnOffNote(programName: string, settingsUrl: string, lead: string): string {
+  return mutedNote(
+    `${lead} Program admins can turn these emails off under <a href="${escapeHtml(settingsUrl)}" style="color:${BRAND.primary};">Email notifications</a> on the ${escapeHtml(programName)} overview page.`,
+  );
+}
+
+export function newRegistrationNotificationEmail(params: {
+  programName: string;
+  registrationNumber: string;
+  applicantName?: string | null;
+  submittedAt: Date;
+  answers: { label: string; value: string }[];
+  detailsUrl: string;
+  settingsUrl: string;
+}): { subject: string; html: string } {
+  const who = params.applicantName || "Someone";
+  const body = [
+    paragraph(
+      `<strong style="color:${BRAND.heading};">${escapeHtml(who)}</strong> just registered for <strong style="color:${BRAND.heading};">${escapeHtml(params.programName)}</strong>.`,
+    ),
+    detailsTable([
+      { label: "Registration number", value: params.registrationNumber, mono: true },
+      { label: "Submitted", value: formatWhen(params.submittedAt) },
+      ...params.answers,
+    ]),
+    button("Open the registration", params.detailsUrl),
+    turnOffNote(params.programName, params.settingsUrl, "You're getting this because you're on this program's team."),
+  ].join("");
+
+  return {
+    subject: `New registration: ${who} - ${params.programName}`,
+    html: layout({
+      preheader: `${who} registered (${params.registrationNumber})`,
+      eyebrow: "New registration",
+      heading: "New registration received",
+      body,
+    }),
+  };
+}
+
+export function documentVerifiedNotificationEmail(params: {
+  programName: string;
+  documentLabel: string;
+  registrationNumber: string;
+  applicantName?: string | null;
+  valid: boolean;
+  status: string;
+  verifiedAt: Date;
+  verifiedBy: string;
+  detailsUrl: string;
+  settingsUrl: string;
+}): { subject: string; html: string } {
+  const who = params.applicantName || params.registrationNumber;
+  const strong = (value: string) => `<strong style="color:${BRAND.heading};">${escapeHtml(value)}</strong>`;
+  const body = [
+    paragraph(
+      params.valid
+        ? `The ${escapeHtml(params.documentLabel.toLowerCase())} for ${strong(who)} was scanned and verified for ${strong(params.programName)}.`
+        : `The ${escapeHtml(params.documentLabel.toLowerCase())} for ${strong(who)} was scanned for ${strong(params.programName)}, but it is <strong style="color:#b91c1c;">not valid</strong> because the registration is ${escapeHtml(params.status)}.`,
+    ),
+    detailsTable([
+      { label: "Result", value: params.valid ? "Valid" : `Not valid (${params.status})` },
+      { label: "Document", value: params.documentLabel },
+      ...(params.applicantName ? [{ label: "Name", value: params.applicantName }] : []),
+      { label: "Registration number", value: params.registrationNumber, mono: true },
+      { label: "Checked in", value: formatWhen(params.verifiedAt) },
+      { label: "Scanned by", value: params.verifiedBy },
+    ]),
+    button("Open the registration", params.detailsUrl),
+    turnOffNote(params.programName, params.settingsUrl, "Only the first scan of each ID card or ticket sends an email."),
+  ].join("");
+
+  const result = params.valid ? "verified" : "NOT VALID";
+  return {
+    subject: `${params.documentLabel} ${result}: ${who} - ${params.programName}`,
+    html: layout({
+      preheader: `${params.documentLabel} ${result} for ${who}`,
+      eyebrow: params.valid ? "Check-in" : "Check-in warning",
+      heading: params.valid ? `${params.documentLabel} verified` : `${params.documentLabel} not valid`,
+      body,
+    }),
+  };
+}

@@ -20,7 +20,7 @@ const BUILT_IN_COLUMNS: ExportColumn[] = [
   { key: "applicantPhone", label: "Phone" },
 ];
 
-function formatCellValue(value: unknown): string {
+export function formatCellValue(value: unknown): string {
   if (value === null || value === undefined || value === "") return "";
   if (Array.isArray(value)) {
     if (value.length > 0 && typeof value[0] === "object") {
@@ -34,7 +34,7 @@ function formatCellValue(value: unknown): string {
 }
 
 /** Shows a chosen "Other" option together with what the registrant typed, e.g. "Other: Freetown". */
-function withOtherText(value: unknown, otherText: unknown): unknown {
+export function withOtherText(value: unknown, otherText: unknown): unknown {
   if (typeof otherText !== "string" || !otherText) return value;
   const expand = (option: unknown) => (typeof option === "string" && isOtherOption(option) ? `${option}: ${otherText}` : option);
   return Array.isArray(value) ? value.map(expand) : expand(value);
