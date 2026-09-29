@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Outlet } from "react-router-dom";
+import { LazyOutlet } from "@/components/PageLoading";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PublicFormFooter } from "@/features/legal/SiteFooter";
@@ -72,9 +72,9 @@ export function BareLayout() {
           {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
       </div>
-      <div className="mx-auto w-full max-w-5xl px-4 pb-6 sm:pb-10">
-        <Outlet />
-      </div>
+      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-5xl px-4 pb-6 focus:outline-none sm:pb-10">
+        <LazyOutlet />
+      </main>
       <PublicFormFooter />
     </div>
   );

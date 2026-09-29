@@ -7,8 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/link-button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useTenant, useTenantPrograms, useTenantUsers, useUpdateUserStatus } from "./hooks";
+import { usePageMeta } from "@/lib/seo";
 
 export function TenantDetailPage() {
+  usePageMeta({ title: "Organization" });
   const { tenantId } = useParams<{ tenantId: string }>();
   const { data: tenant, isLoading: tenantLoading } = useTenant(tenantId);
   const { data: users, isLoading: usersLoading } = useTenantUsers(tenantId);

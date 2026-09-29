@@ -1,5 +1,6 @@
 import * as React from "react";
-import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
+import { LazyOutlet } from "@/components/PageLoading";
 import { LayoutDashboard } from "lucide-react";
 import { useAuth } from "@/app/AuthContext";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -23,14 +24,13 @@ export function LegalLayout() {
 
   React.useEffect(() => {
     window.scrollTo({ top: 0 });
-    document.getElementById("robots-meta")?.setAttribute("content", "index, follow");
   }, [pathname]);
 
   return (
     <div className="flex min-h-screen flex-col bg-transparent">
       <header className="sticky top-0 z-40 border-b border-border/70 bg-background/80 backdrop-blur-md">
         <div className="site-container flex h-16 items-center justify-between gap-4">
-          <Link to="/" className="flex items-center gap-2 font-semibold tracking-tight">
+          <Link to="/" aria-label="Program Registration home" className="flex items-center gap-2 font-semibold tracking-tight">
             <BrandLogo className="h-9" />
             <span className="gradient-text hidden whitespace-nowrap text-lg sm:inline">Program Registration</span>
           </Link>
@@ -71,8 +71,8 @@ export function LegalLayout() {
           </div>
         </div>
       </header>
-      <main className="page-enter flex-1">
-        <Outlet />
+      <main id="main-content" tabIndex={-1} className="page-enter focus:outline-none flex-1">
+        <LazyOutlet />
       </main>
       <SiteFooter />
     </div>

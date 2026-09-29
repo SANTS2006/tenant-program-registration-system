@@ -1,4 +1,5 @@
-import { NavLink, Outlet, useOutletContext, useParams } from "react-router-dom";
+import { NavLink, useOutletContext, useParams } from "react-router-dom";
+import { LazyOutlet } from "@/components/PageLoading";
 import { ArrowLeft, ImageIcon, MessageSquarePlus } from "lucide-react";
 import { useAuth } from "@/app/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { ProgramStatusBadge } from "@/components/StatusBadge";
 import { LinkButton } from "@/components/ui/link-button";
 import { useProgram } from "./hooks";
 import type { Program } from "@/types/api";
+import { usePageMeta } from "@/lib/seo";
 
 export function useProgramOutletContext() {
   return useOutletContext<{ program: Program }>();
@@ -25,6 +27,7 @@ const tabs = [
 export function ProgramDetailLayout() {
   const { programId } = useParams<{ programId: string }>();
   const { data: program, isLoading, error } = useProgram(programId);
+  usePageMeta({ title: program?.name ?? "Program" });
   const { user } = useAuth();
 
   if (error) {
@@ -103,7 +106,7 @@ export function ProgramDetailLayout() {
         ))}
       </div>
 
-      <Outlet context={{ program }} />
+      <LazyOutlet context={{ program }} />
     </div>
   );
 }

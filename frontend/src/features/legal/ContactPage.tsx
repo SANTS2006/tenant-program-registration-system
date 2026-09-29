@@ -4,6 +4,7 @@ import { ArrowRight, Flag, Mail, Phone } from "lucide-react";
 import { COMPANY_NAME, COUNTRY, SUPPORT_EMAIL, SUPPORT_PHONE, SUPPORT_PHONE_LINK } from "@/lib/contact";
 import { ContactForm } from "./ContactForm";
 import { PageHero } from "./LegalDocument";
+import { usePageMeta } from "@/lib/seo";
 
 const CHANNELS = [
   {
@@ -33,9 +34,11 @@ const CHANNELS = [
 ];
 
 export function ContactPage() {
-  React.useEffect(() => {
-    document.title = "Contact us | Program Registration Platform";
-  }, []);
+  usePageMeta({
+    title: "Contact us",
+    description: "Questions, demos, or help with your registrations? Contact the Program Registration Platform team at NTS Digital Solutions.",
+    index: true,
+  });
 
   return (
     <>

@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ApiError } from "@/lib/api";
+import { usePageMeta } from "@/lib/seo";
 
 const loginSchema = z.object({
   email: z.string().email("Enter a valid email address"),
@@ -41,6 +42,7 @@ function RegistrationsMockCard() {
 }
 
 export function LoginPage() {
+  usePageMeta({ title: "Sign in", description: "Sign in to manage your programs, registrations, ID cards and tickets.", index: true });
   const { user, login, isLoading } = useAuth();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = React.useState(false);
@@ -70,7 +72,7 @@ export function LoginPage() {
   };
 
   return (
-    <div className="page-enter flex min-h-screen items-center justify-center p-4 sm:p-8">
+    <main id="main-content" tabIndex={-1} className="page-enter flex min-h-screen items-center justify-center p-4 focus:outline-none sm:p-8">
       <div className="grid w-full max-w-4xl grid-cols-1 overflow-hidden rounded-[2rem] border border-border/60 bg-card shadow-2xl lg:min-h-[620px] lg:grid-cols-2">
         {/* Info panel */}
         <div className="relative hidden flex-col justify-between overflow-hidden bg-gradient-brand p-10 text-white lg:flex">
@@ -103,7 +105,7 @@ export function LoginPage() {
         {/* Form panel */}
         <div className="flex flex-col p-6 sm:p-10 lg:p-12">
           <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-2 text-base font-semibold">
+            <Link to="/" aria-label="Program Registration home" className="flex items-center gap-2 text-base font-semibold">
               <BrandLogo className="h-9" />
               <span className="gradient-text hidden whitespace-nowrap sm:inline">Program Registration</span>
             </Link>
@@ -149,7 +151,7 @@ export function LoginPage() {
                       type="button"
                       onClick={() => setShowPassword((v) => !v)}
                       aria-label={showPassword ? "Hide password" : "Show password"}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -175,6 +177,6 @@ export function LoginPage() {
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

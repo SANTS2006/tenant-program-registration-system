@@ -1,4 +1,3 @@
-import { ID_CARD_DESIGNS, TICKET_DESIGNS } from "@designs";
 import {
   BarChart3,
   BellRing,
@@ -35,7 +34,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Reveal, Tilt } from "./motion";
-import { AnalyticsMock, DocumentsShowcase, FormBuilderMock, VerificationsMock } from "./visuals";
+import { AnalyticsMock, FormBuilderMock, VerificationsMock } from "./visuals";
+import { DocumentsShowcase } from "./lazyShowcase";
 
 export function SectionHeading({
   eyebrow,
@@ -69,7 +69,7 @@ export function SectionHeading({
 
 export const CAPABILITIES = [
   { value: "23", label: "question types, from text to file uploads" },
-  { value: String(ID_CARD_DESIGNS.length + TICKET_DESIGNS.length), label: "ready-made ID card and ticket designs" },
+  { value: "50+", label: "ready-made ID card and ticket designs" },
   { value: "3", label: "team roles with per-program access" },
   { value: "Excel", label: "& CSV exports, ready to share" },
 ];
@@ -197,23 +197,28 @@ const STEPS: { icon: LucideIcon; title: string; description: string }[] = [
 
 export function Steps() {
   return (
-    <ol className="relative grid grid-cols-1 gap-6 md:grid-cols-4">
-      <div className="pointer-events-none absolute left-[12.5%] right-[12.5%] top-7 hidden h-px bg-gradient-to-r from-primary/10 via-primary/50 to-primary/10 md:block" />
-      {STEPS.map((step, i) => (
-        <li key={step.title} className="relative">
-          <Reveal delay={i * 150} variant="zoom" className="flex flex-col items-center gap-3 text-center">
-          <span className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-brand text-white shadow-glow">
-            <step.icon className="h-6 w-6" />
-            <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-card text-xs font-bold text-primary">
-              {i + 1}
-            </span>
-          </span>
-          <h3 className="text-lg font-semibold">{step.title}</h3>
-          <p className="max-w-xs text-sm text-muted-foreground">{step.description}</p>
-          </Reveal>
-        </li>
-      ))}
-    </ol>
+    <div className="relative">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute left-[12.5%] right-[12.5%] top-7 hidden h-px bg-gradient-to-r from-primary/10 via-primary/50 to-primary/10 md:block"
+      />
+      <ol className="relative grid grid-cols-1 gap-6 md:grid-cols-4">
+        {STEPS.map((step, i) => (
+          <li key={step.title} className="relative">
+            <Reveal delay={i * 150} variant="zoom" className="flex flex-col items-center gap-3 text-center">
+              <span className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-brand text-white shadow-glow">
+                <step.icon className="h-6 w-6" aria-hidden="true" />
+                <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-card text-xs font-bold text-primary">
+                  {i + 1}
+                </span>
+              </span>
+              <h3 className="text-lg font-semibold">{step.title}</h3>
+              <p className="max-w-xs text-sm text-muted-foreground">{step.description}</p>
+            </Reveal>
+          </li>
+        ))}
+      </ol>
+    </div>
   );
 }
 

@@ -6,6 +6,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { getPublicProgram } from "./api";
+import { usePageMeta } from "@/lib/seo";
 
 export function PublicProgramPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -15,12 +16,11 @@ export function PublicProgramPage() {
     enabled: !!slug,
   });
 
-  React.useEffect(() => {
-    if (program) {
-      document.title = `${program.name} - Program Registration`;
-      document.getElementById("robots-meta")?.setAttribute("content", "index, follow");
-    }
-  }, [program]);
+  usePageMeta({
+    title: program?.name,
+    description: program ? (program.shortDescription ?? `Register for ${program.name} online.`) : undefined,
+    index: !!program,
+  });
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading...</p>;
   if (!program) return <p className="text-sm text-muted-foreground">Program not found.</p>;

@@ -247,7 +247,7 @@ export function FormBuilderPage() {
             <CardTitle className="text-base">Unassigned fields</CardTitle>
           )}
           {section && (
-            <Button variant="ghost" size="icon" onClick={() => removeSection(section.key)}>
+            <Button variant="ghost" size="icon" aria-label="Delete section" onClick={() => removeSection(section.key)}>
               <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
           )}

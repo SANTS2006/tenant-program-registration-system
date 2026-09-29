@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { apiFetch, ApiError } from "@/lib/api";
 import { SUPPORT_EMAIL } from "@/lib/contact";
 import { PageHero } from "./LegalDocument";
+import { usePageMeta } from "@/lib/seo";
 
 const CATEGORIES = [
   { value: "abuse", label: "Abuse, harassment, or spam" },
@@ -40,9 +41,11 @@ export function ReportPage() {
   const [params] = useSearchParams();
   const [sent, setSent] = React.useState(false);
 
-  React.useEffect(() => {
-    document.title = "Report a concern | Program Registration Platform";
-  }, []);
+  usePageMeta({
+    title: "Report a concern",
+    description: "Report a suspicious program, misuse of personal data, or a security issue on the Program Registration Platform.",
+    index: true,
+  });
 
   const {
     register,

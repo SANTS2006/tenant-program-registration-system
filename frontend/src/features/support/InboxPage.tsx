@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { getMessage, listMessages, updateMessageStatus, type MessageKind, type MessageStatus, type SupportMessage } from "./api";
+import { usePageMeta } from "@/lib/seo";
 
 const TABS: { kind: MessageKind; label: string; icon: typeof Inbox; description: string }[] = [
   { kind: "feedback", label: "Feedback", icon: MessageSquarePlus, description: "Improvements, bugs, and feature requests from admins and viewers." },
@@ -37,6 +38,7 @@ function when(value: string) {
 
 /** Super admin inbox: feedback, contact messages, and reports, each opening to its full details. */
 export function InboxPage() {
+  usePageMeta({ title: "Inbox" });
   const queryClient = useQueryClient();
   const [kind, setKind] = React.useState<MessageKind>("feedback");
   const [status, setStatus] = React.useState("all");

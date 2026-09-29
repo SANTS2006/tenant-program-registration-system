@@ -8,8 +8,10 @@ import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api";
 import { requestPasswordReset } from "./api";
 import { AuthCardShell } from "./AuthCardShell";
+import { usePageMeta } from "@/lib/seo";
 
 export function ForgotPasswordPage() {
+  usePageMeta({ title: "Forgot password" });
   const [email, setEmail] = React.useState("");
   const [sentTo, setSentTo] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);

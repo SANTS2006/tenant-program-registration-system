@@ -2,6 +2,7 @@ import * as React from "react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { LEGAL_LAST_UPDATED, LEGAL_LINKS, SUPPORT_EMAIL } from "@/lib/contact";
+import { usePageMeta } from "@/lib/seo";
 
 export interface LegalSection {
   id: string;
@@ -38,9 +39,7 @@ export function LegalDocument({
   intro: React.ReactNode;
   sections: LegalSection[];
 }) {
-  React.useEffect(() => {
-    document.title = `${title} | Program Registration Platform`;
-  }, [title]);
+  usePageMeta({ title, description: `${title} for the Program Registration Platform by NTS Digital Solutions.`, index: true });
 
   return (
     <>

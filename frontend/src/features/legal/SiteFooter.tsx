@@ -18,7 +18,7 @@ export function SiteFooter() {
     <footer className="border-t border-border/70 bg-card/40">
       <div className="site-container grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr_1.2fr]">
         <div className="flex flex-col gap-3">
-          <Link to="/" className="flex items-center gap-2 font-semibold">
+          <Link to="/" aria-label="Program Registration home" className="flex items-center gap-2 font-semibold">
             <BrandLogo className="h-9" />
             <span className="gradient-text text-lg">Program Registration</span>
           </Link>

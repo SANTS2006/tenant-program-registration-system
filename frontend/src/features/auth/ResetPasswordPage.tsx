@@ -9,10 +9,12 @@ import { LinkButton } from "@/components/ui/link-button";
 import { ApiError } from "@/lib/api";
 import { resetPassword } from "./api";
 import { AuthCardShell } from "./AuthCardShell";
+import { usePageMeta } from "@/lib/seo";
 
 const MIN_LENGTH = 8;
 
 export function ResetPasswordPage() {
+  usePageMeta({ title: "Reset password" });
   const [params] = useSearchParams();
   const token = params.get("token");
   const [password, setPassword] = React.useState("");
@@ -87,7 +89,7 @@ export function ResetPasswordPage() {
               type="button"
               onClick={() => setShow((v) => !v)}
               aria-label={show ? "Hide password" : "Show password"}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
             >
               {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>

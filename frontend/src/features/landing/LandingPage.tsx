@@ -7,8 +7,6 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { cn } from "@/lib/utils";
-import { IdCardPreview } from "../idcards/IdCardPreview";
-import { TicketPreview } from "../tickets/TicketPreview";
 import { SiteFooter } from "../legal/SiteFooter";
 import { CountUp, Reveal, Stage } from "./motion";
 import {
@@ -23,16 +21,9 @@ import {
   Steps,
   USE_CASES,
 } from "./sections";
-import {
-  DesignCarousel,
-  HeroDashboard,
-  RegistrationToast,
-  SAMPLE_ID_CONTEXT,
-  SAMPLE_TICKET_CONTEXT,
-  sampleIdCard,
-  sampleTicket,
-  ShareCardMock,
-} from "./visuals";
+import { HeroDashboard, RegistrationToast, ShareCardMock } from "./visuals";
+import { DesignCarousel, HeroIdCard, HeroTicket } from "./lazyShowcase";
+import { usePageMeta } from "@/lib/seo";
 
 const NAV = [
   { href: "#features", label: "Features" },
@@ -98,7 +89,7 @@ function Header() {
       )}
     >
       <div className="site-container flex h-16 items-center justify-between gap-4">
-        <a href="#top" className="flex items-center gap-2 font-semibold tracking-tight">
+        <a href="#top" aria-label="Program Registration, back to top" className="flex items-center gap-2 font-semibold tracking-tight">
           <BrandLogo className="h-9" />
           <span className="gradient-text whitespace-nowrap text-base sm:text-lg">Program Registration</span>
         </a>
@@ -196,8 +187,6 @@ function Layer({
 
 function Hero() {
   const { user } = useAuth();
-  const ticket = React.useMemo(() => sampleTicket("orbit"), []);
-  const card = React.useMemo(() => sampleIdCard("aurora"), []);
 
   return (
     <section id="top" className="relative overflow-hidden">
@@ -261,10 +250,10 @@ function Hero() {
               <ShareCardMock />
             </Layer>
             <Layer depth={140} delay={4} className="-right-10 bottom-[-4.5rem] hidden w-72 xl:block">
-              <TicketPreview config={ticket} context={SAMPLE_TICKET_CONTEXT} className="shadow-2xl" />
+              <HeroTicket />
             </Layer>
             <Layer depth={120} delay={1} className="-bottom-16 -left-10 hidden w-28 xl:block">
-              <IdCardPreview config={card} context={SAMPLE_ID_CONTEXT} className="shadow-2xl" />
+              <HeroIdCard />
             </Layer>
           </Stage>
         </Reveal>
@@ -290,7 +279,7 @@ function CapabilityStrip() {
 
 function Section({ id, className, children }: { id?: string; className?: string; children: React.ReactNode }) {
   return (
-    <section id={id} className={cn("relative scroll-mt-20 py-20 sm:py-24", className)}>
+    <section id={id} className={cn("offscreen-lazy relative scroll-mt-20 py-20 sm:py-24", className)}>
       <div className="site-container relative flex flex-col gap-12">{children}</div>
     </section>
   );
@@ -356,15 +345,12 @@ export function LandingPage() {
     return () => window.clearTimeout(timer);
   }, [hash]);
 
-  React.useEffect(() => {
-    document.title = "Program Registration Platform | Registration forms, applicants, ID cards and tickets";
-    document.getElementById("robots-meta")?.setAttribute("content", "index, follow");
-  }, []);
+  usePageMeta({ index: true });
 
   return (
     <div className="min-h-screen scroll-smooth overflow-x-clip bg-transparent">
       <Header />
-      <main>
+      <main id="main-content" tabIndex={-1} className="focus:outline-none">
         <Hero />
         <CapabilityStrip />
 
@@ -398,7 +384,7 @@ export function LandingPage() {
                 ID cards and tickets that look <span className="gradient-text">professionally made</span>
               </>
             }
-            description="Pick one of eight two-sided ID card designs or two ticket designs, switch the colors to your brand, and add your logo. Every registrant's document is filled in automatically."
+            description="Choose from more than 50 ID card and ticket designs, many of them two-sided, switch the colors to your brand, and add your logo or event flyer. Every registrant's document is filled in automatically."
           />
           <Reveal variant="zoom">
             <DesignCarousel />

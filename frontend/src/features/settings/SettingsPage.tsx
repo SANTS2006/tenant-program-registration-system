@@ -15,6 +15,7 @@ import { useAuth } from "@/app/AuthContext";
 import { ApiError } from "@/lib/api";
 import { confirmEmailChange, requestEmailChange } from "../auth/api";
 import { changePassword, updateProfile, uploadAvatar } from "./api";
+import { usePageMeta } from "@/lib/seo";
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
@@ -157,6 +158,7 @@ const passwordSchema = z
 type PasswordForm = z.infer<typeof passwordSchema>;
 
 export function SettingsPage() {
+  usePageMeta({ title: "Settings" });
   const { user, updateLocalUser, logout } = useAuth();
   const [uploadingAvatar, setUploadingAvatar] = React.useState(false);
 

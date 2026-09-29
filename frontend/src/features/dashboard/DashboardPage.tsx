@@ -27,6 +27,7 @@ import { DocumentBadge, ResultBadge } from "../verifications/VerificationsPage";
 import { getDashboardInsights, type DashboardInsights } from "./insights";
 import type { DashboardOverview } from "@/types/api";
 import { useAuth } from "@/app/AuthContext";
+import { usePageMeta } from "@/lib/seo";
 
 const SCAN_COLOR = CATEGORICAL_LIGHT[2]!;
 
@@ -207,6 +208,7 @@ function RecentActivity({ insights }: { insights: DashboardInsights }) {
 }
 
 export function DashboardPage() {
+  usePageMeta({ title: "Dashboard" });
   const { user } = useAuth();
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard-overview"],

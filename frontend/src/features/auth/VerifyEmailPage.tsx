@@ -11,6 +11,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { CodeInput } from "@/components/CodeInput";
 import { ApiError } from "@/lib/api";
 import { confirmEmailChange, requestEmailChange, resendVerificationCode, verifyEmail } from "./api";
+import { usePageMeta } from "@/lib/seo";
 
 const RESEND_COOLDOWN_SECONDS = 60;
 const CODE_LENGTH = 6;
@@ -28,6 +29,7 @@ function useCountdown(initial: number) {
 }
 
 export function VerifyEmailPage() {
+  usePageMeta({ title: "Verify your email" });
   const { user, isLoading, updateLocalUser, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -96,7 +98,7 @@ export function VerifyEmailPage() {
   const targetEmail = mode === "confirm-new-email" ? pendingEmail : user.email;
 
   return (
-    <div className="page-enter flex min-h-screen items-center justify-center p-4 sm:p-8">
+    <main id="main-content" tabIndex={-1} className="page-enter flex min-h-screen items-center justify-center p-4 focus:outline-none sm:p-8">
       <div className="w-full max-w-md overflow-hidden rounded-[2rem] border border-border/60 bg-card shadow-2xl">
         <div className="relative bg-gradient-brand px-8 pb-10 pt-6 text-white">
           <div className="pointer-events-none absolute inset-0 bg-gradient-radial-soft opacity-60" />
@@ -213,6 +215,6 @@ export function VerifyEmailPage() {
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

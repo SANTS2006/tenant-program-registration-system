@@ -18,6 +18,8 @@ import { formRoutes } from "./modules/forms/routes.js";
 import { registrationRoutes } from "./modules/registrations/routes.js";
 import { publicRoutes } from "./modules/public/routes.js";
 import { feedbackRoutes, supportRoutes } from "./modules/support/routes.js";
+import { seoRoutes } from "./modules/seo/routes.js";
+import { indexHtmlFor } from "./modules/seo/indexHtml.js";
 import { verificationRoutes } from "./modules/verifications/routes.js";
 import { dashboardRoutes } from "./modules/dashboard/routes.js";
 import { auditRoutes } from "./modules/audit/routes.js";
@@ -64,6 +66,8 @@ export function buildApp() {
     app.register(fastifyStatic, {
       root: FRONTEND_DIST,
       wildcard: false,
+      // The build writes .br/.gz copies of text files; send those to browsers that accept them.
+      preCompressed: true,
       // Off so the plugin's default "max-age=0" doesn't override setHeaders below.
       cacheControl: false,
       setHeaders: (res, filePath) => {
@@ -76,8 +80,10 @@ export function buildApp() {
       },
     });
     // Client-side routes (/admin, /programs/:slug, ...) all boot from index.html.
-    app.setNotFoundHandler((request, reply) => {
+    app.setNotFoundHandler(async (request, reply) => {
       if ((request.method === "GET" || request.method === "HEAD") && !request.url.startsWith("/api/")) {
+        const html = await indexHtmlFor(FRONTEND_DIST, request.url, env.APP_URL);
+        if (html) return reply.header("Cache-Control", "no-cache").type("text/html; charset=utf-8").send(html);
         return reply.sendFile("index.html");
       }
       return reply.status(404).send({ success: false, error: { code: "NOT_FOUND", message: "Route not found" } });
@@ -87,6 +93,7 @@ export function buildApp() {
   app.setErrorHandler(errorHandler);
 
   app.get("/health", async () => ({ success: true, data: { status: "ok" } }));
+  app.register(seoRoutes);
 
   // Every non-public, non-auth route requires a valid access token.
   app.register(

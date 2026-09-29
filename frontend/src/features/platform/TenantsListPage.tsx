@@ -5,8 +5,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { useTenantsList } from "./hooks";
+import { usePageMeta } from "@/lib/seo";
 
 export function TenantsListPage() {
+  usePageMeta({ title: "Organizations" });
   const [page, setPage] = React.useState(1);
   const { data, isLoading } = useTenantsList({ page, pageSize: 20 });
 

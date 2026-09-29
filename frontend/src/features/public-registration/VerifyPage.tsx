@@ -4,6 +4,7 @@ import { AlertTriangle, BadgeCheck, CreditCard, QrCode, ShieldX, Ticket, UserChe
 import { useAuth } from "@/app/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { verifyRegistration, type VerificationResult } from "./api";
+import { usePageMeta } from "@/lib/seo";
 
 const DOCUMENTS: Record<VerificationResult["documentType"], { label: string; icon: typeof Ticket }> = {
   id_card: { label: "ID card", icon: CreditCard },
@@ -12,6 +13,7 @@ const DOCUMENTS: Record<VerificationResult["documentType"], { label: string; ico
 };
 
 export function VerifyPage() {
+  usePageMeta({ title: "Verify a registration" });
   const { slug, registrationNumber } = useParams<{ slug: string; registrationNumber: string }>();
   const [params] = useSearchParams();
   const doc = params.get("doc");

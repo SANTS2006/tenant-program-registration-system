@@ -8,8 +8,10 @@ import { ProgramStatusBadge } from "@/components/StatusBadge";
 import { useProgramsList } from "./hooks";
 import { ProgramCreateDialog } from "./ProgramCreateDialog";
 import { useAuth } from "@/app/AuthContext";
+import { usePageMeta } from "@/lib/seo";
 
 export function ProgramsListPage() {
+  usePageMeta({ title: "Programs" });
   const { user } = useAuth();
   const [search, setSearch] = React.useState("");
   const [page, setPage] = React.useState(1);

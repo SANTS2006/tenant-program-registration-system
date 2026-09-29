@@ -15,6 +15,7 @@ import { ApiError } from "@/lib/api";
 import { useProgramsList } from "../programs/hooks";
 import { useAddMembership, useCreateUser, useMemberships, useRemoveMembership, useUsersList } from "./hooks";
 import type { UserRole } from "@/types/api";
+import { usePageMeta } from "@/lib/seo";
 
 const createUserSchema = z.object({
   name: z.string().min(2),
@@ -84,7 +85,7 @@ function CreateUserDialog() {
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 aria-label={showPassword ? "Hide password" : "Show password"}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -124,7 +125,7 @@ function ManageAccessDialog({ userId, userName }: { userId: string; userName: st
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="icon" aria-label={`Manage program access for ${userName}`}>
           <Settings2 className="h-4 w-4" />
         </Button>
       </DialogTrigger>
@@ -141,7 +142,7 @@ function ManageAccessDialog({ userId, userName }: { userId: string; userName: st
                   {m.roleOnProgram}
                 </Badge>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => removeMembership.mutate(m.programId)}>
+              <Button variant="ghost" size="icon" aria-label={`Remove access to ${m.programName}`} onClick={() => removeMembership.mutate(m.programId)}>
                 <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
             </div>
@@ -187,6 +188,7 @@ function ManageAccessDialog({ userId, userName }: { userId: string; userName: st
 }
 
 export function UsersPage() {
+  usePageMeta({ title: "Users" });
   const [search, setSearch] = React.useState("");
   const { data, isLoading } = useUsersList({ page: 1, pageSize: 50, search: search || undefined });
 

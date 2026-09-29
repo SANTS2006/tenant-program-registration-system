@@ -8,6 +8,7 @@ import { LinkButton } from "@/components/ui/link-button";
 import { DesignSvg } from "../designs/DesignSvg";
 import { downloadRegistrantDocument, type DocumentKind } from "../designs/documentImage";
 import type { SubmitRegistrationResult } from "./api";
+import { usePageMeta } from "@/lib/seo";
 
 function downloadUrl(slug: string, registrationNumber: string, kind: "id-card" | "ticket") {
   return `/api/public/programs/${encodeURIComponent(slug)}/registrations/${encodeURIComponent(registrationNumber)}/${kind}`;
@@ -52,6 +53,7 @@ function DocumentImage({
 }
 
 export function ConfirmationPage() {
+  usePageMeta({ title: "Registration received" });
   const { slug } = useParams<{ slug: string }>();
   const location = useLocation();
   const result = location.state as SubmitRegistrationResult | undefined;

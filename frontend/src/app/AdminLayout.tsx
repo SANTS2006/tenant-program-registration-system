@@ -1,5 +1,6 @@
 import * as React from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink } from "react-router-dom";
+import { LazyOutlet } from "@/components/PageLoading";
 import { Building2, Inbox, LayoutDashboard, ListChecks, LogOut, Menu, MessageSquarePlus, Settings, Users, X } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { useAuth } from "./AuthContext";
@@ -150,9 +151,9 @@ export function AdminLayout() {
         <ProfileFooter onLogout={() => logout()} />
       </aside>
 
-      <main className="page-enter min-h-screen pt-16 md:pl-64">
+      <main id="main-content" tabIndex={-1} className="page-enter focus:outline-none min-h-screen pt-16 md:pl-64">
         <div className="p-4 sm:p-6 lg:p-8">
-          <Outlet />
+          <LazyOutlet />
         </div>
       </main>
     </div>

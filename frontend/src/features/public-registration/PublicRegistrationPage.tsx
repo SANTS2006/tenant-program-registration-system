@@ -6,6 +6,7 @@ import { ApiError } from "@/lib/api";
 import { DynamicForm, type UploadedFileInfo } from "./DynamicForm";
 import { FormCoverHeader } from "./FormCoverHeader";
 import { getPublicForm, getPublicProgram, submitRegistration, uploadPublicFile } from "./api";
+import { usePageMeta } from "@/lib/seo";
 
 export function PublicRegistrationPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -17,6 +18,11 @@ export function PublicRegistrationPage() {
     queryKey: ["public-program", slug],
     queryFn: () => getPublicProgram(slug!),
     enabled: !!slug,
+  });
+  usePageMeta({
+    title: program ? `Register for ${program.name}` : "Register",
+    description: program ? (program.shortDescription ?? `Fill in the online registration form for ${program.name}.`) : undefined,
+    index: !!program,
   });
 
   const { data, isLoading, error } = useQuery({

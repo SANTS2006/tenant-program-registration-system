@@ -1,0 +1,22 @@
+# Program Registration Platform
+
+> A web platform by NTS Digital Solutions for running program registrations: build registration forms, share them by link or QR code, review applicants, issue ID cards and tickets, and verify them at the door by QR code or barcode.
+
+## Main pages
+
+- [Home](/): what the platform does, features, designs, and FAQ
+- [Create an account](/register): start a free workspace for your organization
+- [Sign in](/login)
+- [Contact](/contact): questions, demos, and support (hello@ntsdigitalsolutions.com)
+- [Report a concern](/report): report misuse, suspicious programs, or security issues
+
+## Policies
+
+- [Terms of service](/terms)
+- [Privacy policy](/privacy)
+- [Cookie policy](/cookies)
+- [Acceptable use policy](/acceptable-use)
+
+## Public program pages
+
+Each published program has a page at /programs/{slug} and a registration form at /programs/{slug}/register. The full list is in [the sitemap](/sitemap.xml).

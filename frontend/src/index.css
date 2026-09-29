@@ -239,6 +239,12 @@
     -webkit-backface-visibility: hidden;
   }
 
+  /* Landing sections below the fold skip layout and paint until they are scrolled near. */
+  .offscreen-lazy {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 900px;
+  }
+
   @media (max-width: 1023px) {
     .stage-scene {
       transform: none;
