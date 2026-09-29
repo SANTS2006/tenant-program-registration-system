@@ -14,6 +14,11 @@ const REGISTRATION_STATUS_VARIANTS: Record<string, "secondary" | "success" | "wa
   rejected: "destructive",
   waitlisted: "warning",
   cancelled: "outline",
+  confirmed: "success",
+  processing: "warning",
+  ready: "secondary",
+  delivered: "success",
+  completed: "success",
 };
 
 function labelize(status: string) {
@@ -27,6 +32,6 @@ export function ProgramStatusBadge({ status }: { status: string }) {
   return <Badge variant={PROGRAM_STATUS_VARIANTS[status] ?? "secondary"}>{labelize(status)}</Badge>;
 }
 
-export function RegistrationStatusBadge({ status }: { status: string }) {
-  return <Badge variant={REGISTRATION_STATUS_VARIANTS[status] ?? "secondary"}>{labelize(status)}</Badge>;
+export function RegistrationStatusBadge({ status, label }: { status: string; label?: string }) {
+  return <Badge variant={REGISTRATION_STATUS_VARIANTS[status] ?? "secondary"}>{label ?? labelize(status)}</Badge>;
 }

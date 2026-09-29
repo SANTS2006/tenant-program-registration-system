@@ -53,8 +53,9 @@ function DocumentImage({
   return <DesignSvg svg={svg} label={alt} className={`h-auto rounded-xl shadow-lg ring-1 ring-black/5 ${className}`} />;
 }
 
-export function ConfirmationPage() {
-  usePageMeta({ title: "Registration received" });
+export function ConfirmationPage({ variant = "registration" }: { variant?: "registration" | "order" }) {
+  const isOrder = variant === "order";
+  usePageMeta({ title: isOrder ? "Order placed" : "Registration received" });
   const { slug } = useParams<{ slug: string }>();
   const location = useLocation();
   const result = React.useMemo(() => {
@@ -92,8 +93,8 @@ export function ConfirmationPage() {
       <Card>
         <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
           <p className="text-sm text-muted-foreground">We couldn't find your confirmation details.</p>
-          <LinkButton to={`/programs/${slug}`} variant="outline" size="sm">
-            Back to program
+          <LinkButton to={isOrder ? `/order/${slug}` : `/programs/${slug}`} variant="outline" size="sm">
+            {isOrder ? "Back to the order page" : "Back to program"}
           </LinkButton>
         </CardContent>
       </Card>
@@ -106,13 +107,16 @@ export function ConfirmationPage() {
         <span className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-success text-white shadow-glow">
           <CheckCircle2 className="h-8 w-8" />
         </span>
-        <h1 className="text-2xl font-semibold">Registration submitted!</h1>
+        <h1 className="text-2xl font-semibold">{isOrder ? "Order placed!" : "Registration submitted!"}</h1>
         <p className="max-w-md text-sm text-muted-foreground">
-          {result.confirmationMessage ?? "Thank you for registering. We've received your submission."}
+          {result.confirmationMessage ??
+            (isOrder
+              ? "Thank you for your order. We've emailed you a confirmation and will let you know as it progresses."
+              : "Thank you for registering. We've received your submission.")}
         </p>
         {result.showRegistrationNumber !== false && (
           <div className="rounded-xl border border-border/70 bg-gradient-brand-soft px-6 py-3">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Registration Number</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">{isOrder ? "Order Number" : "Registration Number"}</p>
             <p className="gradient-text text-lg font-semibold tracking-wide">{result.registrationNumber}</p>
           </div>
         )}
@@ -168,8 +172,12 @@ export function ConfirmationPage() {
             )}
           </div>
         )}
-        {result.receiptToken && <SubmissionDetails token={result.receiptToken} />}
+        {result.receiptToken && <SubmissionDetails token={result.receiptToken} heading={isOrder ? "Your order details" : undefined} />}
       </CardContent>
     </Card>
   );
+}
+
+export function OrderConfirmationPage() {
+  return <ConfirmationPage variant="order" />;
 }

@@ -10,6 +10,7 @@ import { apiFetch, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { listPrograms } from "../programs/api";
 import { listPolls } from "../polls/api";
+import { listBusinesses } from "../businesses/api";
 
 type Role = "admin" | "viewer";
 
@@ -41,6 +42,14 @@ export const ACCESS_KINDS: AccessKind[] = [
     options: async () => (await listPolls({ page: 1, pageSize: 100 })).items.map((p) => ({ id: p.id, name: p.name })),
     toRows: (raw) => raw.map((r) => ({ id: r.pollId!, name: r.pollName!, role: r.roleOnPoll as Role })),
     body: (id, role) => ({ pollId: id, roleOnPoll: role }),
+  },
+  {
+    key: "businesses",
+    label: "Businesses",
+    singular: "business",
+    options: async () => (await listBusinesses({ page: 1, pageSize: 100 })).items.map((b) => ({ id: b.id, name: b.name })),
+    toRows: (raw) => raw.map((r) => ({ id: r.businessId!, name: r.businessName!, role: r.roleOnBusiness as Role })),
+    body: (id, role) => ({ businessId: id, roleOnBusiness: role }),
   },
 ];
 

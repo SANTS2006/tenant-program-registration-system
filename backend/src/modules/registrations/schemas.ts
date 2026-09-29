@@ -2,6 +2,10 @@ import { z } from "zod";
 import { isOwnCloudinaryUrl } from "../../lib/cloudinaryUrl.js";
 import { paginationSchema } from "../../lib/pagination.js";
 
+export const programStatusChoices = ["submitted", "under_review", "approved", "rejected", "waitlisted", "cancelled"] as const;
+// A business order moves through these instead.
+export const orderStatusChoices = ["submitted", "confirmed", "processing", "ready", "delivered", "completed", "cancelled", "rejected"] as const;
+
 export const registrationStatusValues = [
   "submitted",
   "under_review",
@@ -9,6 +13,11 @@ export const registrationStatusValues = [
   "rejected",
   "waitlisted",
   "cancelled",
+  "confirmed",
+  "processing",
+  "ready",
+  "delivered",
+  "completed",
 ] as const;
 
 export const updateStatusSchema = z.object({

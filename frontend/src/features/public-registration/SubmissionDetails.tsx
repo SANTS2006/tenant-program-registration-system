@@ -15,7 +15,7 @@ interface SubmissionSummary {
 }
 
 /** Lets a registrant look over and download (as a PDF) the answers they just submitted. */
-export function SubmissionDetails({ token }: { token: string }) {
+export function SubmissionDetails({ token, heading = "Your registration information" }: { token: string; heading?: string }) {
   const [open, setOpen] = React.useState(false);
   const [downloading, setDownloading] = React.useState(false);
   const path = `/public/submissions/${encodeURIComponent(token)}`;
@@ -44,7 +44,7 @@ export function SubmissionDetails({ token }: { token: string }) {
         <div className="flex items-center gap-2">
           <FileText className="h-5 w-5 text-primary" aria-hidden="true" />
           <h2 id="submission-heading" className="text-sm font-semibold">
-            Your registration information
+            {heading}
           </h2>
         </div>
         <div className="flex gap-2">

@@ -165,7 +165,9 @@ export async function getShareInfo(programId: string): Promise<FormShareInfo> {
   if (!program) throw AppError.notFound("Program not found");
 
   const published = await formsRepo.findPublishedForm(programId);
-  const publicUrl = `${env.APP_URL}/programs/${program.slug}/register`;
+  // A business's order form lives at /order/:slug; programs at /programs/:slug/register.
+  const publicUrl =
+    program.kind === "order_form" ? `${env.APP_URL}/order/${program.slug}` : `${env.APP_URL}/programs/${program.slug}/register`;
 
   if (!published || program.status !== "published") {
     return { published: false, publicUrl, qrCodeDataUrl: null };

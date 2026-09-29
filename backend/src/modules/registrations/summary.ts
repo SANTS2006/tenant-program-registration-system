@@ -1,5 +1,8 @@
+import { eq } from "drizzle-orm";
 import jwt from "jsonwebtoken";
 import { env } from "../../config/env.js";
+import { db } from "../../db/client.js";
+import { businesses } from "../../db/schema/index.js";
 import { renderDetailsPdf, type DetailsSection } from "../../lib/detailsPdf.js";
 import { participantFileName } from "../../lib/downloadName.js";
 import { AppError } from "../../lib/errors.js";
@@ -95,7 +98,13 @@ function statusLabel(status: string) {
 }
 
 async function summaryPdf(program: programsRepo.ProgramRow, registration: registrationsRepo.RegistrationRow) {
-  const [summary, logo] = await Promise.all([summarize(program, registration), fetchImageDataUri(program.thumbnailUrl ?? undefined, LOGO_TRANSFORM)]);
+  // An order is headed with its business's name and logo.
+  const [business] = program.businessId ? await db.select().from(businesses).where(eq(businesses.id, program.businessId)).limit(1) : [];
+  const isOrder = program.kind === "order_form";
+  const [summary, logo] = await Promise.all([
+    summarize(program, registration),
+    fetchImageDataUri((business?.logoUrl ?? program.thumbnailUrl) ?? undefined, LOGO_TRANSFORM),
+  ]);
   const submitted = new Date(summary.submittedAt).toLocaleString("en-GB", {
     day: "numeric",
     month: "short",
@@ -106,19 +115,20 @@ async function summaryPdf(program: programsRepo.ProgramRow, registration: regist
   });
   const sections: DetailsSection[] = summary.sections;
   const buffer = await renderDetailsPdf({
-    title: program.name,
-    subtitle: "Registration details",
+    title: business?.name ?? program.name,
+    subtitle: isOrder ? "Order details" : "Registration details",
     logo,
     facts: [
-      { label: "Registration number", value: summary.registrationNumber },
+      { label: isOrder ? "Order number" : "Registration number", value: summary.registrationNumber },
       { label: "Submitted", value: `${submitted} UTC` },
       ...(summary.applicantName ? [{ label: "Name", value: summary.applicantName }] : []),
       { label: "Status", value: statusLabel(summary.status) },
     ],
     sections,
-    footer: `${program.name} - ${summary.registrationNumber}`,
+    footer: `${business?.name ?? program.name} - ${summary.registrationNumber}`,
+    accentColor: business?.brandColor,
   });
-  return { buffer, fileName: participantFileName(registration.applicantName, `summary:${registration.id}`, "pdf", "Registration") };
+  return { buffer, fileName: participantFileName(registration.applicantName, `summary:${registration.id}`, "pdf", isOrder ? "Order" : "Registration") };
 }
 
 export async function submissionPdfByToken(token: string) {

@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, ilike, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { programMembers, programs, tenants, users } from "../../db/schema/index.js";
+import { businessMembers, programMembers, programs, tenants, users } from "../../db/schema/index.js";
 import type { PaginationInput } from "../../lib/pagination.js";
 import { toOffsetLimit } from "../../lib/pagination.js";
 import type { ProgramRole } from "../users/types.js";
@@ -107,9 +107,9 @@ export async function listAccessibleProgramIdsForUser(userId: string): Promise<s
 }
 
 /** Published programs' public pages, for the sitemap. */
-export async function listPublishedProgramSlugs(limit = 5000): Promise<{ slug: string; updatedAt: Date }[]> {
+export async function listPublishedProgramSlugs(limit = 5000): Promise<{ slug: string; updatedAt: Date; kind: ProgramRow["kind"] }[]> {
   return db
-    .select({ slug: programs.slug, updatedAt: programs.updatedAt })
+    .select({ slug: programs.slug, updatedAt: programs.updatedAt, kind: programs.kind })
     .from(programs)
     .where(and(eq(programs.status, "published"), isNull(programs.deletedAt)))
     .orderBy(desc(programs.updatedAt))
@@ -117,11 +117,17 @@ export async function listPublishedProgramSlugs(limit = 5000): Promise<{ slug: s
 }
 
 /**
- * The people to email about a program's activity: its admins and viewers, plus the
- * organization's account admins, who can see every program. Only active, verified accounts.
+ * The people to email about a program's activity: its admins and viewers (or, for a business's
+ * order form, the business's), plus the account admins, who can see everything. Only active,
+ * verified accounts.
  */
-export async function listNotificationRecipients(program: Pick<ProgramRow, "id" | "tenantId">): Promise<{ name: string; email: string }[]> {
+export async function listNotificationRecipients(
+  program: Pick<ProgramRow, "id" | "tenantId" | "businessId">,
+): Promise<{ name: string; email: string }[]> {
   const members = db.select({ userId: programMembers.userId }).from(programMembers).where(eq(programMembers.programId, program.id));
+  const businessTeam = program.businessId
+    ? db.select({ userId: businessMembers.userId }).from(businessMembers).where(eq(businessMembers.businessId, program.businessId))
+    : null;
   return db
     .selectDistinct({ name: users.name, email: users.email })
     .from(users)
@@ -130,7 +136,7 @@ export async function listNotificationRecipients(program: Pick<ProgramRow, "id" 
         eq(users.tenantId, program.tenantId),
         eq(users.status, "active"),
         isNotNull(users.emailVerifiedAt),
-        or(eq(users.role, "admin"), inArray(users.id, members)),
+        or(eq(users.role, "admin"), inArray(users.id, members), ...(businessTeam ? [inArray(users.id, businessTeam)] : [])),
       ),
     )
     .limit(50);

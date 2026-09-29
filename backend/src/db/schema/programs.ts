@@ -9,7 +9,8 @@ import {
   unique,
   jsonb,
 } from "drizzle-orm/pg-core";
-import { programStatusEnum, programRoleEnum } from "./enums";
+import { programKindEnum, programStatusEnum, programRoleEnum } from "./enums";
+import { businesses } from "./businesses";
 import { users } from "./users";
 import { tenants } from "./tenants";
 
@@ -23,6 +24,9 @@ export const programs = pgTable(
     shortDescription: text("short_description"),
     thumbnailUrl: text("thumbnail_url"),
     status: programStatusEnum("status").notNull().default("draft"),
+    // "order_form" programs are a business's order page and are listed under that business only.
+    kind: programKindEnum("kind").notNull().default("program"),
+    businessId: uuid("business_id").references(() => businesses.id, { onDelete: "cascade" }),
     startDate: timestamp("start_date", { withTimezone: true }),
     endDate: timestamp("end_date", { withTimezone: true }),
     registrationStartDate: timestamp("registration_start_date", { withTimezone: true }),
@@ -51,6 +55,7 @@ export const programs = pgTable(
     index("programs_status_idx").on(table.status),
     index("programs_deleted_at_idx").on(table.deletedAt),
     index("programs_tenant_id_idx").on(table.tenantId),
+    index("programs_business_id_idx").on(table.businessId),
   ],
 );
 

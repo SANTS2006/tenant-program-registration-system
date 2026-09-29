@@ -7,7 +7,7 @@ import { DemographicBarChart, RegistrationTrendChart, StatusPieChart } from "../
 import { FieldAnalyticsSection } from "../analytics/FieldAnalyticsSection";
 
 export function ProgramAnalyticsPage() {
-  const { program } = useProgramOutletContext();
+  const { program, terms } = useProgramOutletContext();
   const { data: stats } = useProgramStats(program.id);
   const { data: trend, isLoading: trendLoading } = useQuery({
     queryKey: ["analytics", program.id, "trend"],
@@ -23,7 +23,7 @@ export function ProgramAnalyticsPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-base">Registrations in the last 30 days</CardTitle>
+            <CardTitle className="text-base capitalize">{terms.plural} in the last 30 days</CardTitle>
           </CardHeader>
           <CardContent>
             {trendLoading || !trend ? (

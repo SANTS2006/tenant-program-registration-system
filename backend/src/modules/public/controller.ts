@@ -1,4 +1,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
+import { eq } from "drizzle-orm";
+import { db } from "../../db/client.js";
+import { businesses } from "../../db/schema/index.js";
 import { AppError } from "../../lib/errors.js";
 import { sendSuccess } from "../../lib/response.js";
 import * as formsService from "../forms/service.js";
@@ -16,8 +19,26 @@ function isRegistrationOpen(program: programsRepo.ProgramRow): boolean {
   return true;
 }
 
-function toPublicProgram(program: programsRepo.ProgramRow) {
+async function businessFor(program: programsRepo.ProgramRow) {
+  if (program.kind !== "order_form" || !program.businessId) return null;
+  const [business] = await db.select().from(businesses).where(eq(businesses.id, program.businessId)).limit(1);
+  if (!business || business.deletedAt) return null;
   return {
+    name: business.name,
+    logoUrl: business.logoUrl,
+    description: business.description,
+    email: business.email,
+    phone: business.phone,
+    address: business.address,
+    website: business.website,
+  };
+}
+
+async function toPublicProgram(program: programsRepo.ProgramRow) {
+  return {
+    kind: program.kind,
+    // An order form is shown as its business's order page.
+    business: await businessFor(program),
     id: program.id,
     name: program.name,
     slug: program.slug,
@@ -36,7 +57,7 @@ export async function getPublicProgramHandler(request: FastifyRequest, reply: Fa
   const { slug } = request.params as { slug: string };
   const program = await programsRepo.findProgramBySlug(slug);
   if (!program || program.status !== "published") throw AppError.notFound("Program not found");
-  return sendSuccess(reply, toPublicProgram(program));
+  return sendSuccess(reply, await toPublicProgram(program));
 }
 
 export async function getPublicFormHandler(request: FastifyRequest, reply: FastifyReply) {

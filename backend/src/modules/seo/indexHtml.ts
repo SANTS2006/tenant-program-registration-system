@@ -1,5 +1,8 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { eq } from "drizzle-orm";
+import { db } from "../../db/client.js";
+import { businesses } from "../../db/schema/index.js";
 import * as pollsRepo from "../polls/repository.js";
 import * as programsRepo from "../programs/repository.js";
 
@@ -20,6 +23,7 @@ function setByProperty(html: string, property: string, value: string) {
 
 const PROGRAM_PAGE = /^\/programs\/([^/?#]+)(\/register)?\/?(?:[?#].*)?$/;
 const POLL_PAGE = /^\/vote\/([^/?#]+)(?:\/[^?#]*)?(?:[?#].*)?$/;
+const ORDER_PAGE = /^\/order\/([^/?#]+)\/?(?:[?#].*)?$/;
 
 const trimUrl = (siteUrl: string) => siteUrl.replace(/\/+$/, "");
 
@@ -31,8 +35,24 @@ const trimUrl = (siteUrl: string) => siteUrl.replace(/\/+$/, "");
 export async function indexHtmlFor(distDir: string, url: string, siteUrl: string): Promise<string | null> {
   const programMatch = PROGRAM_PAGE.exec(url);
   const pollMatch = programMatch ? null : POLL_PAGE.exec(url);
-  if (!programMatch && !pollMatch) return null;
+  const orderMatch = programMatch || pollMatch ? null : ORDER_PAGE.exec(url);
+  if (!programMatch && !pollMatch && !orderMatch) return null;
   template ??= readFileSync(path.join(distDir, "index.html"), "utf8");
+
+  if (orderMatch) {
+    const form = await programsRepo.findProgramBySlug(decodeURIComponent(orderMatch[1]!)).catch(() => null);
+    if (!form || form.kind !== "order_form" || form.status !== "published" || !form.businessId) return null;
+    const [business] = await db.select().from(businesses).where(eq(businesses.id, form.businessId)).limit(1);
+    if (!business) return null;
+    return pageIndexHtml(template, {
+      title: `Order from ${business.name}`,
+      description: (business.description ?? `Place your order with ${business.name} online.`).replace(/\s+/g, " ").slice(0, 200),
+      url: `${trimUrl(siteUrl)}/order/${encodeURIComponent(form.slug)}`,
+      image: business.logoUrl,
+      imageAlt: business.name,
+      index: true,
+    });
+  }
 
   if (programMatch) {
     const program = await programsRepo.findProgramBySlug(decodeURIComponent(programMatch[1]!)).catch(() => null);

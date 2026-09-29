@@ -20,6 +20,7 @@ import { publicRoutes } from "./modules/public/routes.js";
 import { feedbackRoutes, supportRoutes } from "./modules/support/routes.js";
 import { seoRoutes } from "./modules/seo/routes.js";
 import { pollRoutes } from "./modules/polls/routes.js";
+import { businessRoutes } from "./modules/businesses/routes.js";
 import { voterRoutes } from "./modules/voters/routes.js";
 import { indexHtmlFor } from "./modules/seo/indexHtml.js";
 import { verificationRoutes } from "./modules/verifications/routes.js";
@@ -113,6 +114,7 @@ export function buildApp() {
       protectedApp.register(userRoutes, { prefix: "/users" });
       protectedApp.register(programRoutes, { prefix: "/programs" });
       protectedApp.register(pollRoutes, { prefix: "/polls" });
+      protectedApp.register(businessRoutes, { prefix: "/businesses" });
       protectedApp.register(formRoutes, { prefix: "/programs" });
       protectedApp.register(registrationRoutes, { prefix: "/programs" });
       protectedApp.register(idCardRoutes, { prefix: "/programs" });

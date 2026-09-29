@@ -9,11 +9,53 @@ import { ApiError } from "@/lib/api";
 import { ProgramStatusBadge } from "@/components/StatusBadge";
 import { LinkButton } from "@/components/ui/link-button";
 import { useProgram } from "./hooks";
-import type { Program } from "@/types/api";
+import type { Program, RegistrationStatus } from "@/types/api";
 import { usePageMeta } from "@/lib/seo";
 
+/** Words for the things a form collects: registrations for programs, orders for a business. */
+export interface SubmissionTerms {
+  singular: string;
+  plural: string;
+  numberLabel: string;
+  statuses: RegistrationStatus[];
+  statusLabel: (status: RegistrationStatus) => string;
+}
+
+const labelize = (status: string) => status.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+
+export const PROGRAM_TERMS: SubmissionTerms = {
+  singular: "registration",
+  plural: "registrations",
+  numberLabel: "Registration #",
+  statuses: ["submitted", "under_review", "approved", "rejected", "waitlisted", "cancelled"],
+  statusLabel: labelize,
+};
+
+const ORDER_LABELS: Partial<Record<RegistrationStatus, string>> = { submitted: "New", rejected: "Declined" };
+
+export const ORDER_TERMS: SubmissionTerms = {
+  singular: "order",
+  plural: "orders",
+  numberLabel: "Order #",
+  statuses: ["submitted", "confirmed", "processing", "ready", "delivered", "completed", "cancelled", "rejected"],
+  statusLabel: (status) => ORDER_LABELS[status] ?? labelize(status),
+};
+
+interface ProgramOutletContext {
+  program: Program;
+  /** Where one submission opens; defaults to the program's own registrations page. */
+  submissionPath?: (registrationId: string) => string;
+  terms?: SubmissionTerms;
+}
+
 export function useProgramOutletContext() {
-  return useOutletContext<{ program: Program }>();
+  const context = useOutletContext<ProgramOutletContext>();
+  const { program } = context;
+  return {
+    program,
+    submissionPath: context.submissionPath ?? ((id: string) => `/admin/programs/${program.id}/registrations/${id}`),
+    terms: context.terms ?? (program.kind === "order_form" ? ORDER_TERMS : PROGRAM_TERMS),
+  };
 }
 
 const tabs = [

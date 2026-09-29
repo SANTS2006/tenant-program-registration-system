@@ -20,17 +20,8 @@ import { exportRegistrations } from "./api";
 import { useRegistrationsList } from "./hooks";
 import type { Registration, RegistrationStatus } from "@/types/api";
 
-const STATUS_OPTIONS: RegistrationStatus[] = [
-  "submitted",
-  "under_review",
-  "approved",
-  "rejected",
-  "waitlisted",
-  "cancelled",
-];
-
 export function RegistrationsListPage() {
-  const { program } = useProgramOutletContext();
+  const { program, submissionPath, terms } = useProgramOutletContext();
   const navigate = useNavigate();
   const [search, setSearch] = React.useState("");
   const [status, setStatus] = React.useState<string>("all");
@@ -50,13 +41,13 @@ export function RegistrationsListPage() {
 
   const columns = React.useMemo<ColumnDef<Registration>[]>(
     () => [
-      { accessorKey: "registrationNumber", header: "Registration #" },
+      { accessorKey: "registrationNumber", header: terms.numberLabel },
       { accessorKey: "applicantName", header: "Name", cell: (c) => c.getValue<string>() ?? "—" },
       { accessorKey: "applicantEmail", header: "Email", cell: (c) => c.getValue<string>() ?? "—" },
       {
         accessorKey: "status",
         header: "Status",
-        cell: (c) => <RegistrationStatusBadge status={c.getValue<string>()} />,
+        cell: (c) => <RegistrationStatusBadge status={c.getValue<string>()} label={terms.statusLabel(c.getValue<RegistrationStatus>())} />,
       },
       {
         accessorKey: "submittedAt",
@@ -86,7 +77,7 @@ export function RegistrationsListPage() {
         status: status === "all" ? undefined : (status as RegistrationStatus),
       });
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Failed to export registrations");
+      toast.error(err instanceof ApiError ? err.message : `Failed to export ${terms.plural}`);
     } finally {
       setExporting(null);
     }
@@ -119,9 +110,9 @@ export function RegistrationsListPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All statuses</SelectItem>
-            {STATUS_OPTIONS.map((s) => (
+            {terms.statuses.map((s) => (
               <SelectItem key={s} value={s}>
-                {s.replace("_", " ")}
+                {terms.statusLabel(s)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -180,7 +171,7 @@ export function RegistrationsListPage() {
             {!isLoading && table.getRowModel().rows.length === 0 && (
               <TableRow>
                 <TableCell colSpan={columns.length} className="text-center text-muted-foreground">
-                  No registrations found.
+                  No {terms.plural} found.
                 </TableCell>
               </TableRow>
             )}
@@ -188,7 +179,7 @@ export function RegistrationsListPage() {
               <TableRow
                 key={row.id}
                 className="cursor-pointer"
-                onClick={() => navigate(`/admin/programs/${program.id}/registrations/${row.original.id}`)}
+                onClick={() => navigate(submissionPath(row.original.id))}
               >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>

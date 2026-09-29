@@ -38,6 +38,9 @@ export interface Program {
   updatedAt: string;
   /** The current user's role on this program (only on the single-program endpoint). */
   myRole?: ProgramRole | null;
+  /** "order_form" programs are a business's order page. */
+  kind?: "program" | "order_form";
+  businessId?: string | null;
 }
 
 export interface RegistrationNumberConfig {
@@ -60,6 +63,17 @@ export interface PublicProgram {
   registrationStartDate: string | null;
   registrationEndDate: string | null;
   registrationOpen: boolean;
+  kind?: "program" | "order_form";
+  /** For an order form: the business the order goes to. */
+  business?: {
+    name: string;
+    logoUrl: string | null;
+    description: string | null;
+    email: string | null;
+    phone: string | null;
+    address: string | null;
+    website: string | null;
+  } | null;
 }
 
 export type FieldType =
@@ -165,7 +179,13 @@ export type RegistrationStatus =
   | "approved"
   | "rejected"
   | "waitlisted"
-  | "cancelled";
+  | "cancelled"
+  // Order statuses, for business order forms.
+  | "confirmed"
+  | "processing"
+  | "ready"
+  | "delivered"
+  | "completed";
 
 export interface Registration {
   id: string;

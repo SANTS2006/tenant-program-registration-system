@@ -48,6 +48,12 @@ export const registrationStatusEnum = pgEnum("registration_status", [
   "rejected",
   "waitlisted",
   "cancelled",
+  // Order statuses, used by business order forms.
+  "confirmed",
+  "processing",
+  "ready",
+  "delivered",
+  "completed",
 ]);
 
 // Which document's QR code was scanned; "link" covers codes issued before this was recorded.
@@ -57,3 +63,7 @@ export const supportMessageKindEnum = pgEnum("support_message_kind", ["feedback"
 export const supportMessageStatusEnum = pgEnum("support_message_status", ["new", "read", "resolved"]);
 
 export const pollStatusEnum = pgEnum("poll_status", ["draft", "open", "closed"]);
+
+// A program is a registration program; an order form is a business's order page built on the same form tools.
+export const programKindEnum = pgEnum("program_kind", ["program", "order_form"]);
+export const businessDocumentKindEnum = pgEnum("business_document_kind", ["invoice", "receipt"]);

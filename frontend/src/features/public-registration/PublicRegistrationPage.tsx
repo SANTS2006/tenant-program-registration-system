@@ -4,11 +4,12 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ApiError } from "@/lib/api";
 import { DynamicForm, type UploadedFileInfo } from "./DynamicForm";
-import { FormCoverHeader } from "./FormCoverHeader";
+import { BusinessCoverHeader, FormCoverHeader } from "./FormCoverHeader";
 import { getPublicForm, getPublicProgram, submitRegistration, uploadPublicFile } from "./api";
 import { usePageMeta } from "@/lib/seo";
 
-export function PublicRegistrationPage() {
+/** The live registration form, or (as `order`) a business's live order page at /order/:slug. */
+export function PublicRegistrationPage({ variant = "registration" }: { variant?: "registration" | "order" }) {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = React.useState(false);
@@ -19,9 +20,17 @@ export function PublicRegistrationPage() {
     queryFn: () => getPublicProgram(slug!),
     enabled: !!slug,
   });
+  const isOrder = variant === "order";
+  const business = program?.business ?? null;
   usePageMeta({
-    title: program ? `Register for ${program.name}` : "Register",
-    description: program ? (program.shortDescription ?? `Fill in the online registration form for ${program.name}.`) : undefined,
+    title: isOrder ? (business ? `Order from ${business.name}` : "Place an order") : program ? `Register for ${program.name}` : "Register",
+    description: isOrder
+      ? business
+        ? (business.description ?? `Place your order with ${business.name} online.`)
+        : undefined
+      : program
+        ? (program.shortDescription ?? `Fill in the online registration form for ${program.name}.`)
+        : undefined,
     index: !!program,
   });
 
@@ -49,7 +58,7 @@ export function PublicRegistrationPage() {
     setErrors([]);
     try {
       const result = await submitRegistration(slug!, responses, files, consentAccepted);
-      navigate(`/programs/${slug}/confirmation`, { state: result });
+      navigate(isOrder ? `/order/${slug}/confirmation` : `/programs/${slug}/confirmation`, { state: result });
     } catch (err) {
       if (err instanceof ApiError && Array.isArray(err.details)) {
         setErrors(err.details as string[]);
@@ -63,8 +72,10 @@ export function PublicRegistrationPage() {
 
   return (
     <Card className="overflow-hidden">
-      {program && (
-        <FormCoverHeader name={program.name} thumbnailUrl={program.thumbnailUrl} description={program.description} />
+      {isOrder && business ? (
+        <BusinessCoverHeader business={business} />
+      ) : (
+        program && <FormCoverHeader name={program.name} thumbnailUrl={program.thumbnailUrl} description={program.description} />
       )}
       <CardHeader>
         <CardTitle>{data.form.title}</CardTitle>
@@ -82,9 +93,14 @@ export function PublicRegistrationPage() {
           consentText={data.form.consentText}
           onUploadFile={(file, fieldKey) => uploadPublicFile(slug!, fieldKey, file)}
           onSubmit={handleSubmit}
-          onCancel={() => navigate(`/programs/${slug}`)}
+          onCancel={isOrder ? undefined : () => navigate(`/programs/${slug}`)}
+          submitLabel={isOrder ? "Place order" : undefined}
         />
       </CardContent>
     </Card>
   );
+}
+
+export function PublicOrderPage() {
+  return <PublicRegistrationPage variant="order" />;
 }

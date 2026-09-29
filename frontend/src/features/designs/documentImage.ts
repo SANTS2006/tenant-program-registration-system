@@ -118,6 +118,13 @@ async function savePng(svgs: string[], fileName: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+/** Saves each page as its own PNG, e.g. "Invoice-1.png", "Invoice-2.png" (just "Invoice.png" for one page). */
+export async function savePagesAsPng(svgs: string[], baseName: string) {
+  for (const [i, svg] of svgs.entries()) {
+    await savePng([svg], svgs.length > 1 ? `${baseName}-page-${i + 1}.png` : `${baseName}.png`);
+  }
+}
+
 /**
  * Downloads a registrant's document: the ID card as a two-page PDF (front and back),
  * "<Name>-ID-Card-<code>.pdf"; a two-sided ticket as a PDF too; a one-sided ticket as a

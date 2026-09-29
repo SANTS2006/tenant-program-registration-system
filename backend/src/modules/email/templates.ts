@@ -455,27 +455,33 @@ export function newRegistrationNotificationEmail(params: {
   answers: { label: string; value: string }[];
   detailsUrl: string;
   settingsUrl: string;
+  /** A business order rather than a program registration. */
+  isOrder?: boolean;
 }): { subject: string; html: string } {
   const who = params.applicantName || "Someone";
+  const noun = params.isOrder ? "order" : "registration";
+  const strong = (value: string) => `<strong style="color:${BRAND.heading};">${escapeHtml(value)}</strong>`;
   const body = [
-    paragraph(
-      `<strong style="color:${BRAND.heading};">${escapeHtml(who)}</strong> just registered for <strong style="color:${BRAND.heading};">${escapeHtml(params.programName)}</strong>.`,
-    ),
+    paragraph(params.isOrder ? `${strong(who)} just placed an order through ${strong(params.programName)}.` : `${strong(who)} just registered for ${strong(params.programName)}.`),
     detailsTable([
-      { label: "Registration number", value: params.registrationNumber, mono: true },
+      { label: params.isOrder ? "Order number" : "Registration number", value: params.registrationNumber, mono: true },
       { label: "Submitted", value: formatWhen(params.submittedAt) },
       ...params.answers,
     ]),
-    button("Open the registration", params.detailsUrl),
-    turnOffNote(params.programName, params.settingsUrl, "You're getting this because you're on this program's team."),
+    button(`Open the ${noun}`, params.detailsUrl),
+    params.isOrder
+      ? mutedNote(
+          `You're getting this because you're on this business's team. Admins can turn these emails off on the business's <a href="${escapeHtml(params.settingsUrl)}" style="color:${BRAND.primary};">overview page</a>.`,
+        )
+      : turnOffNote(params.programName, params.settingsUrl, "You're getting this because you're on this program's team."),
   ].join("");
 
   return {
-    subject: `New registration: ${who} - ${params.programName}`,
+    subject: `New ${noun}: ${who} - ${params.programName}`,
     html: layout({
-      preheader: `${who} registered (${params.registrationNumber})`,
-      eyebrow: "New registration",
-      heading: "New registration received",
+      preheader: params.isOrder ? `${who} placed an order (${params.registrationNumber})` : `${who} registered (${params.registrationNumber})`,
+      eyebrow: `New ${noun}`,
+      heading: `New ${noun} received`,
       body,
     }),
   };
@@ -593,6 +599,129 @@ export function newVoteNotificationEmail(params: {
       eyebrow: "New vote",
       heading: "A new vote was cast",
       body,
+    }),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Business emails: branded with the business's own name and logo.
+
+export interface BusinessEmailBrand {
+  name: string;
+  logoUrl?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  brandColor?: string;
+}
+
+function businessBrand(business: BusinessEmailBrand, footer: string): EmailBrand {
+  return { name: business.name, logoUrl: emailImageUrl(business.logoUrl), footer };
+}
+
+function businessContactLine(business: BusinessEmailBrand) {
+  const parts = [business.phone, business.email].filter(Boolean).map((v) => escapeHtml(v!));
+  return parts.length ? mutedNote(`Questions? Contact ${escapeHtml(business.name)} at ${parts.join(" or ")}.`) : "";
+}
+
+export function businessDocumentEmail(params: {
+  kind: "invoice" | "receipt";
+  business: BusinessEmailBrand;
+  clientName: string;
+  number: string;
+  issueDate: string;
+  dueDate: string | null;
+  total: string;
+  balance: string | null;
+  updated: boolean;
+  message?: string;
+}): { subject: string; html: string } {
+  const label = params.kind === "invoice" ? "Invoice" : "Receipt";
+  const strong = (value: string) => `<strong style="color:${BRAND.heading};">${escapeHtml(value)}</strong>`;
+  const body = [
+    paragraph(`Hi ${strong(params.clientName)},`),
+    params.message
+      ? paragraph(escapeHtml(params.message).replace(/\r?\n/g, "<br />"))
+      : paragraph(
+          params.kind === "invoice"
+            ? `Please find ${params.updated ? "the updated" : "your"} invoice ${strong(params.number)} from ${strong(params.business.name)} attached.`
+            : `Thank you for your payment. Your ${params.updated ? "updated " : ""}receipt ${strong(params.number)} from ${strong(params.business.name)} is attached.`,
+        ),
+    detailsTable([
+      { label: `${label} number`, value: params.number, mono: true },
+      { label: "Date", value: params.issueDate },
+      ...(params.dueDate ? [{ label: "Due date", value: params.dueDate }] : []),
+      { label: "Total", value: params.total },
+      ...(params.balance ? [{ label: "Amount due", value: params.balance }] : []),
+    ]),
+    paragraph(`The ${label.toLowerCase()} is attached to this email as a PDF.`),
+    businessContactLine(params.business),
+  ].join("");
+  return {
+    subject: `${params.updated ? "Updated " : ""}${label} ${params.number} from ${params.business.name}`,
+    html: layout({
+      preheader: `${label} ${params.number}: ${params.total}`,
+      eyebrow: params.updated ? `Updated ${label.toLowerCase()}` : label,
+      heading: `${label} ${params.number}`,
+      body,
+      brand: businessBrand(params.business, `You're receiving this ${label.toLowerCase()} from ${escapeHtml(params.business.name)}.`),
+    }),
+  };
+}
+
+const ORDER_STATUS_TEXT: Record<string, { label: string; line: string }> = {
+  submitted: { label: "Received", line: "We've received your order and will confirm it shortly." },
+  confirmed: { label: "Confirmed", line: "Your order has been confirmed." },
+  processing: { label: "Processing", line: "We're preparing your order." },
+  ready: { label: "Ready", line: "Your order is ready for pickup or delivery." },
+  delivered: { label: "Delivered", line: "Your order has been delivered." },
+  completed: { label: "Completed", line: "Your order is complete. Thank you!" },
+  cancelled: { label: "Cancelled", line: "Your order has been cancelled." },
+  rejected: { label: "Declined", line: "Unfortunately we can't fulfil your order." },
+};
+
+export function orderStatusLabel(status: string) {
+  return ORDER_STATUS_TEXT[status]?.label ?? status.replace(/_/g, " ");
+}
+
+/** Sent to the customer when they place an order, and each time its status changes. */
+export function orderUpdateEmail(params: {
+  business: BusinessEmailBrand;
+  customerName: string;
+  orderNumber: string;
+  status: string;
+  note?: string | null;
+  isNew: boolean;
+  placedAt: Date;
+  answers: { label: string; value: string }[];
+}): { subject: string; html: string } {
+  const status = ORDER_STATUS_TEXT[params.status] ?? { label: orderStatusLabel(params.status), line: `Your order is now ${orderStatusLabel(params.status).toLowerCase()}.` };
+  const strong = (value: string) => `<strong style="color:${BRAND.heading};">${escapeHtml(value)}</strong>`;
+  const body = [
+    paragraph(`Hi ${strong(params.customerName)},`),
+    paragraph(params.isNew ? `Thank you for your order with ${strong(params.business.name)}. ${status.line}` : status.line),
+    params.note
+      ? `<div style="margin:0 0 16px;border-left:3px solid ${BRAND.border};padding:4px 0 4px 16px;">
+           <p style="margin:0;font-family:${FONT};font-size:14px;line-height:1.6;color:${BRAND.body};">${escapeHtml(params.note).replace(/\r?\n/g, "<br />")}</p>
+         </div>`
+      : "",
+    detailsTable([
+      { label: "Order number", value: params.orderNumber, mono: true },
+      { label: "Status", value: status.label },
+      { label: "Placed", value: formatWhen(params.placedAt) },
+      ...params.answers,
+    ]),
+    businessContactLine(params.business),
+  ].join("");
+  return {
+    subject: params.isNew
+      ? `We've received your order ${params.orderNumber} - ${params.business.name}`
+      : `Your order ${params.orderNumber} is ${status.label.toLowerCase()} - ${params.business.name}`,
+    html: layout({
+      preheader: `Order ${params.orderNumber}: ${status.label}`,
+      eyebrow: params.isNew ? "Order received" : "Order update",
+      heading: params.isNew ? "Thanks for your order!" : `Order ${status.label.toLowerCase()}`,
+      body,
+      brand: businessBrand(params.business, `You're receiving this because you placed an order with ${escapeHtml(params.business.name)}.`),
     }),
   };
 }

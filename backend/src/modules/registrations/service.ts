@@ -4,10 +4,10 @@ import { buildPaginatedResult } from "../../lib/pagination.js";
 import { sendEmail } from "../email/service.js";
 import { registrationConfirmationEmail } from "../email/templates.js";
 import * as formsService from "../forms/service.js";
-import { notifyNewRegistration } from "../notifications/service.js";
+import { notifyCustomer, notifyNewRegistration } from "../notifications/service.js";
 import * as programsRepo from "../programs/repository.js";
 import * as registrationsRepo from "./repository.js";
-import type { ListRegistrationsQuery, SubmitRegistrationInput, UpdateStatusInput } from "./schemas.js";
+import { orderStatusChoices, programStatusChoices, type ListRegistrationsQuery, type SubmitRegistrationInput, type UpdateStatusInput } from "./schemas.js";
 import { counterBucket, formatRegistrationNumber, resolveNumberingConfig } from "./numbering.js";
 import { extractApplicantContact, validateAndNormalizeResponses } from "./validation.js";
 
@@ -78,7 +78,10 @@ export async function submitRegistration(slug: string, input: SubmitRegistration
   if (!registration) throw AppError.conflict("Could not allocate a registration number, please try again");
   const registrationNumber = registration.registrationNumber;
 
-  if (contact.email) {
+  if (program.kind === "order_form") {
+    // Customers get an order confirmation branded with the business instead.
+    void notifyCustomer(program, registration, { isNew: true, fields: published.fields, files });
+  } else if (contact.email) {
     try {
       await sendEmail({
         to: contact.email,
@@ -165,14 +168,32 @@ export async function updateRegistrationStatus(
 ) {
   const registration = await registrationsRepo.findRegistrationInProgram(programId, registrationId);
   if (!registration) throw AppError.notFound("Registration not found");
+  const program = await programsRepo.findProgramById(programId);
+  if (!program) throw AppError.notFound("Program not found");
+  const allowed: readonly string[] = program.kind === "order_form" ? orderStatusChoices : programStatusChoices;
+  if (!allowed.includes(input.status)) throw AppError.validation(`"${input.status}" isn't a valid ${program.kind === "order_form" ? "order" : "registration"} status`);
 
-  return registrationsRepo.updateRegistrationStatus(
+  const updated = await registrationsRepo.updateRegistrationStatus(
     registration.id,
     registration.status,
     input.status,
     changedBy,
     input.note,
   );
+
+  if (program.kind === "order_form" && input.status !== registration.status) {
+    const [{ fields }, files] = await Promise.all([
+      formsService.getFormVersionWithContent(registration.formId),
+      registrationsRepo.getRegistrationFiles(registration.id),
+    ]);
+    void notifyCustomer(program, { ...registration, status: input.status }, {
+      isNew: false,
+      note: input.note,
+      fields,
+      files: files.map((f) => ({ fieldKey: f.fieldKey, filename: f.originalFilename })),
+    });
+  }
+  return updated;
 }
 
 export async function getProgramStats(programId: string) {

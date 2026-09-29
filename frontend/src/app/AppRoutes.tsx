@@ -51,6 +51,23 @@ const BallotBuilderPage = lazyPage(() => import("@/features/polls/BallotBuilderP
 const PollResultsPage = lazyPage(() => import("@/features/polls/PollResultsPage"), "PollResultsPage");
 const PollVotersPage = lazyPage(() => import("@/features/polls/PollVotersPage"), "PollVotersPage");
 const VotePage = lazyPage(() => import("@/features/vote/VotePage"), "VotePage");
+const BusinessesListPage = lazyPage(() => import("@/features/businesses/BusinessesListPage"), "BusinessesListPage");
+const BusinessLayout = lazyPage(() => import("@/features/businesses/BusinessLayout"), "BusinessLayout");
+const BusinessOverviewPage = lazyPage(() => import("@/features/businesses/BusinessOverviewPage"), "BusinessOverviewPage");
+const InvoicesPage = lazyPage(() => import("@/features/businesses/DocumentPages"), "InvoicesPage");
+const ReceiptsPage = lazyPage(() => import("@/features/businesses/DocumentPages"), "ReceiptsPage");
+const NewInvoicePage = lazyPage(() => import("@/features/businesses/DocumentPages"), "NewInvoicePage");
+const NewReceiptPage = lazyPage(() => import("@/features/businesses/DocumentPages"), "NewReceiptPage");
+const InvoiceDetailPage = lazyPage(() => import("@/features/businesses/DocumentPages"), "InvoiceDetailPage");
+const ReceiptDetailPage = lazyPage(() => import("@/features/businesses/DocumentPages"), "ReceiptDetailPage");
+const InvoiceSettingsPage = lazyPage(() => import("@/features/businesses/DocumentSettingsPage"), "InvoiceSettingsPage");
+const ReceiptSettingsPage = lazyPage(() => import("@/features/businesses/DocumentSettingsPage"), "ReceiptSettingsPage");
+const BusinessOrderFormPage = lazyPage(() => import("@/features/businesses/OrderPages"), "BusinessOrderFormPage");
+const BusinessOrdersPage = lazyPage(() => import("@/features/businesses/OrderPages"), "BusinessOrdersPage");
+const BusinessOrderDetailPage = lazyPage(() => import("@/features/businesses/OrderPages"), "BusinessOrderDetailPage");
+const BusinessAnalyticsTab = lazyPage(() => import("@/features/businesses/OrderPages"), "BusinessAnalyticsTab");
+const PublicOrderPage = lazyPage(() => import("@/features/public-registration/PublicRegistrationPage"), "PublicOrderPage");
+const OrderConfirmationPage = lazyPage(() => import("@/features/public-registration/ConfirmationPage"), "OrderConfirmationPage");
 const VoterLoginPage = lazyPage(() => import("@/features/vote/VoterAuthPage"), "VoterLoginPage");
 const VoterRegisterPage = lazyPage(() => import("@/features/vote/VoterAuthPage"), "VoterRegisterPage");
 
@@ -91,6 +108,9 @@ export function AppRoutes() {
           <Route element={<BareLayout />}>
             <Route path="/programs/:slug/register" element={<PublicRegistrationPage />} />
             <Route path="/programs/:slug/confirmation" element={<ConfirmationPage />} />
+            {/* A business's live order page and its confirmation. */}
+            <Route path="/order/:slug" element={<PublicOrderPage />} />
+            <Route path="/order/:slug/confirmation" element={<OrderConfirmationPage />} />
           </Route>
 
           <Route element={<ProtectedRoute />}>
@@ -98,6 +118,22 @@ export function AppRoutes() {
               <Route path="/admin" element={<DashboardPage />} />
               <Route path="/admin/settings" element={<SettingsPage />} />
               <Route path="/admin/programs" element={<ProgramsListPage />} />
+              <Route path="/admin/businesses" element={<BusinessesListPage />} />
+              <Route path="/admin/businesses/:businessId" element={<BusinessLayout />}>
+                <Route index element={<BusinessOverviewPage />} />
+                <Route path="order-form" element={<BusinessOrderFormPage />} />
+                <Route path="orders" element={<BusinessOrdersPage />} />
+                <Route path="orders/:registrationId" element={<BusinessOrderDetailPage />} />
+                <Route path="invoices" element={<InvoicesPage />} />
+                <Route path="invoices/new" element={<NewInvoicePage />} />
+                <Route path="invoices/settings" element={<InvoiceSettingsPage />} />
+                <Route path="invoices/:documentId" element={<InvoiceDetailPage />} />
+                <Route path="receipts" element={<ReceiptsPage />} />
+                <Route path="receipts/new" element={<NewReceiptPage />} />
+                <Route path="receipts/settings" element={<ReceiptSettingsPage />} />
+                <Route path="receipts/:documentId" element={<ReceiptDetailPage />} />
+                <Route path="analytics" element={<BusinessAnalyticsTab />} />
+              </Route>
               <Route path="/admin/polls" element={<PollsListPage />} />
               <Route path="/admin/polls/:pollId" element={<PollDetailLayout />}>
                 <Route index element={<PollOverviewPage />} />

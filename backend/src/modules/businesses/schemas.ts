@@ -1,0 +1,103 @@
+import { z } from "zod";
+import { paginationSchema } from "../../lib/pagination.js";
+import { INVOICE_STATUSES, RECEIPT_STATUSES } from "../../shared/designs/index.js";
+
+const optionalText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .nullish()
+    .transform((v) => (v ? v : null));
+const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Use a colour like #2563eb");
+
+export const createBusinessSchema = z.object({
+  name: z.string().trim().min(2, "Give the business a name").max(200),
+  description: optionalText(2000),
+  email: z.string().trim().email().max(254).nullish().transform((v) => v || null),
+  phone: optionalText(60),
+  address: optionalText(500),
+  tenantId: z.string().uuid().optional(),
+});
+
+export const updateBusinessSchema = z
+  .object({
+    name: z.string().trim().min(2).max(200),
+    description: optionalText(2000),
+    logoUrl: z.string().url().max(1000).nullish().transform((v) => v ?? null),
+    email: z.string().trim().email().max(254).nullish().or(z.literal("")).transform((v) => v || null),
+    phone: optionalText(60),
+    address: optionalText(500),
+    website: optionalText(200),
+    taxNumber: optionalText(100),
+    currency: z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/, "Use a 3-letter currency code like SLE"),
+    brandColor: hexColor,
+    notifyCustomerOnStatus: z.boolean(),
+  })
+  .partial();
+
+export const documentSettingsSchema = z.object({
+  prefix: z.string().trim().min(1).max(12).regex(/^[A-Za-z0-9-]+$/, "Letters, numbers and dashes only"),
+  title: z.string().trim().min(1).max(40),
+  template: z.enum(["classic", "modern", "minimal"]),
+  accentColor: hexColor,
+  taxLabel: z.string().trim().min(1).max(30),
+  defaultTaxRate: z.number().min(0).max(100),
+  dueDays: z.number().int().min(0).max(365),
+  defaultNotes: z.string().max(2000),
+  defaultTerms: z.string().max(2000),
+  paymentDetails: z.string().max(1000),
+  footer: z.string().max(300),
+  signatureLabel: z.string().max(80),
+  showLogo: z.boolean(),
+  showBusinessDetails: z.boolean(),
+  customFields: z
+    .array(z.object({ key: z.string().trim().min(1).max(40), label: z.string().trim().min(1).max(60) }))
+    .max(10),
+});
+
+const lineItem = z.object({
+  description: z.string().trim().min(1, "Every item needs a description").max(500),
+  quantity: z.number().min(0).max(1_000_000),
+  unitPrice: z.number().min(0).max(1_000_000_000),
+});
+
+export const saveDocumentSchema = z.object({
+  status: z.string().trim().max(30).optional(),
+  clientName: z.string().trim().min(1, "Enter who this is for").max(200),
+  clientEmail: z.string().trim().email("Enter a valid email address").max(254).nullish().or(z.literal("")).transform((v) => v || null),
+  clientPhone: optionalText(60),
+  clientAddress: optionalText(500),
+  issueDate: z.coerce.date(),
+  dueDate: z.coerce.date().nullish().transform((v) => v ?? null),
+  paymentMethod: optionalText(80),
+  items: z.array(lineItem).min(1, "Add at least one item").max(200),
+  discount: z.number().min(0).max(1_000_000_000).default(0),
+  taxRate: z.number().min(0).max(100).default(0),
+  amountPaid: z.number().min(0).max(1_000_000_000).default(0),
+  notes: optionalText(2000),
+  terms: optionalText(2000),
+  customFields: z.record(z.string().max(40), z.string().max(300)).default({}),
+});
+
+export function statusesFor(kind: "invoice" | "receipt"): readonly string[] {
+  return kind === "invoice" ? INVOICE_STATUSES : RECEIPT_STATUSES;
+}
+
+export const listDocumentsQuerySchema = paginationSchema.extend({
+  search: z.string().trim().min(1).optional(),
+  status: z.string().trim().max(30).optional(),
+});
+
+export const sendDocumentSchema = z.object({
+  email: z.string().trim().email("Enter a valid email address").max(254).optional(),
+  message: z.string().trim().max(2000).optional(),
+});
+
+export const listBusinessesQuerySchema = paginationSchema.extend({
+  search: z.string().trim().min(1).optional(),
+});
+
+export type CreateBusinessInput = z.infer<typeof createBusinessSchema>;
+export type UpdateBusinessInput = z.infer<typeof updateBusinessSchema>;
+export type SaveDocumentInput = z.infer<typeof saveDocumentSchema>;

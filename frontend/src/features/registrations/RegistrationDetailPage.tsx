@@ -17,15 +17,6 @@ import { downloadRegistrationFile } from "./api";
 import { useRegistration, useUpdateRegistrationStatus } from "./hooks";
 import type { RegistrationFile, RegistrationStatus } from "@/types/api";
 
-const STATUS_OPTIONS: RegistrationStatus[] = [
-  "submitted",
-  "under_review",
-  "approved",
-  "rejected",
-  "waitlisted",
-  "cancelled",
-];
-
 function formatValue(value: unknown, otherText?: unknown): string {
   if (value === null || value === undefined || value === "") return "—";
   // A chosen "Other" option is shown together with what the registrant typed.
@@ -44,7 +35,7 @@ function formatValue(value: unknown, otherText?: unknown): string {
 }
 
 export function RegistrationDetailPage() {
-  const { program } = useProgramOutletContext();
+  const { program, terms } = useProgramOutletContext();
   const { registrationId } = useParams<{ registrationId: string }>();
   const { data, isLoading } = useRegistration(program.id, registrationId);
   const updateStatus = useUpdateRegistrationStatus(program.id, registrationId ?? "");
@@ -53,7 +44,7 @@ export function RegistrationDetailPage() {
   const [downloading, setDownloading] = React.useState<"id-card" | "ticket" | "details" | null>(null);
   const canEdit = program.myRole === "admin";
 
-  if (isLoading || !data) return <p className="text-sm text-muted-foreground">Loading registration...</p>;
+  if (isLoading || !data) return <p className="text-sm text-muted-foreground">Loading {terms.singular}...</p>;
 
   const handleDownload = async (kind: "id-card" | "ticket") => {
     setDownloading(kind);
@@ -129,7 +120,7 @@ export function RegistrationDetailPage() {
                   {downloading === "ticket" ? "Preparing..." : "Ticket"}
                 </Button>
               )}
-              <RegistrationStatusBadge status={registration.status} />
+              <RegistrationStatusBadge status={registration.status} label={terms.statusLabel(registration.status)} />
             </div>
           </CardHeader>
           <CardContent>
@@ -171,9 +162,9 @@ export function RegistrationDetailPage() {
                 <SelectValue placeholder="Choose new status" />
               </SelectTrigger>
               <SelectContent>
-                {STATUS_OPTIONS.map((s) => (
+                {terms.statuses.map((s) => (
                   <SelectItem key={s} value={s}>
-                    {s.replace("_", " ")}
+                    {terms.statusLabel(s)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -209,7 +200,9 @@ export function RegistrationDetailPage() {
             {history.map((entry) => (
               <div key={entry.id} className="border-l-2 border-border pl-3 text-sm">
                 <p className="font-medium">
-                  {entry.fromStatus ? `${entry.fromStatus} → ${entry.toStatus}` : entry.toStatus}
+                  {entry.fromStatus
+                    ? `${terms.statusLabel(entry.fromStatus)} → ${terms.statusLabel(entry.toStatus)}`
+                    : terms.statusLabel(entry.toStatus)}
                 </p>
                 {entry.note && <p className="text-muted-foreground">{entry.note}</p>}
                 <p className="text-xs text-muted-foreground">{new Date(entry.createdAt).toLocaleString()}</p>

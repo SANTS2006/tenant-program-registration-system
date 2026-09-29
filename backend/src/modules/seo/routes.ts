@@ -34,7 +34,7 @@ export async function seoRoutes(app: FastifyInstance) {
   });
 
   app.get("/sitemap.xml", async (request, reply) => {
-    let programs: { slug: string; updatedAt: Date }[] = [];
+    let programs: { slug: string; updatedAt: Date; kind: string }[] = [];
     try {
       programs = await programsRepo.listPublishedProgramSlugs();
     } catch (err) {
@@ -43,7 +43,12 @@ export async function seoRoutes(app: FastifyInstance) {
     }
     const urls = [
       ...STATIC_PAGES.map((path) => ({ loc: siteUrl(path), lastmod: undefined as string | undefined, priority: path === "/" ? "1.0" : "0.5" })),
-      ...programs.flatMap((p) => [
+      ...programs.filter((p) => p.kind === "order_form").map((p) => ({
+        loc: siteUrl(`/order/${encodeURIComponent(p.slug)}`),
+        lastmod: p.updatedAt.toISOString(),
+        priority: "0.7",
+      })),
+      ...programs.filter((p) => p.kind !== "order_form").flatMap((p) => [
         { loc: siteUrl(`/programs/${encodeURIComponent(p.slug)}`), lastmod: p.updatedAt.toISOString(), priority: "0.8" },
         { loc: siteUrl(`/programs/${encodeURIComponent(p.slug)}/register`), lastmod: p.updatedAt.toISOString(), priority: "0.7" },
       ]),
