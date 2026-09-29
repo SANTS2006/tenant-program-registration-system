@@ -1,7 +1,7 @@
 import * as React from "react";
 import { NavLink } from "react-router-dom";
 import { LazyOutlet } from "@/components/PageLoading";
-import { Building2, Inbox, LayoutDashboard, ListChecks, LogOut, Menu, MessageSquarePlus, Settings, Users, X } from "lucide-react";
+import { Building2, Inbox, LayoutDashboard, ListChecks, LogOut, Menu, MessageSquarePlus, Settings, Users, Vote, X } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { useAuth } from "./AuthContext";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ import { FeedbackDialog } from "@/features/support/FeedbackDialog";
 const navItems = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/admin/programs", label: "Programs", icon: ListChecks, end: false },
+  { to: "/admin/polls", label: "Voting Polls", icon: Vote, end: false },
   // Tenant team management -- only the tenant's own admin (owner) can invite/manage teammates.
   { to: "/admin/users", label: "Users", icon: Users, end: false, adminOnly: true },
   { to: "/admin/settings", label: "Settings", icon: Settings, end: false },

@@ -44,6 +44,15 @@ const ProgramAnalyticsPage = lazyPage(() => import("@/features/programs/ProgramA
 const TenantsListPage = lazyPage(() => import("@/features/platform/TenantsListPage"), "TenantsListPage");
 const TenantDetailPage = lazyPage(() => import("@/features/platform/TenantDetailPage"), "TenantDetailPage");
 const InboxPage = lazyPage(() => import("@/features/support/InboxPage"), "InboxPage");
+const PollsListPage = lazyPage(() => import("@/features/polls/PollsListPage"), "PollsListPage");
+const PollDetailLayout = lazyPage(() => import("@/features/polls/PollDetailLayout"), "PollDetailLayout");
+const PollOverviewPage = lazyPage(() => import("@/features/polls/PollOverviewPage"), "PollOverviewPage");
+const BallotBuilderPage = lazyPage(() => import("@/features/polls/BallotBuilderPage"), "BallotBuilderPage");
+const PollResultsPage = lazyPage(() => import("@/features/polls/PollResultsPage"), "PollResultsPage");
+const PollVotersPage = lazyPage(() => import("@/features/polls/PollVotersPage"), "PollVotersPage");
+const VotePage = lazyPage(() => import("@/features/vote/VotePage"), "VotePage");
+const VoterLoginPage = lazyPage(() => import("@/features/vote/VoterAuthPage"), "VoterLoginPage");
+const VoterRegisterPage = lazyPage(() => import("@/features/vote/VoterAuthPage"), "VoterRegisterPage");
 
 export function AppRoutes() {
   return (
@@ -67,6 +76,12 @@ export function AppRoutes() {
             <Route path="/report" element={<ReportPage />} />
           </Route>
 
+          {/* Voting pages have their own frame, branded with the poll. */}
+          <Route path="/vote/:slug/login" element={<VoterLoginPage />} />
+          <Route path="/vote/:slug/register" element={<VoterRegisterPage />} />
+          <Route path="/vote/:slug" element={<VotePage />} />
+          <Route path="/vote/:slug/:positionId" element={<VotePage />} />
+
           <Route element={<PublicLayout />}>
             <Route path="/programs/:slug" element={<PublicProgramPage />} />
             <Route path="/verify/:slug/:registrationNumber" element={<VerifyPage />} />
@@ -83,6 +98,13 @@ export function AppRoutes() {
               <Route path="/admin" element={<DashboardPage />} />
               <Route path="/admin/settings" element={<SettingsPage />} />
               <Route path="/admin/programs" element={<ProgramsListPage />} />
+              <Route path="/admin/polls" element={<PollsListPage />} />
+              <Route path="/admin/polls/:pollId" element={<PollDetailLayout />}>
+                <Route index element={<PollOverviewPage />} />
+                <Route path="ballot" element={<BallotBuilderPage />} />
+                <Route path="results" element={<PollResultsPage />} />
+                <Route path="voters" element={<PollVotersPage />} />
+              </Route>
               <Route path="/admin/programs/:programId" element={<ProgramDetailLayout />}>
                 <Route index element={<ProgramOverviewPage />} />
                 <Route path="form" element={<FormBuilderPage />} />

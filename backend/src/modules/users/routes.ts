@@ -9,6 +9,7 @@ import {
   removeMembershipHandler,
   updateUserHandler,
 } from "./controller.js";
+import { pollAccessRoutes } from "./pollAccess.js";
 
 // Tenant admins' own team-management surface -- the platform super_admin
 // does not use this router at all (see modules/platform for its read-only
@@ -23,4 +24,5 @@ export async function userRoutes(app: FastifyInstance) {
   app.get("/:userId/programs", listMembershipsHandler);
   app.post("/:userId/programs", addMembershipHandler);
   app.delete("/:userId/programs/:programId", removeMembershipHandler);
+  await app.register(pollAccessRoutes);
 }

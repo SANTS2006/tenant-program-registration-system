@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import * as pollsRepo from "../polls/repository.js";
 import * as programsRepo from "../programs/repository.js";
 
 let template: string | null = null;
@@ -18,42 +19,76 @@ function setByProperty(html: string, property: string, value: string) {
 }
 
 const PROGRAM_PAGE = /^\/programs\/([^/?#]+)(\/register)?\/?(?:[?#].*)?$/;
+const POLL_PAGE = /^\/vote\/([^/?#]+)(?:\/[^?#]*)?(?:[?#].*)?$/;
+
+const trimUrl = (siteUrl: string) => siteUrl.replace(/\/+$/, "");
 
 /**
- * index.html for a client-side route. A shared program link gets that program's title,
+ * index.html for a client-side route. Shared program and poll links get their own title,
  * description, and picture in the page itself, because WhatsApp, Facebook, and other link
  * previews don't run JavaScript.
  */
 export async function indexHtmlFor(distDir: string, url: string, siteUrl: string): Promise<string | null> {
-  const match = PROGRAM_PAGE.exec(url);
-  if (!match) return null;
+  const programMatch = PROGRAM_PAGE.exec(url);
+  const pollMatch = programMatch ? null : POLL_PAGE.exec(url);
+  if (!programMatch && !pollMatch) return null;
   template ??= readFileSync(path.join(distDir, "index.html"), "utf8");
 
-  const program = await programsRepo.findProgramBySlug(decodeURIComponent(match[1]!)).catch(() => null);
-  if (!program || program.status !== "published") return null;
-  return programIndexHtml(template, program, siteUrl, !!match[2]);
+  if (programMatch) {
+    const program = await programsRepo.findProgramBySlug(decodeURIComponent(programMatch[1]!)).catch(() => null);
+    if (!program || program.status !== "published") return null;
+    return programIndexHtml(template, program, siteUrl, !!programMatch[2]);
+  }
+
+  const poll = await pollsRepo.findPollBySlug(decodeURIComponent(pollMatch![1]!)).catch(() => null);
+  if (!poll) return null;
+  return pageIndexHtml(template, {
+    title: `Vote: ${poll.name}`,
+    description: (poll.description ?? `Cast your vote in ${poll.name}.`).replace(/\s+/g, " ").slice(0, 200),
+    url: `${trimUrl(siteUrl)}/vote/${encodeURIComponent(poll.slug)}`,
+    image: poll.imageUrl,
+    imageAlt: poll.name,
+    // Polls are shared with their own voters, not listed in search results.
+    index: false,
+  });
 }
 
 type ProgramMeta = Pick<programsRepo.ProgramRow, "name" | "slug" | "shortDescription" | "description" | "thumbnailUrl">;
 
 export function programIndexHtml(template: string, program: ProgramMeta, siteUrl: string, register: boolean): string {
-  const title = register ? `Register for ${program.name}` : program.name;
-  const description = (program.shortDescription ?? program.description ?? `Register for ${program.name} online.`).replace(/\s+/g, " ").slice(0, 200);
-  const pageUrl = `${siteUrl.replace(/\/+$/, "")}/programs/${encodeURIComponent(program.slug)}${register ? "/register" : ""}`;
+  return pageIndexHtml(template, {
+    title: register ? `Register for ${program.name}` : program.name,
+    description: (program.shortDescription ?? program.description ?? `Register for ${program.name} online.`).replace(/\s+/g, " ").slice(0, 200),
+    url: `${trimUrl(siteUrl)}/programs/${encodeURIComponent(program.slug)}${register ? "/register" : ""}`,
+    image: program.thumbnailUrl,
+    imageAlt: program.name,
+    index: true,
+  });
+}
 
-  let html = template.replace(/<title>[^<]*<\/title>/, `<title>${escapeAttr(`${title} | Program Registration Platform`)}</title>`);
-  html = setById(html, "robots-meta", "content", "index, follow");
-  html = setById(html, "description-meta", "content", description);
-  html = setById(html, "canonical-link", "href", pageUrl);
-  html = setById(html, "og-title", "content", title);
-  html = setById(html, "og-description", "content", description);
-  html = setById(html, "og-url", "content", pageUrl);
-  html = setById(html, "twitter-title", "content", title);
-  html = setById(html, "twitter-description", "content", description);
-  if (program.thumbnailUrl) {
-    html = setByProperty(html, "og:image", program.thumbnailUrl);
-    html = setByProperty(html, "og:image:alt", program.name);
-    html = html.replace(/(name="twitter:image"[^>]*?content=")[^"]*(")/, `$1${escapeAttr(program.thumbnailUrl)}$2`);
+interface PageMeta {
+  title: string;
+  description: string;
+  url: string;
+  image?: string | null;
+  imageAlt: string;
+  index: boolean;
+}
+
+function pageIndexHtml(template: string, page: PageMeta): string {
+  let html = template.replace(/<title>[^<]*<\/title>/, `<title>${escapeAttr(`${page.title} | Program Registration Platform`)}</title>`);
+  html = setById(html, "robots-meta", "content", page.index ? "index, follow" : "noindex, nofollow");
+  html = setById(html, "description-meta", "content", page.description);
+  html = setById(html, "canonical-link", "href", page.url);
+  html = setById(html, "og-title", "content", page.title);
+  html = setById(html, "og-description", "content", page.description);
+  html = setById(html, "og-url", "content", page.url);
+  html = setById(html, "twitter-title", "content", page.title);
+  html = setById(html, "twitter-description", "content", page.description);
+  if (page.image) {
+    html = setByProperty(html, "og:image", page.image);
+    html = setByProperty(html, "og:image:alt", page.imageAlt);
+    html = html.replace(/(name="twitter:image"[^>]*?content=")[^"]*(")/, `$1${escapeAttr(page.image)}$2`);
     // The site's own picture sizes no longer apply.
     html = html.replace(/\s*<meta property="og:image:(width|height)"[^>]*>/g, "");
   }

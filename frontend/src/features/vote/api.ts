@@ -1,0 +1,74 @@
+import { apiFetch } from "@/lib/api";
+import type { PollResults, PollState } from "../polls/api";
+
+export interface VoteCandidate {
+  id: string;
+  name: string;
+  description: string | null;
+  imageUrl: string | null;
+}
+
+export interface VotePosition {
+  id: string;
+  title: string;
+  description: string | null;
+  imageUrl: string | null;
+  candidates: VoteCandidate[];
+}
+
+export interface VotePoll {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  imageUrl: string | null;
+  state: PollState;
+  closesAt: string | null;
+  onePerEmail: boolean;
+  allowedDomains: string[];
+  showResults: boolean;
+  googleClientId: string | null;
+  positions: VotePosition[];
+}
+
+export interface Voter {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export interface VoterSession {
+  voter: Voter | null;
+  votedPositionIds: string[];
+  emailAllowed: boolean;
+}
+
+export type AuthResult = { status: "signed_in"; voter: Voter } | { status: "verify"; email: string };
+
+// Voter calls never try the staff sign-in refresh: voters have their own session.
+const voterFetch = <T>(path: string, options: Parameters<typeof apiFetch>[1] = {}) =>
+  apiFetch<T>(`/voter${path}`, { ...options, skipAuthRetry: true });
+
+const slugPath = (slug: string) => `/polls/${encodeURIComponent(slug)}`;
+
+export const getVotePoll = (slug: string) => voterFetch<VotePoll>(slugPath(slug));
+export const getVoteResults = (slug: string) => voterFetch<PollResults>(`${slugPath(slug)}/results`);
+export const getVoterSession = (slug: string) => voterFetch<VoterSession>(`${slugPath(slug)}/session`);
+
+export const castVote = (slug: string, positionId: string, candidateId: string) =>
+  voterFetch<{ votedPositionIds: string[]; results: PollResults | null }>(`${slugPath(slug)}/positions/${positionId}/vote`, {
+    method: "POST",
+    body: { candidateId },
+  });
+
+export const registerVoter = (input: { pollSlug: string; name: string; email: string; password: string }) =>
+  voterFetch<AuthResult>("/auth/register", { method: "POST", body: input });
+export const loginVoter = (input: { pollSlug: string; email: string; password: string }) =>
+  voterFetch<AuthResult>("/auth/login", { method: "POST", body: input });
+export const verifyVoter = (input: { pollSlug: string; email: string; code: string }) =>
+  voterFetch<AuthResult>("/auth/verify", { method: "POST", body: input });
+export const resendVoterCode = (input: { pollSlug: string; email: string }) =>
+  voterFetch<AuthResult>("/auth/resend", { method: "POST", body: input });
+export const googleVoter = (input: { pollSlug: string; credential: string }) =>
+  voterFetch<AuthResult>("/auth/google", { method: "POST", body: input });
+export const logoutVoter = () => voterFetch<null>("/auth/logout", { method: "POST" });

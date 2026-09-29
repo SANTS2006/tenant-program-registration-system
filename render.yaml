@@ -48,6 +48,9 @@ projects:
                 value: program-registration
               - key: BREVO_API_KEY
                 sync: false
+              # OAuth client ID for "Sign in with Google" on the voting pages (optional).
+              - key: GOOGLE_CLIENT_ID
+                sync: false
               - key: EMAIL_FROM_NAME
                 value: Program Registration
               # Must be a sender address verified in your Brevo account.

@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Eye, EyeOff, Plus, Settings2, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,8 +12,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ApiError } from "@/lib/api";
-import { useProgramsList } from "../programs/hooks";
-import { useAddMembership, useCreateUser, useMemberships, useRemoveMembership, useUsersList } from "./hooks";
+import { useCreateUser, useUsersList } from "./hooks";
+import { ManageAccessDialog } from "./AccessDialog";
 import type { UserRole } from "@/types/api";
 import { usePageMeta } from "@/lib/seo";
 
@@ -108,80 +108,6 @@ function CreateUserDialog() {
             </Button>
           </DialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function ManageAccessDialog({ userId, userName }: { userId: string; userName: string }) {
-  const [open, setOpen] = React.useState(false);
-  const [programId, setProgramId] = React.useState("");
-  const [role, setRole] = React.useState<"admin" | "viewer">("viewer");
-  const { data: memberships } = useMemberships(open ? userId : null);
-  const { data: programsPage } = useProgramsList({ page: 1, pageSize: 100 });
-  const addMembership = useAddMembership(userId);
-  const removeMembership = useRemoveMembership(userId);
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label={`Manage program access for ${userName}`}>
-          <Settings2 className="h-4 w-4" />
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Program access &middot; {userName}</DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-3">
-          {memberships?.map((m) => (
-            <div key={m.programId} className="flex items-center justify-between rounded-md border border-border px-3 py-2">
-              <div>
-                <p className="text-sm font-medium">{m.programName}</p>
-                <Badge variant="outline" className="mt-1 text-[10px] capitalize">
-                  {m.roleOnProgram}
-                </Badge>
-              </div>
-              <Button variant="ghost" size="icon" aria-label={`Remove access to ${m.programName}`} onClick={() => removeMembership.mutate(m.programId)}>
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            </div>
-          ))}
-          {memberships?.length === 0 && <p className="text-sm text-muted-foreground">No program access yet.</p>}
-
-          <div className="flex items-center gap-2 border-t border-border pt-3">
-            <Select value={programId} onValueChange={setProgramId}>
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Choose program" />
-              </SelectTrigger>
-              <SelectContent>
-                {programsPage?.items.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={role} onValueChange={(v) => setRole(v as "admin" | "viewer")}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="viewer">Viewer</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button
-              disabled={!programId}
-              onClick={() => {
-                addMembership.mutate({ programId, roleOnProgram: role });
-                setProgramId("");
-              }}
-            >
-              Grant
-            </Button>
-          </div>
-        </div>
       </DialogContent>
     </Dialog>
   );

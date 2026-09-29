@@ -31,6 +31,9 @@ const envSchema = z.object({
   EMAIL_FROM_NAME: z.string().default("Program Registration"),
   EMAIL_FROM_ADDRESS: z.string().default("no-reply@example.com"),
 
+  // OAuth client ID from Google Cloud Console; the "Sign in with Google" button only shows when set.
+  GOOGLE_CLIENT_ID: z.string().optional().default(""),
+
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
   RATE_LIMIT_WINDOW: z.string().default("1 minute"),
 });

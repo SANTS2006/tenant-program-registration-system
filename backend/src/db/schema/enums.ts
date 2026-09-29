@@ -55,3 +55,5 @@ export const verificationDocumentEnum = pgEnum("verification_document", ["id_car
 
 export const supportMessageKindEnum = pgEnum("support_message_kind", ["feedback", "contact", "report"]);
 export const supportMessageStatusEnum = pgEnum("support_message_status", ["new", "read", "resolved"]);
+
+export const pollStatusEnum = pgEnum("poll_status", ["draft", "open", "closed"]);

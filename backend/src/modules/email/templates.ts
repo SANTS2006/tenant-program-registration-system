@@ -80,8 +80,21 @@ function detailsTable(rows: { label: string; value: string; mono?: boolean }[]):
     </table>`;
 }
 
-function layout(params: { preheader: string; eyebrow: string; heading: string; body: string }): string {
+/** Whose email this is: the platform by default, or a poll or business with its own name and logo. */
+export interface EmailBrand {
+  name: string;
+  logoUrl?: string | null;
+  /** Replaces the "activity on your account" line at the bottom. */
+  footer?: string;
+}
+
+function layout(params: { preheader: string; eyebrow: string; heading: string; body: string; brand?: EmailBrand }): string {
   const year = new Date().getFullYear();
+  const brandName = params.brand?.name ?? env.EMAIL_FROM_NAME;
+  const logoUrl = params.brand ? params.brand.logoUrl : `${env.APP_URL}/email-logo.png`;
+  const footer =
+    params.brand?.footer ??
+    `You're receiving this email because of activity on your ${escapeHtml(env.EMAIL_FROM_NAME)} account.`;
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -101,12 +114,16 @@ function layout(params: { preheader: string; eyebrow: string; heading: string; b
               <td style="padding:0 4px 18px;">
                 <table role="presentation" cellpadding="0" cellspacing="0">
                   <tr>
-                    <td style="vertical-align:middle;">
-                      <img src="${escapeHtml(env.APP_URL)}/email-logo.png" width="48" height="38" alt="${escapeHtml(env.EMAIL_FROM_NAME)}"
-                           style="display:block;width:48px;height:38px;border:0;outline:none;" />
-                    </td>
-                    <td style="padding-left:10px;font-family:${FONT};font-size:16px;font-weight:700;color:${BRAND.primaryDark};">
-                      ${escapeHtml(env.EMAIL_FROM_NAME)}
+                    ${
+                      logoUrl
+                        ? `<td style="vertical-align:middle;padding-right:10px;">
+                      <img src="${escapeHtml(logoUrl)}" height="38" alt="${escapeHtml(brandName)}"
+                           style="display:block;height:38px;max-width:120px;border:0;outline:none;" />
+                    </td>`
+                        : ""
+                    }
+                    <td style="font-family:${FONT};font-size:16px;font-weight:700;color:${BRAND.primaryDark};">
+                      ${escapeHtml(brandName)}
                     </td>
                   </tr>
                 </table>
@@ -136,8 +153,8 @@ function layout(params: { preheader: string; eyebrow: string; heading: string; b
             </tr>
             <tr>
               <td style="padding:26px 16px 0;text-align:center;font-family:${FONT};font-size:12px;line-height:1.6;color:${BRAND.faint};">
-                You're receiving this email because of activity on your ${escapeHtml(env.EMAIL_FROM_NAME)} account.<br />
-                &copy; ${year} ${escapeHtml(env.EMAIL_FROM_NAME)}. All rights reserved.
+                ${footer}<br />
+                &copy; ${year} ${escapeHtml(brandName)}. All rights reserved.
               </td>
             </tr>
           </table>
@@ -503,6 +520,78 @@ export function documentVerifiedNotificationEmail(params: {
       preheader: `${params.documentLabel} ${result} for ${who}`,
       eyebrow: params.valid ? "Check-in" : "Check-in warning",
       heading: params.valid ? `${params.documentLabel} verified` : `${params.documentLabel} not valid`,
+      body,
+    }),
+  };
+}
+
+/** A Cloudinary image as a small PNG, which every email client can show (Outlook can't show WebP). */
+export function emailImageUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  return url.includes("/image/upload/") ? url.replace("/image/upload/", "/image/upload/c_limit,h_120,f_png/") : url;
+}
+
+export function voterCodeEmail(params: { pollName: string; pollImageUrl?: string | null; name: string; code: string }): {
+  subject: string;
+  html: string;
+} {
+  const body = [
+    paragraph(`Hi <strong style="color:${BRAND.heading};">${escapeHtml(params.name)}</strong>,`),
+    paragraph(
+      `Enter this code to confirm your email address and start voting in <strong style="color:${BRAND.heading};">${escapeHtml(params.pollName)}</strong>.`,
+    ),
+    codeBlock(params.code),
+    `<p style="margin:0 0 24px;text-align:center;font-family:${FONT};font-size:13px;color:${BRAND.muted};">
+       This code expires in <strong>${VERIFICATION_CODE_TTL_MINUTES} minutes</strong>.
+     </p>`,
+    mutedNote("Didn't try to vote? You can ignore this email. Never share this code with anyone."),
+  ].join("");
+  return {
+    subject: `Your voting code for ${params.pollName}`,
+    html: layout({
+      preheader: `Your code is ${params.code}`,
+      eyebrow: "Confirm your email",
+      heading: "Your voting code",
+      body,
+      brand: {
+        name: params.pollName,
+        logoUrl: emailImageUrl(params.pollImageUrl),
+        footer: `You're receiving this email because this address was used to sign in to vote in ${escapeHtml(params.pollName)}.`,
+      },
+    }),
+  };
+}
+
+export function newVoteNotificationEmail(params: {
+  pollName: string;
+  voterName: string;
+  voterEmail: string;
+  positionTitle: string;
+  votedAt: Date;
+  totalVotesForPosition: number;
+  resultsUrl: string;
+  settingsUrl: string;
+}): { subject: string; html: string } {
+  const strong = (value: string) => `<strong style="color:${BRAND.heading};">${escapeHtml(value)}</strong>`;
+  const body = [
+    paragraph(`${strong(params.voterName)} voted for ${strong(params.positionTitle)} in ${strong(params.pollName)}.`),
+    detailsTable([
+      { label: "Voter", value: `${params.voterName} (${params.voterEmail})` },
+      { label: "Position", value: params.positionTitle },
+      { label: "Voted", value: formatWhen(params.votedAt) },
+      { label: "Votes for this position so far", value: String(params.totalVotesForPosition) },
+    ]),
+    button("See the live results", params.resultsUrl),
+    mutedNote(
+      `Ballots are secret, so this email doesn't say who they chose. Poll admins can turn these emails off under <a href="${escapeHtml(params.settingsUrl)}" style="color:${BRAND.primary};">Settings</a> on the poll.`,
+    ),
+  ].join("");
+  return {
+    subject: `New vote: ${params.positionTitle} - ${params.pollName}`,
+    html: layout({
+      preheader: `${params.voterName} voted for ${params.positionTitle}`,
+      eyebrow: "New vote",
+      heading: "A new vote was cast",
       body,
     }),
   };

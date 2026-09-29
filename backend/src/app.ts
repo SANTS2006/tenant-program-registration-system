@@ -19,6 +19,8 @@ import { registrationRoutes } from "./modules/registrations/routes.js";
 import { publicRoutes } from "./modules/public/routes.js";
 import { feedbackRoutes, supportRoutes } from "./modules/support/routes.js";
 import { seoRoutes } from "./modules/seo/routes.js";
+import { pollRoutes } from "./modules/polls/routes.js";
+import { voterRoutes } from "./modules/voters/routes.js";
 import { indexHtmlFor } from "./modules/seo/indexHtml.js";
 import { verificationRoutes } from "./modules/verifications/routes.js";
 import { dashboardRoutes } from "./modules/dashboard/routes.js";
@@ -48,8 +50,12 @@ export function buildApp() {
     // browser-to-Cloudinary uploads.
     contentSecurityPolicy: {
       directives: {
-        imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com"],
-        connectSrc: ["'self'", "https://api.cloudinary.com"],
+        imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://*.googleusercontent.com"],
+        connectSrc: ["'self'", "https://api.cloudinary.com", "https://accounts.google.com/gsi/"],
+        // "Sign in with Google" on the voting pages loads Google's script, button frame, and styles.
+        scriptSrc: ["'self'", "https://accounts.google.com/gsi/client"],
+        frameSrc: ["'self'", "https://accounts.google.com/gsi/"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://accounts.google.com/gsi/style", "https://fonts.googleapis.com"],
       },
     },
   });
@@ -106,6 +112,7 @@ export function buildApp() {
       });
       protectedApp.register(userRoutes, { prefix: "/users" });
       protectedApp.register(programRoutes, { prefix: "/programs" });
+      protectedApp.register(pollRoutes, { prefix: "/polls" });
       protectedApp.register(formRoutes, { prefix: "/programs" });
       protectedApp.register(registrationRoutes, { prefix: "/programs" });
       protectedApp.register(idCardRoutes, { prefix: "/programs" });
@@ -125,6 +132,8 @@ export function buildApp() {
   app.register(publicIdCardRoutes, { prefix: "/api/public" });
   app.register(publicTicketRoutes, { prefix: "/api/public" });
   app.register(supportRoutes, { prefix: "/api/public" });
+  // Voters have their own sign-in, separate from staff accounts.
+  app.register(voterRoutes, { prefix: "/api/voter" });
 
   return app;
 }

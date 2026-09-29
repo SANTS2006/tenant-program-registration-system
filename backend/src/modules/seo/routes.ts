@@ -25,6 +25,7 @@ export async function seoRoutes(app: FastifyInstance) {
       "Disallow: /verify-email",
       "Disallow: /reset-password",
       "Disallow: /programs/*/confirmation",
+      "Disallow: /vote/",
       "",
       `Sitemap: ${siteUrl("/sitemap.xml")}`,
       "",
