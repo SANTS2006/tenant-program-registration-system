@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RegistrationStatusBadge } from "@/components/StatusBadge";
-import { ApiError } from "@/lib/api";
+import { ApiError, downloadAuthenticatedFile } from "@/lib/api";
 import { useProgramOutletContext } from "../programs/ProgramDetailLayout";
 import { RegistrationVerifications } from "../verifications/VerificationsPage";
 import { RegistrantIdCardPanel } from "../idcards/RegistrantIdCardPanel";
@@ -50,7 +50,7 @@ export function RegistrationDetailPage() {
   const updateStatus = useUpdateRegistrationStatus(program.id, registrationId ?? "");
   const [nextStatus, setNextStatus] = React.useState<RegistrationStatus | "">("");
   const [note, setNote] = React.useState("");
-  const [downloading, setDownloading] = React.useState<"id-card" | "ticket" | null>(null);
+  const [downloading, setDownloading] = React.useState<"id-card" | "ticket" | "details" | null>(null);
   const canEdit = program.myRole === "admin";
 
   if (isLoading || !data) return <p className="text-sm text-muted-foreground">Loading registration...</p>;
@@ -69,6 +69,17 @@ export function RegistrationDetailPage() {
   };
 
   const { registration, files, history, form } = data;
+
+  const downloadDetails = async () => {
+    setDownloading("details");
+    try {
+      await downloadAuthenticatedFile(`/programs/${program.id}/registrations/${registration.id}/summary.pdf`, `${registration.registrationNumber}.pdf`);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to download the registration details");
+    } finally {
+      setDownloading(null);
+    }
+  };
 
   const downloadFile = async (file: RegistrationFile) => {
     try {
@@ -102,6 +113,10 @@ export function RegistrationDetailPage() {
               </p>
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={downloadDetails} loading={downloading === "details"} disabled={downloading !== null}>
+                <FileText className="h-4 w-4" />
+                {downloading === "details" ? "Preparing..." : "Details PDF"}
+              </Button>
               {program.idCardEnabled && (
                 <Button variant="outline" size="sm" onClick={() => handleDownload("id-card")} loading={downloading === "id-card"} disabled={downloading !== null}>
                   <CreditCard className="h-4 w-4" />

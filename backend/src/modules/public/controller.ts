@@ -5,6 +5,8 @@ import * as formsService from "../forms/service.js";
 import * as programsRepo from "../programs/repository.js";
 import * as registrationsService from "../registrations/service.js";
 import { submitRegistrationSchema } from "../registrations/schemas.js";
+import { signSubmissionToken, submissionPdfByToken, submissionSummaryByToken } from "../registrations/summary.js";
+import { attachmentDisposition } from "../../lib/downloadName.js";
 
 function isRegistrationOpen(program: programsRepo.ProgramRow): boolean {
   if (program.status !== "published" || !program.registrationEnabled) return false;
@@ -61,8 +63,27 @@ export async function submitPublicRegistrationHandler(request: FastifyRequest, r
       showRegistrationNumber: result.showRegistrationNumber,
       idCardAvailable: result.idCardAvailable,
       ticketAvailable: result.ticketAvailable,
+      // Lets the registrant view and download what they submitted from the success page.
+      receiptToken: signSubmissionToken(result.registration.id),
     },
     "Registration submitted successfully",
     201,
   );
+}
+
+export async function getSubmissionSummaryHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { token } = request.params as { token: string };
+  reply.header("Cache-Control", "no-store");
+  return sendSuccess(reply, await submissionSummaryByToken(token));
+}
+
+export async function downloadSubmissionPdfHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { token } = request.params as { token: string };
+  const { buffer, fileName } = await submissionPdfByToken(token);
+  return reply
+    .header("Content-Type", "application/pdf")
+    .header("Content-Disposition", attachmentDisposition(fileName))
+    .header("X-Download-Name", encodeURIComponent(fileName))
+    .header("Cache-Control", "no-store")
+    .send(buffer);
 }

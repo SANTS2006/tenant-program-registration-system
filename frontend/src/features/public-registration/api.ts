@@ -17,6 +17,8 @@ export interface SubmitRegistrationResult {
   showRegistrationNumber: boolean;
   idCardAvailable: boolean;
   ticketAvailable: boolean;
+  /** Private link token for viewing and downloading the submitted answers. */
+  receiptToken?: string;
 }
 
 export function submitRegistration(

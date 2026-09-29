@@ -8,6 +8,7 @@ import { LinkButton } from "@/components/ui/link-button";
 import { DesignSvg } from "../designs/DesignSvg";
 import { downloadRegistrantDocument, type DocumentKind } from "../designs/documentImage";
 import type { SubmitRegistrationResult } from "./api";
+import { SubmissionDetails } from "./SubmissionDetails";
 import { usePageMeta } from "@/lib/seo";
 
 function downloadUrl(slug: string, registrationNumber: string, kind: "id-card" | "ticket") {
@@ -56,7 +57,18 @@ export function ConfirmationPage() {
   usePageMeta({ title: "Registration received" });
   const { slug } = useParams<{ slug: string }>();
   const location = useLocation();
-  const result = location.state as SubmitRegistrationResult | undefined;
+  const result = React.useMemo(() => {
+    const key = `registration-result:${slug}`;
+    const fromNavigation = location.state as SubmitRegistrationResult | undefined;
+    // Kept for this browser tab so a reload still shows the confirmation.
+    try {
+      if (fromNavigation) sessionStorage.setItem(key, JSON.stringify(fromNavigation));
+      else return JSON.parse(sessionStorage.getItem(key) ?? "null") as SubmitRegistrationResult | null;
+    } catch {
+      /* storage unavailable */
+    }
+    return fromNavigation ?? null;
+  }, [location.state, slug]);
   const [downloading, setDownloading] = React.useState<DocumentKind | null>(null);
   const [ticketSides, setTicketSides] = React.useState(1);
 
@@ -156,6 +168,7 @@ export function ConfirmationPage() {
             )}
           </div>
         )}
+        {result.receiptToken && <SubmissionDetails token={result.receiptToken} />}
       </CardContent>
     </Card>
   );

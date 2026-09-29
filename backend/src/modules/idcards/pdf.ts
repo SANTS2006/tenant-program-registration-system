@@ -45,7 +45,7 @@ const POPPINS = {
   "Poppins-BoldItalic": "700-italic",
 } as const;
 
-function registerPoppins(doc: PDFKit.PDFDocument) {
+export function registerPoppins(doc: PDFKit.PDFDocument) {
   for (const [name, weight] of Object.entries(POPPINS)) {
     doc.registerFont(name, require.resolve(`@fontsource/poppins/files/poppins-latin-${weight}.woff`));
   }

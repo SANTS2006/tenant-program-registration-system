@@ -30,7 +30,11 @@ interface DynamicFormProps {
   requireConsent?: boolean;
   consentText?: string | null;
   onCancel?: () => void;
+  /** Asks the person to confirm they checked their answers before the form can be submitted. */
+  requireReviewConfirmation?: boolean;
 }
+
+const REVIEW_REQUIRED_MESSAGE = "Please confirm you have checked all your answers before submitting";
 
 function isEmpty(value: unknown) {
   return value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
@@ -138,6 +142,7 @@ export function DynamicForm({
   requireConsent = false,
   consentText,
   onCancel,
+  requireReviewConfirmation = true,
 }: DynamicFormProps) {
   const orderedSections = [...sections].sort((a, b) => a.orderIndex - b.orderIndex);
   const hasSections = orderedSections.length > 0;
@@ -148,6 +153,7 @@ export function DynamicForm({
   const [uploadedFiles, setUploadedFiles] = React.useState<Record<string, UploadedFileInfo>>({});
   const [uploadingKey, setUploadingKey] = React.useState<string | null>(null);
   const [stepErrors, setStepErrors] = React.useState<string[]>([]);
+  const [reviewConfirmed, setReviewConfirmed] = React.useState(false);
 
   const fieldsBySection = (sectionId: string | null) =>
     fields.filter((f) => f.sectionId === sectionId).sort((a, b) => a.orderIndex - b.orderIndex);
@@ -172,6 +178,7 @@ export function DynamicForm({
     setUploadedFiles({});
     setStepErrors([]);
     setStepIndex(0);
+    setReviewConfirmed(false);
   };
 
   const setValue = (key: string, value: unknown) =>
@@ -226,6 +233,10 @@ export function DynamicForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateStep()) return;
+    if (requireReviewConfirmation && !reviewConfirmed) {
+      setStepErrors([REVIEW_REQUIRED_MESSAGE]);
+      return;
+    }
     await onSubmit(responses, Object.values(uploadedFiles), consented);
   };
 
@@ -530,6 +541,28 @@ export function DynamicForm({
         </div>
       ) : (
         <div className="flex flex-col gap-5">{currentStep.fields.map(renderField)}</div>
+      )}
+
+      {requireReviewConfirmation && (isSingle || isLastStep) && (
+        <label
+          htmlFor="review-confirm"
+          className="flex cursor-pointer items-start gap-3 rounded-xl border border-primary/25 bg-gradient-brand-soft p-4 text-sm"
+        >
+          <Checkbox
+            id="review-confirm"
+            checked={reviewConfirmed}
+            onCheckedChange={(checked) => {
+              setReviewConfirmed(checked === true);
+              if (checked === true) setStepErrors((errs) => errs.filter((e) => e !== REVIEW_REQUIRED_MESSAGE));
+            }}
+            className="mt-0.5"
+            aria-required="true"
+          />
+          <span>
+            <span className="font-medium">I have gone through the entire form</span> and confirm that all the information
+            I entered is complete and correct.
+          </span>
+        </label>
       )}
 
       <div className="flex items-center justify-between pt-2">

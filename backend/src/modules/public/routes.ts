@@ -1,6 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import { publicUploadSignatureHandler } from "../uploads/controller.js";
-import { getPublicFormHandler, getPublicProgramHandler, submitPublicRegistrationHandler } from "./controller.js";
+import {
+  downloadSubmissionPdfHandler,
+  getPublicFormHandler,
+  getPublicProgramHandler,
+  getSubmissionSummaryHandler,
+  submitPublicRegistrationHandler,
+} from "./controller.js";
 
 const submissionRateLimit = { rateLimit: { max: 20, timeWindow: "1 minute" } };
 
@@ -15,4 +21,7 @@ export async function publicRoutes(app: FastifyInstance) {
     submitPublicRegistrationHandler,
   );
   app.post("/uploads/signature", { config: submissionRateLimit }, publicUploadSignatureHandler);
+  // What a registrant submitted, reached through the private link token from their success page.
+  app.get("/submissions/:token", { config: submissionRateLimit }, getSubmissionSummaryHandler);
+  app.get("/submissions/:token/pdf", { config: submissionRateLimit }, downloadSubmissionPdfHandler);
 }

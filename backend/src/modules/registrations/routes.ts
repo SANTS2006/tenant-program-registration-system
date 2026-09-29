@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { requireProgramAccess } from "../../middleware/authorize.js";
 import {
   downloadRegistrationFileHandler,
+  downloadRegistrationSummaryHandler,
   exportRegistrationsHandler,
   getProgramStatsHandler,
   getRegistrationHandler,
@@ -29,6 +30,11 @@ export async function registrationRoutes(app: FastifyInstance) {
     "/:programId/registrations/:registrationId",
     { preHandler: requireProgramAccess("viewer") },
     getRegistrationHandler,
+  );
+  app.get(
+    "/:programId/registrations/:registrationId/summary.pdf",
+    { preHandler: requireProgramAccess("viewer") },
+    downloadRegistrationSummaryHandler,
   );
   app.get(
     "/:programId/registrations/:registrationId/files/:fileId/download",

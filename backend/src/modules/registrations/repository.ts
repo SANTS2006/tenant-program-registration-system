@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ilike, isNull, lte, or, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import {
   programCounters,
@@ -84,6 +84,15 @@ export async function findRegistrationInProgram(
     .select()
     .from(registrations)
     .where(and(eq(registrations.programId, programId), eq(registrations.id, registrationId)))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function findRegistrationById(registrationId: string): Promise<RegistrationRow | null> {
+  const [row] = await db
+    .select()
+    .from(registrations)
+    .where(and(eq(registrations.id, registrationId), isNull(registrations.deletedAt)))
     .limit(1);
   return row ?? null;
 }

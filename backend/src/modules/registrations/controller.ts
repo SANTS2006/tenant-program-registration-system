@@ -7,6 +7,7 @@ import { sendSuccess } from "../../lib/response.js";
 import { recordAudit } from "../audit/service.js";
 import * as programsRepo from "../programs/repository.js";
 import { generateCsvExport, generateXlsxExport } from "./exportService.js";
+import { submissionPdfForAdmin } from "./summary.js";
 import * as registrationsService from "./service.js";
 import { exportRegistrationsQuerySchema, listRegistrationsQuerySchema, updateStatusSchema } from "./schemas.js";
 
@@ -96,4 +97,15 @@ export async function downloadRegistrationFileHandler(request: FastifyRequest, r
   const length = upstream.headers.get("content-length");
   if (length) reply.header("Content-Length", length);
   return reply.send(Readable.fromWeb(upstream.body as import("node:stream/web").ReadableStream));
+}
+
+export async function downloadRegistrationSummaryHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { programId, registrationId } = request.params as { programId: string; registrationId: string };
+  const { buffer, fileName } = await submissionPdfForAdmin(programId, registrationId);
+  return reply
+    .header("Content-Type", "application/pdf")
+    .header("Content-Disposition", attachmentDisposition(fileName))
+    .header("X-Download-Name", encodeURIComponent(fileName))
+    .header("Cache-Control", "no-store")
+    .send(buffer);
 }
