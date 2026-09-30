@@ -57,21 +57,22 @@ export function BusinessLayout() {
   return (
     <div className="flex flex-col gap-6">
       <div
-        className="relative overflow-hidden rounded-2xl border border-border/70 p-5 text-white shadow-glow sm:p-6"
+        className="relative h-40 w-full overflow-hidden rounded-2xl border border-border/70 shadow-glow sm:h-48"
         style={{ background: `linear-gradient(135deg, ${business.brandColor}, #0f172a)` }}
       >
-        <div className="flex items-center gap-4">
-          <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-md">
-            {business.logoUrl ? (
-              <img src={business.logoUrl} alt="" className="h-full w-full object-contain p-1.5" />
-            ) : (
-              <Store className="h-8 w-8" style={{ color: business.brandColor }} aria-hidden="true" />
-            )}
-          </span>
-          <div className="min-w-0">
-            <h1 className="truncate text-2xl font-bold tracking-tight sm:text-3xl">{business.name}</h1>
-            <p className="truncate text-sm text-white/80">{[business.phone, business.email].filter(Boolean).join(" · ") || "Add contact details on the Overview tab"}</p>
+        {business.logoUrl ? (
+          <img src={business.logoUrl} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-start justify-end p-5">
+            <Store className="h-12 w-12 text-white/30" aria-hidden="true" />
           </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 flex flex-col gap-1 p-4 sm:p-6">
+          <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg sm:text-3xl">{business.name}</h1>
+          <p className="text-sm font-medium text-white drop-shadow">
+            {[business.phone, business.email].filter(Boolean).join(" · ") || "Add contact details on the Overview tab"}
+          </p>
         </div>
       </div>
 

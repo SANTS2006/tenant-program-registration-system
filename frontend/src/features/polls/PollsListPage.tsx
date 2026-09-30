@@ -184,26 +184,27 @@ export function PollsListPage() {
                     <ExternalLink className="h-4 w-4" />
                   </button>
                 )}
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/80 to-transparent" />
+                <div className="absolute inset-x-2 bottom-2 flex flex-wrap items-center gap-2 text-xs font-bold text-white">
+                  <span className="flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 shadow-md backdrop-blur-sm">
+                    <ListOrdered className="h-4 w-4" aria-hidden="true" />
+                    {poll.positionCount ?? 0} position{poll.positionCount === 1 ? "" : "s"}
+                  </span>
+                  <span className="flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 shadow-md backdrop-blur-sm">
+                    <Users2 className="h-4 w-4" aria-hidden="true" />
+                    {poll.voterCount ?? 0} voted
+                  </span>
+                </div>
               </div>
               <CardContent className="flex flex-1 flex-col gap-3 p-4">
                 <h2 className="text-base font-semibold leading-tight">{poll.name}</h2>
                 <p className="line-clamp-2 flex-1 text-sm text-muted-foreground">{poll.description ?? "No description."}</p>
-                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-3 text-xs font-medium text-muted-foreground">
-                  <span className="flex items-center gap-1.5">
-                    <ListOrdered className="h-3.5 w-3.5" aria-hidden="true" />
-                    {poll.positionCount ?? 0} position{poll.positionCount === 1 ? "" : "s"}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <Users2 className="h-3.5 w-3.5" aria-hidden="true" />
-                    {poll.voterCount ?? 0} voted
-                  </span>
-                  {poll.closesAt && poll.state === "open" && (
-                    <span className="flex items-center gap-1.5">
-                      <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
-                      Closes {new Date(poll.closesAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
-                    </span>
-                  )}
-                </div>
+                {poll.closesAt && poll.state === "open" && (
+                  <div className="flex items-center gap-1.5 border-t border-border/60 pt-3 text-xs font-medium text-muted-foreground">
+                    <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
+                    Closes {new Date(poll.closesAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
+                  </div>
+                )}
               </CardContent>
             </CardInteractive>
           </Link>

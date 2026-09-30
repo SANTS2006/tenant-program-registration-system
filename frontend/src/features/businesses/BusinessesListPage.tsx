@@ -173,35 +173,36 @@ export function BusinessesListPage() {
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
         {data?.items.map((business) => (
           <Link key={business.id} to={`/admin/businesses/${business.id}`}>
-            <CardInteractive className="flex h-full flex-col gap-4 p-5">
-              <div className="flex items-center gap-3">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/70 bg-white">
-                  {business.logoUrl ? (
-                    <img src={business.logoUrl} alt="" className="h-full w-full object-contain p-1" />
-                  ) : (
-                    <Store className="h-6 w-6 text-primary" aria-hidden="true" />
-                  )}
-                </span>
-                <div className="min-w-0">
-                  <h2 className="truncate text-base font-semibold">{business.name}</h2>
-                  <p className="truncate text-xs text-muted-foreground">{business.email ?? business.phone ?? "No contact details yet"}</p>
+            <CardInteractive className="flex h-full flex-col overflow-hidden">
+              <div className="relative h-32 w-full shrink-0 overflow-hidden bg-gradient-brand-soft">
+                {business.logoUrl ? (
+                  <img src={business.logoUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <Store className="h-9 w-9 text-primary/40" aria-hidden="true" />
+                  </div>
+                )}
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/80 to-transparent" />
+                <div className="absolute inset-x-2 bottom-2 flex flex-wrap items-center gap-1.5 text-xs font-bold text-white">
+                  <span className="flex items-center gap-1 rounded-full bg-black/70 px-2 py-1 shadow-md backdrop-blur-sm">
+                    <ShoppingBag className="h-4 w-4" aria-hidden="true" />
+                    {business.orderCount ?? 0} orders
+                  </span>
+                  <span className="flex items-center gap-1 rounded-full bg-black/70 px-2 py-1 shadow-md backdrop-blur-sm">
+                    <FileText className="h-4 w-4" aria-hidden="true" />
+                    {business.invoiceCount ?? 0} invoices
+                  </span>
+                  <span className="flex items-center gap-1 rounded-full bg-black/70 px-2 py-1 shadow-md backdrop-blur-sm">
+                    <Receipt className="h-4 w-4" aria-hidden="true" />
+                    {business.receiptCount ?? 0} receipts
+                  </span>
                 </div>
               </div>
-              <p className="line-clamp-2 flex-1 text-sm text-muted-foreground">{business.description ?? "No description."}</p>
-              <div className="grid grid-cols-3 gap-2 border-t border-border/60 pt-3 text-center text-xs text-muted-foreground">
-                <span className="flex flex-col items-center gap-0.5">
-                  <ShoppingBag className="h-4 w-4 text-primary" aria-hidden="true" />
-                  <span className="font-semibold text-foreground">{business.orderCount ?? 0}</span> orders
-                </span>
-                <span className="flex flex-col items-center gap-0.5">
-                  <FileText className="h-4 w-4 text-primary" aria-hidden="true" />
-                  <span className="font-semibold text-foreground">{business.invoiceCount ?? 0}</span> invoices
-                </span>
-                <span className="flex flex-col items-center gap-0.5">
-                  <Receipt className="h-4 w-4 text-primary" aria-hidden="true" />
-                  <span className="font-semibold text-foreground">{business.receiptCount ?? 0}</span> receipts
-                </span>
-              </div>
+              <CardContent className="flex flex-1 flex-col gap-2 p-4">
+                <h2 className="text-base font-semibold leading-tight">{business.name}</h2>
+                <p className="truncate text-xs text-muted-foreground">{business.email ?? business.phone ?? "No contact details yet"}</p>
+                <p className="line-clamp-2 flex-1 text-sm text-muted-foreground">{business.description ?? "No description."}</p>
+              </CardContent>
             </CardInteractive>
           </Link>
         ))}
