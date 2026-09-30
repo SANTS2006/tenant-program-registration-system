@@ -19,6 +19,13 @@ const registerSchema = z.object({
 const loginSchema = z.object({ pollSlug, email, password: z.string().min(1).max(128) });
 const verifySchema = z.object({ pollSlug, email, code: z.string().trim().min(4).max(12) });
 const resendSchema = z.object({ pollSlug, email });
+const forgotSchema = z.object({ pollSlug, email });
+const resetSchema = z.object({
+  pollSlug,
+  email,
+  code: z.string().trim().min(4).max(12),
+  password: z.string().min(8, "Use at least 8 characters").max(128),
+});
 const googleSchema = z.object({ pollSlug, credential: z.string().min(20).max(5000) });
 const voteSchema = z.object({ candidateId: z.string().uuid() });
 
@@ -72,6 +79,14 @@ export async function voterRoutes(app: FastifyInstance) {
 
   app.post("/auth/resend", authLimit, async (request, reply) => {
     return sendSuccess(reply, await votersService.resendCode(resendSchema.parse(request.body)), "A new code is on its way");
+  });
+
+  app.post("/auth/forgot-password", authLimit, async (request, reply) => {
+    return sendSuccess(reply, await votersService.forgotPassword(forgotSchema.parse(request.body)), "If that email has an account, a code is on its way");
+  });
+
+  app.post("/auth/reset-password", authLimit, async (request, reply) => {
+    return sendSuccess(reply, await votersService.resetPassword(resetSchema.parse(request.body)), "Your password has been changed");
   });
 
   app.post("/auth/google", authLimit, async (request, reply) => {

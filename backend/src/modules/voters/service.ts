@@ -93,7 +93,7 @@ async function startSession(reply: FastifyReply, voter: Voter, poll: Poll) {
   return { status: "signed_in" as const, voter: publicVoter(voter) };
 }
 
-async function sendCode(voter: Voter, poll: Poll) {
+async function sendCode(voter: Voter, poll: Poll, purpose: "confirm" | "reset" = "confirm") {
   const [latest] = await db
     .select({ createdAt: voterEmailCodes.createdAt })
     .from(voterEmailCodes)
@@ -109,7 +109,7 @@ async function sendCode(voter: Voter, poll: Poll) {
     codeHash: hashToken(code),
     expiresAt: new Date(Date.now() + VERIFICATION_CODE_TTL_MINUTES * 60_000),
   });
-  const email = voterCodeEmail({ pollName: poll.name, pollImageUrl: poll.imageUrl, name: voter.name, code });
+  const email = voterCodeEmail({ pollName: poll.name, pollImageUrl: poll.imageUrl, name: voter.name, code, purpose });
   await sendEmail({ to: voter.email, toName: voter.name, subject: email.subject, html: email.html });
 }
 
@@ -209,10 +209,8 @@ export async function login(reply: FastifyReply, input: { pollSlug: string; emai
   return startSession(reply, voter, poll);
 }
 
-export async function verifyEmail(reply: FastifyReply, input: { pollSlug: string; email: string; code: string }) {
-  const poll = await findPoll(input.pollSlug);
-  const voter = await findVoterByEmail(input.email);
-  if (!voter) throw AppError.validation("That code isn't right. Check the email and try again.");
+/** Checks a 6-character code against the voter's latest unused one, and uses it up. */
+async function consumeCode(voter: Voter, code: string) {
   const [row] = await db
     .select()
     .from(voterEmailCodes)
@@ -222,11 +220,18 @@ export async function verifyEmail(reply: FastifyReply, input: { pollSlug: string
   if (!row || row.expiresAt < new Date() || row.attempts >= 5) {
     throw AppError.validation("That code has expired. Ask for a new one.");
   }
-  if (row.codeHash !== hashToken(input.code.trim().toUpperCase())) {
+  if (row.codeHash !== hashToken(code.trim().toUpperCase())) {
     await db.update(voterEmailCodes).set({ attempts: row.attempts + 1 }).where(eq(voterEmailCodes.id, row.id));
     throw AppError.validation("That code isn't right. Check the email and try again.");
   }
   await db.update(voterEmailCodes).set({ consumedAt: new Date() }).where(eq(voterEmailCodes.id, row.id));
+}
+
+export async function verifyEmail(reply: FastifyReply, input: { pollSlug: string; email: string; code: string }) {
+  const poll = await findPoll(input.pollSlug);
+  const voter = await findVoterByEmail(input.email);
+  if (!voter) throw AppError.validation("That code isn't right. Check the email and try again.");
+  await consumeCode(voter, input.code);
   const [verified] = await db.update(voterAccounts).set({ emailVerifiedAt: new Date() }).where(eq(voterAccounts.id, voter.id)).returning();
   assertEmailAllowed(poll, verified!.email);
   return startSession(reply, verified!, poll);
@@ -238,6 +243,23 @@ export async function resendCode(input: { pollSlug: string; email: string }) {
   // Same answer whether or not the address has an account, so this can't be used to probe emails.
   if (voter && !voter.emailVerifiedAt) await sendCode(voter, poll);
   return { status: "verify" as const, email: normalizeEmail(input.email) };
+}
+
+/** Emails a reset code. The answer is the same whether or not the address has an account. */
+export async function forgotPassword(input: { pollSlug: string; email: string }) {
+  const poll = await findPoll(input.pollSlug);
+  const voter = await findVoterByEmail(input.email);
+  if (voter?.emailVerifiedAt) await sendCode(voter, poll, "reset");
+  return { status: "reset_sent" as const, email: normalizeEmail(input.email) };
+}
+
+export async function resetPassword(input: { pollSlug: string; email: string; code: string; password: string }) {
+  await findPoll(input.pollSlug);
+  const voter = await findVoterByEmail(input.email);
+  if (!voter?.emailVerifiedAt) throw AppError.validation("That code isn't right. Check the email and try again.");
+  await consumeCode(voter, input.code);
+  await db.update(voterAccounts).set({ passwordHash: await hashPassword(input.password) }).where(eq(voterAccounts.id, voter.id));
+  return { status: "password_reset" as const };
 }
 
 export async function googleSignIn(reply: FastifyReply, input: { pollSlug: string; profile: { googleId: string; email: string; name: string } }) {

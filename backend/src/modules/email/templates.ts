@@ -537,27 +537,40 @@ export function emailImageUrl(url: string | null | undefined): string | null {
   return url.includes("/image/upload/") ? url.replace("/image/upload/", "/image/upload/c_limit,h_120,f_png/") : url;
 }
 
-export function voterCodeEmail(params: { pollName: string; pollImageUrl?: string | null; name: string; code: string }): {
+export function voterCodeEmail(params: {
+  pollName: string;
+  pollImageUrl?: string | null;
+  name: string;
+  code: string;
+  purpose?: "confirm" | "reset";
+}): {
   subject: string;
   html: string;
 } {
+  const reset = params.purpose === "reset";
   const body = [
     paragraph(`Hi <strong style="color:${BRAND.heading};">${escapeHtml(params.name)}</strong>,`),
     paragraph(
-      `Enter this code to confirm your email address and start voting in <strong style="color:${BRAND.heading};">${escapeHtml(params.pollName)}</strong>.`,
+      reset
+        ? `Enter this code to choose a new password for your voter account in <strong style="color:${BRAND.heading};">${escapeHtml(params.pollName)}</strong>.`
+        : `Enter this code to confirm your email address and start voting in <strong style="color:${BRAND.heading};">${escapeHtml(params.pollName)}</strong>.`,
     ),
     codeBlock(params.code),
     `<p style="margin:0 0 24px;text-align:center;font-family:${FONT};font-size:13px;color:${BRAND.muted};">
        This code expires in <strong>${VERIFICATION_CODE_TTL_MINUTES} minutes</strong>.
      </p>`,
-    mutedNote("Didn't try to vote? You can ignore this email. Never share this code with anyone."),
+    mutedNote(
+      reset
+        ? "Didn't ask to reset your password? You can ignore this email. Never share this code with anyone."
+        : "Didn't try to vote? You can ignore this email. Never share this code with anyone.",
+    ),
   ].join("");
   return {
-    subject: `Your voting code for ${params.pollName}`,
+    subject: reset ? `Reset your password for ${params.pollName}` : `Your voting code for ${params.pollName}`,
     html: layout({
       preheader: `Your code is ${params.code}`,
-      eyebrow: "Confirm your email",
-      heading: "Your voting code",
+      eyebrow: reset ? "Reset your password" : "Confirm your email",
+      heading: reset ? "Your reset code" : "Your voting code",
       body,
       brand: {
         name: params.pollName,

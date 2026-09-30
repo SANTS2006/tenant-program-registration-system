@@ -154,7 +154,7 @@ export function VoterAuthPage({ mode }: { mode: "login" | "register" }) {
                 {mode === "register" && (
                   <div className="flex flex-col gap-1.5">
                     <Label htmlFor="voter-name">Full name</Label>
-                    <Input id="voter-name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} required />
+                    <Input id="voter-name" autoComplete="name" placeholder="Enter your full name" value={name} onChange={(e) => setName(e.target.value)} required />
                   </div>
                 )}
                 <div className="flex flex-col gap-1.5">
@@ -163,16 +163,27 @@ export function VoterAuthPage({ mode }: { mode: "login" | "register" }) {
                     id="voter-email"
                     type="email"
                     autoComplete="email"
-                    placeholder={domains[0] ? `you@${domains[0]}` : "you@example.com"}
+                    placeholder="Enter your email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="voter-password">Password</Label>
+                  <div className="flex items-center justify-between gap-2">
+                    <Label htmlFor="voter-password">Password</Label>
+                    {mode === "login" && (
+                      <Link
+                        to={`/vote/${slug}/forgot-password?next=${encodeURIComponent(next)}`}
+                        className="text-xs font-medium text-primary hover:underline"
+                      >
+                        Forgot password?
+                      </Link>
+                    )}
+                  </div>
                   <PasswordInput
                     id="voter-password"
+                    placeholder="Enter your password"
                     autoComplete={mode === "register" ? "new-password" : "current-password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}

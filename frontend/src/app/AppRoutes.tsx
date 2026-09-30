@@ -69,6 +69,8 @@ const BusinessAnalyticsTab = lazyPage(() => import("@/features/businesses/OrderP
 const PublicOrderPage = lazyPage(() => import("@/features/public-registration/PublicRegistrationPage"), "PublicOrderPage");
 const OrderConfirmationPage = lazyPage(() => import("@/features/public-registration/ConfirmationPage"), "OrderConfirmationPage");
 const VoterLoginPage = lazyPage(() => import("@/features/vote/VoterAuthPage"), "VoterLoginPage");
+const VoterForgotPasswordPage = lazyPage(() => import("@/features/vote/VoterPasswordPages"), "VoterForgotPasswordPage");
+const VoterResetPasswordPage = lazyPage(() => import("@/features/vote/VoterPasswordPages"), "VoterResetPasswordPage");
 const VoterRegisterPage = lazyPage(() => import("@/features/vote/VoterAuthPage"), "VoterRegisterPage");
 
 export function AppRoutes() {
@@ -96,6 +98,8 @@ export function AppRoutes() {
           {/* Voting pages have their own frame, branded with the poll. */}
           <Route path="/vote/:slug/login" element={<VoterLoginPage />} />
           <Route path="/vote/:slug/register" element={<VoterRegisterPage />} />
+          <Route path="/vote/:slug/forgot-password" element={<VoterForgotPasswordPage />} />
+          <Route path="/vote/:slug/reset-password" element={<VoterResetPasswordPage />} />
           <Route path="/vote/:slug" element={<VotePage />} />
           <Route path="/vote/:slug/:positionId" element={<VotePage />} />
 
