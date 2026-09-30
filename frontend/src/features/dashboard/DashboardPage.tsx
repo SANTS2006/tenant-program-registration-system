@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { ExportButtons } from "@/components/ExportButtons";
 import { Link } from "react-router-dom";
 import {
   BadgeCheck,
@@ -227,11 +228,14 @@ export function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-          Welcome back, <span className="gradient-text">{user?.name.split(" ")[0]}</span>
-        </h1>
-        <p className="text-sm text-muted-foreground">Here's what's happening across your programs.</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            Welcome back, <span className="gradient-text">{user?.name.split(" ")[0]}</span>
+          </h1>
+          <p className="text-sm text-muted-foreground">Here's what's happening across your programs.</p>
+        </div>
+        <ExportButtons path="/dashboard/export" fileLabel="Dashboard" />
       </div>
 
       {isLoading && <p className="text-sm text-muted-foreground">Loading dashboard...</p>}

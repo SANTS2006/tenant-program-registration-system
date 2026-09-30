@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { ExportButtons } from "@/components/ExportButtons";
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { formatMoney } from "@designs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,6 +57,9 @@ export function BusinessAnalyticsPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <div className="flex justify-end">
+        <ExportButtons path={`/businesses/${business.id}/analytics/export`} fileLabel={`${business.name} analysis`} />
+      </div>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
         <StatCard label="Orders" value={data.orders?.total ?? 0} />
         <StatCard label="Orders this month" value={data.orders?.thisMonth ?? 0} />

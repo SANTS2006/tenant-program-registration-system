@@ -1,4 +1,5 @@
 import * as React from "react";
+import { ExportButtons } from "@/components/ExportButtons";
 import { Building2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -14,11 +15,14 @@ export function TenantsListPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Accounts</h1>
-        <p className="text-sm text-muted-foreground">
-          Every account on the platform. Open one to manage its users and programs.
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Accounts</h1>
+          <p className="text-sm text-muted-foreground">
+            Every account on the platform. Open one to manage its users and programs.
+          </p>
+        </div>
+        <ExportButtons path="/platform/tenants/export" fileLabel="Accounts" />
       </div>
 
       {!isLoading && data?.items.length === 0 && (

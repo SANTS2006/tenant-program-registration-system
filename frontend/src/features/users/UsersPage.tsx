@@ -1,4 +1,5 @@
 import * as React from "react";
+import { ExportButtons } from "@/components/ExportButtons";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -128,7 +129,10 @@ export function UsersPage() {
         <CreateUserDialog />
       </div>
 
-      <Input placeholder="Search users..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Input placeholder="Search users..." aria-label="Search users" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
+        <ExportButtons path="/users/export" params={{ search }} fileLabel="Users" />
+      </div>
 
       <div className="overflow-hidden rounded-xl border border-border/70 bg-card/60 backdrop-blur-sm">
         <Table>

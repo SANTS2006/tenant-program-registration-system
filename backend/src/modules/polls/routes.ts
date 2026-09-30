@@ -8,6 +8,7 @@ import { getPollRole, requirePollAccess } from "./access.js";
 import { createPollSchema, listPollsQuerySchema, listVotersQuerySchema, saveBallotSchema, updatePollSchema } from "./schemas.js";
 import * as pollsService from "./service.js";
 import * as pollsRepo from "./repository.js";
+import { pollExportRoutes } from "./exports.js";
 
 type PollParams = { pollId: string };
 
@@ -24,6 +25,8 @@ async function pollView(request: FastifyRequest, poll: pollsRepo.PollRow) {
 export async function pollRoutes(app: FastifyInstance) {
   const viewer = { preHandler: requirePollAccess("viewer") };
   const admin = { preHandler: requirePollAccess("admin") };
+
+  await app.register(pollExportRoutes);
 
   app.get("/", async (request, reply) => {
     const query = listPollsQuerySchema.parse(request.query);

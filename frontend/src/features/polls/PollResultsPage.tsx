@@ -1,4 +1,5 @@
 import { Trophy } from "lucide-react";
+import { ExportButtons } from "@/components/ExportButtons";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/StatCard";
 import { usePollResults } from "./hooks";
@@ -16,6 +17,9 @@ export function PollResultsPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <div className="flex justify-end">
+        <ExportButtons path={`/polls/${poll.id}/results/export`} fileLabel={`${poll.name} results`} />
+      </div>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="People who voted" value={results.voters} />
         <StatCard label="Voters signed up" value={results.registeredVoters} />

@@ -1,3 +1,4 @@
+import { csvCell } from "../../lib/tableExport.js";
 import ExcelJS from "exceljs";
 import * as formsRepo from "../forms/repository.js";
 import type { RegistrationFilters, RegistrationRow } from "./repository.js";
@@ -81,12 +82,8 @@ async function buildRows(programId: string, filters: RegistrationFilters) {
   return { columns, rows };
 }
 
-function escapeCsvCell(value: string): string {
-  if (/[",\n]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-  return value;
-}
+// Formula-safe, and quoted when needed (see lib/tableExport).
+const escapeCsvCell = csvCell;
 
 export async function generateCsvExport(programId: string, filters: RegistrationFilters): Promise<string> {
   const { columns, rows } = await buildRows(programId, filters);

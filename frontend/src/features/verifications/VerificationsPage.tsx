@@ -1,4 +1,5 @@
 import * as React from "react";
+import { ExportButtons } from "@/components/ExportButtons";
 import { useNavigate } from "react-router-dom";
 import { Barcode, CalendarCheck, CreditCard, QrCode, ScanLine, Search, ShieldAlert, Ticket, UserCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -118,6 +119,15 @@ export function VerificationsPage() {
           </SelectContent>
         </Select>
         <span className="text-sm text-muted-foreground">{data?.total ?? 0} scans</span>
+        <ExportButtons
+          path={`/programs/${program.id}/verifications/export`}
+          params={{
+            search,
+            documentType: documentType === "all" ? undefined : documentType,
+            result: result === "all" ? undefined : result,
+          }}
+          fileLabel={`${program.name} verifications`}
+        />
         <div className="ml-auto flex flex-wrap gap-2">
           <Button onClick={() => setScanner("qr")}>
             <ScanLine className="h-4 w-4" />

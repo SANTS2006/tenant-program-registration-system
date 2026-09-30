@@ -1,4 +1,5 @@
 import * as React from "react";
+import { ExportButtons } from "@/components/ExportButtons";
 import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -32,18 +33,21 @@ export function PollVotersPage() {
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <div className="relative max-w-sm">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-          <Input
-            placeholder="Search by name or email..."
-            aria-label="Search voters"
-            className="pl-9"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-          />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="relative w-full max-w-sm">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+            <Input
+              placeholder="Search by name or email..."
+              aria-label="Search voters"
+              className="pl-9"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+          <ExportButtons path={`/polls/${poll.id}/voters/export`} params={{ search }} fileLabel={`${poll.name} voters`} />
         </div>
         {isLoading && <p className="text-sm text-muted-foreground">Loading voters...</p>}
         {data && data.items.length === 0 && <p className="text-sm text-muted-foreground">No voters yet.</p>}

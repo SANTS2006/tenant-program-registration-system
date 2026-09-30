@@ -1,4 +1,5 @@
 import * as React from "react";
+import { ExportButtons } from "@/components/ExportButtons";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -235,6 +236,13 @@ function DocumentsListPage({ kind }: { kind: DocumentKind }) {
           </SelectContent>
         </Select>
         <span className="text-sm text-muted-foreground">{data?.total ?? 0} total</span>
+        <div className="ml-auto">
+          <ExportButtons
+            path={`/businesses/${business.id}/${kindPath(kind)}/export`}
+            params={{ search, status: status === "all" ? undefined : status }}
+            fileLabel={`${business.name} ${label(kind).toLowerCase()}s`}
+          />
+        </div>
       </div>
 
       <Card>

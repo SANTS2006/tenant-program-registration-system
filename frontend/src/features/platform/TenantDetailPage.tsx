@@ -1,4 +1,5 @@
 import { Link, useParams } from "react-router-dom";
+import { ExportButtons } from "@/components/ExportButtons";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ApiError } from "@/lib/api";
@@ -44,8 +45,9 @@ export function TenantDetailPage() {
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
           <CardTitle className="text-base">Users</CardTitle>
+          <ExportButtons path={`/platform/tenants/${tenantId}/users/export`} fileLabel={`${tenant?.name ?? "Account"} users`} />
         </CardHeader>
         <CardContent className="p-0">
           <Table>
@@ -93,8 +95,9 @@ export function TenantDetailPage() {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
           <CardTitle className="text-base">Programs</CardTitle>
+          <ExportButtons path={`/platform/tenants/${tenantId}/programs/export`} fileLabel={`${tenant?.name ?? "Account"} programs`} />
         </CardHeader>
         <CardContent className="p-0">
           <Table>

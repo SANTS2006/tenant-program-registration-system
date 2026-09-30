@@ -1,4 +1,5 @@
 import * as React from "react";
+import { ExportButtons } from "@/components/ExportButtons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Flag, Inbox, Mail, MessageSquarePlus, Search } from "lucide-react";
@@ -82,12 +83,19 @@ export function InboxPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-          <Inbox className="h-6 w-6 text-primary" />
-          Inbox
-        </h1>
-        <p className="text-sm text-muted-foreground">Everything people have sent to the platform team.</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
+            <Inbox className="h-6 w-6 text-primary" aria-hidden="true" />
+            Inbox
+          </h1>
+          <p className="text-sm text-muted-foreground">Everything people have sent to the platform team.</p>
+        </div>
+        <ExportButtons
+          path="/platform/messages/export"
+          params={{ kind, status: status === "all" ? undefined : status, search }}
+          fileLabel={`Inbox ${kind}`}
+        />
       </div>
 
       <div className="flex gap-1.5 overflow-x-auto rounded-xl border border-border/70 bg-card/60 p-1.5">

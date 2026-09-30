@@ -19,6 +19,7 @@ import {
   updateBusinessSchema,
 } from "./schemas.js";
 import * as businessService from "./service.js";
+import { businessExportRoutes } from "./exports.js";
 
 type BusinessParams = { businessId: string };
 type KindParams = BusinessParams & { kind: string };
@@ -61,6 +62,8 @@ async function businessView(request: FastifyRequest, business: businessService.B
 export async function businessRoutes(app: FastifyInstance) {
   const viewer = { preHandler: requireBusinessAccess("viewer") };
   const admin = { preHandler: requireBusinessAccess("admin") };
+
+  await app.register(businessExportRoutes);
 
   app.get("/", async (request, reply) => {
     return sendSuccess(reply, await businessService.listBusinesses(request.user!, listBusinessesQuerySchema.parse(request.query)));
