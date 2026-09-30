@@ -56,6 +56,34 @@ async function currentVoter(request: FastifyRequest): Promise<Voter | null> {
 
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
+/**
+ * The one address behind an email, so "a.b+vote2@gmail.com" and "ab@gmail.com" count as the same
+ * person. One vote per email is tied to this, not to the raw address.
+ */
+export function canonicalEmail(email: string): string {
+  const [rawLocal = "", rawDomain = ""] = normalizeEmail(email).split("@");
+  let local = rawLocal.split("+")[0]!;
+  let domain = rawDomain;
+  if (domain === "gmail.com" || domain === "googlemail.com") {
+    domain = "gmail.com";
+    local = local.replace(/./g, "");
+  }
+  return `${local}@${domain}`;
+}
+
+const ballotKeyFor = (positionId: string, email: string) => `${positionId}:e:${canonicalEmail(email)}`;
+
+/** Positions this voter has voted for: under their account, or under the same person's email. */
+async function votedPositions(poll: Poll, voter: Voter, positionIds: string[]) {
+  const [byAccount, byEmail] = await Promise.all([
+    pollsRepo.votedPositionIds(poll.id, voter.id),
+    poll.onePerEmail
+      ? pollsRepo.votedPositionIdsByKeys(poll.id, positionIds.map((id) => ballotKeyFor(id, voter.email)))
+      : Promise.resolve([] as string[]),
+  ]);
+  return [...new Set([...byAccount, ...byEmail])];
+}
+
 async function findPoll(slug: string): Promise<Poll> {
   const poll = await pollsRepo.findPollBySlug(slug);
   if (!poll) throw AppError.notFound("This poll doesn't exist or has been removed");
@@ -159,7 +187,7 @@ export async function session(request: FastifyRequest, slug: string) {
   await pollsRepo.addPollVoter(poll.id, voter.id);
   return {
     voter: publicVoter(voter),
-    votedPositionIds: await pollsRepo.votedPositionIds(poll.id, voter.id),
+    votedPositionIds: await votedPositions(poll, voter, (await pollsRepo.getBallot(poll.id)).map((p) => p.id)),
     emailAllowed: emailAllowed(poll, voter.email),
   };
 }
@@ -304,16 +332,22 @@ export async function castVote(
   ]);
   if (!position || !candidate) throw AppError.notFound("That choice isn't on this ballot any more. Please reload the page.");
 
+  if (poll.onePerEmail && (await votedPositions(poll, voter, [position.id])).includes(position.id)) {
+    throw new AppError("CONFLICT", `You've already voted for ${position.title}. Each email address can vote only once.`, 409, {
+      reason: "already_voted",
+    });
+  }
+
   const recorded = await pollsRepo.insertVote({
     pollId: poll.id,
     positionId: position.id,
     candidateId: candidate.id,
     voterId: voter.id,
-    ballotKey: poll.onePerEmail ? `${position.id}:${voter.id}` : randomUUID(),
+    ballotKey: poll.onePerEmail ? ballotKeyFor(position.id, voter.email) : randomUUID(),
     ipAddress: request.ip,
   });
   if (!recorded) {
-    throw new AppError("CONFLICT", `You have already voted for ${position.title}. Each email address can vote only once.`, 409, {
+    throw new AppError("CONFLICT", `You've already voted for ${position.title}. Each email address can vote only once.`, 409, {
       reason: "already_voted",
     });
   }
@@ -322,7 +356,7 @@ export async function castVote(
   const results = await buildResults(poll.id);
   if (poll.notifyOnVote) void notifyTeam(poll, voter, position.title, results.positions.find((p) => p.id === position.id)?.totalVotes ?? 0);
   return {
-    votedPositionIds: await pollsRepo.votedPositionIds(poll.id, voter.id),
+    votedPositionIds: await votedPositions(poll, voter, (await pollsRepo.getBallot(poll.id)).map((p) => p.id)),
     results: poll.showResults ? results : null,
   };
 }

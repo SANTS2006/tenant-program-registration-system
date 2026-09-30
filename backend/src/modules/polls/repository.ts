@@ -211,6 +211,16 @@ export async function votedPositionIds(pollId: string, voterId: string): Promise
   return rows.map((r) => r.positionId);
 }
 
+/** Positions this poll has a vote for under any of these ballot keys (one key per position and person). */
+export async function votedPositionIdsByKeys(pollId: string, ballotKeys: string[]): Promise<string[]> {
+  if (!ballotKeys.length) return [];
+  const rows = await db
+    .selectDistinct({ positionId: pollVotes.positionId })
+    .from(pollVotes)
+    .where(and(eq(pollVotes.pollId, pollId), inArray(pollVotes.ballotKey, ballotKeys)));
+  return rows.map((r) => r.positionId);
+}
+
 /** Records a vote; returns false when the ballot key is taken (this voter already voted here). */
 export async function insertVote(values: typeof pollVotes.$inferInsert): Promise<boolean> {
   const rows = await db.insert(pollVotes).values(values).onConflictDoNothing({ target: pollVotes.ballotKey }).returning({ id: pollVotes.id });

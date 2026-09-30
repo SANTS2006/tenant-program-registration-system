@@ -20,7 +20,8 @@ type Outcome =
   | { kind: "done"; exited: boolean }
   | { kind: "already_voted"; message: string }
   | { kind: "domain"; message: string }
-  | { kind: "closed" };
+  | { kind: "closed" }
+  | { kind: "failed"; positionId: string };
 
 function useLiveResults(poll: VotePoll | undefined) {
   return useQuery({
@@ -216,7 +217,7 @@ function VoteFlow() {
       <VoteShell poll={poll}>
         <VoteMessage
           tone="error"
-          title="Voting failed"
+          title="This email can't vote"
           message={
             outcome?.kind === "domain"
               ? outcome.message
@@ -252,8 +253,8 @@ function VoteFlow() {
         <div className="flex flex-col gap-6">
           <VoteMessage
             tone="error"
-            title="Voting failed"
-            message={outcome?.kind === "already_voted" ? outcome.message : `You have already voted for ${singlePosition!.title}. Each email address can vote only once.`}
+            title="You've already voted"
+            message={outcome?.kind === "already_voted" ? outcome.message : `You've already voted for ${singlePosition!.title}. Each email address can vote only once.`}
           >
             <LinkButton to={`/vote/${slug}`} variant="default">
               Vote in the other positions
@@ -262,6 +263,21 @@ function VoteFlow() {
           </VoteMessage>
           {poll.showResults && <AllResults results={results} />}
         </div>
+      </VoteShell>
+    );
+  }
+
+  if (outcome?.kind === "failed") {
+    const failedTitle = poll.positions.find((p) => p.id === outcome.positionId)?.title;
+    return (
+      <VoteShell poll={poll}>
+        <VoteMessage
+          tone="error"
+          title="Voting failed"
+          message={`Your vote${failedTitle ? ` for ${failedTitle}` : ""} was not recorded because of a network or site problem. Nothing was counted, so you can safely try again.`}
+        >
+          <Button onClick={() => setOutcome(null)}>Try voting again</Button>
+        </VoteMessage>
       </VoteShell>
     );
   }
@@ -339,6 +355,7 @@ function VoteFlow() {
       if (reason === "already_voted") setOutcome({ kind: "already_voted", message });
       else if (reason === "domain_not_allowed") setOutcome({ kind: "domain", message });
       else if (reason === "closed") setOutcome({ kind: "closed" });
+      else if (!(err instanceof ApiError) || err.statusCode >= 500) setOutcome({ kind: "failed", positionId: position.id });
       else toast.error(message);
     } finally {
       setSubmitting(false);
