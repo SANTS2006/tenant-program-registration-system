@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertCircle, ChevronLeft, ChevronRight, Eraser, Loader2, ShieldCheck, UploadCloud } from "lucide-react";
-import type { ConditionalRule, FormField, FormSection } from "@/types/api";
+import type { ConditionalRule, FollowUp, FormField, FormSection } from "@/types/api";
 import { cn } from "@/lib/utils";
 
 export interface UploadedFileInfo {
@@ -32,6 +32,36 @@ interface DynamicFormProps {
   onCancel?: () => void;
   /** Asks the person to confirm they checked their answers before the form can be submitted. */
   requireReviewConfirmation?: boolean;
+  /** When set, answers are kept in this browser so a refresh doesn't lose them; cleared on submit or "Clear form". */
+  storageKey?: string;
+}
+
+interface SavedDraft {
+  responses: Record<string, unknown>;
+  files: Record<string, UploadedFileInfo>;
+  step: number;
+}
+
+function loadDraft(key: string | undefined): SavedDraft | null {
+  if (!key) return null;
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as SavedDraft;
+    return parsed && typeof parsed.responses === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Forgets a saved draft, e.g. once the form has been submitted. */
+export function clearSavedDraft(key: string | undefined) {
+  if (!key) return;
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+    /* storage can be blocked; nothing to clear */
+  }
 }
 
 const REVIEW_REQUIRED_MESSAGE = "Please confirm you have checked all your answers before submitting";
@@ -74,6 +104,13 @@ export function isOtherOption(option: string) {
 
 export function otherTextKey(fieldKey: string) {
   return `${fieldKey}__other`;
+}
+
+/** What the chosen option asks for on top of the choice itself, if the admin turned that on. */
+function followUpFor(field: FormField, value: unknown): FollowUp | null {
+  if (!["single_choice", "dropdown", "yes_no"].includes(field.type)) return null;
+  const key = typeof value === "boolean" ? (value ? "Yes" : "No") : typeof value === "string" ? value : "";
+  return field.config.followUps?.[key] ?? null;
 }
 
 /** The choices to show right now -- narrowed by the parent's answer for cascading fields. */
@@ -143,14 +180,18 @@ export function DynamicForm({
   consentText,
   onCancel,
   requireReviewConfirmation = true,
+  storageKey,
 }: DynamicFormProps) {
   const orderedSections = [...sections].sort((a, b) => a.orderIndex - b.orderIndex);
   const hasSections = orderedSections.length > 0;
   const [consented, setConsented] = React.useState(!requireConsent);
   const [consentChecked, setConsentChecked] = React.useState(false);
-  const [stepIndex, setStepIndex] = React.useState(0);
-  const [responses, setResponses] = React.useState<Record<string, unknown>>(() => initialResponses(fields));
-  const [uploadedFiles, setUploadedFiles] = React.useState<Record<string, UploadedFileInfo>>({});
+  const draft = React.useMemo(() => loadDraft(storageKey), [storageKey]);
+  const [stepIndex, setStepIndex] = React.useState(() => Math.max(0, Math.min(draft?.step ?? 0, Math.max(0, sections.length - 1))));
+  const [responses, setResponses] = React.useState<Record<string, unknown>>(() =>
+    draft ? pruneDependentAnswers(fields, draft.responses) : initialResponses(fields),
+  );
+  const [uploadedFiles, setUploadedFiles] = React.useState<Record<string, UploadedFileInfo>>(() => draft?.files ?? {});
   const [uploadingKey, setUploadingKey] = React.useState<string | null>(null);
   const [stepErrors, setStepErrors] = React.useState<string[]>([]);
   const [reviewConfirmed, setReviewConfirmed] = React.useState(false);
@@ -172,8 +213,22 @@ export function DynamicForm({
   const currentStep = steps[stepIndex]!;
   const isLastStep = stepIndex === steps.length - 1;
 
+  // Keep what the person has typed, so a refresh (or an accidental close) doesn't lose it.
+  React.useEffect(() => {
+    if (!storageKey) return;
+    const timer = window.setTimeout(() => {
+      try {
+        window.localStorage.setItem(storageKey, JSON.stringify({ responses, files: uploadedFiles, step: stepIndex } satisfies SavedDraft));
+      } catch {
+        /* storage full or blocked: the form still works, it just won't be remembered */
+      }
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [storageKey, responses, uploadedFiles, stepIndex]);
+
   // Empties every answer and upload at once, and returns to the first step.
   const clearForm = () => {
+    clearSavedDraft(storageKey);
     setResponses({});
     setUploadedFiles({});
     setStepErrors([]);
@@ -196,6 +251,18 @@ export function DynamicForm({
     }
   };
 
+  const handleFollowUpFile = async (field: FormField, file: File | undefined) => {
+    if (!file || !onUploadFile) return;
+    const key = otherTextKey(field.fieldKey);
+    setUploadingKey(key);
+    try {
+      const uploaded = await onUploadFile(file, key);
+      setUploadedFiles((prev) => ({ ...prev, [key]: uploaded }));
+    } finally {
+      setUploadingKey(null);
+    }
+  };
+
   const validateFields = (fieldsToCheck: FormField[]): string[] => {
     const missing: string[] = [];
     for (const field of fieldsToCheck) {
@@ -206,6 +273,17 @@ export function DynamicForm({
       const isFile = field.type.endsWith("_upload");
       const hasValue = isFile ? !!uploadedFiles[field.fieldKey] : !isEmpty(responses[field.fieldKey]);
       if (!hasValue) missing.push(`${field.label} is required`);
+    }
+    for (const field of fieldsToCheck) {
+      if (!isVisible(field, responses)) continue;
+      const followUp = followUpFor(field, responses[field.fieldKey]);
+      if (followUp?.required) {
+        const key = otherTextKey(field.fieldKey);
+        const hasText = !isEmpty(String(responses[key] ?? "").trim());
+        const hasFile = !!uploadedFiles[key];
+        const ok = followUp.mode === "text" ? hasText : followUp.mode === "file" ? hasFile : hasText || hasFile;
+        if (!ok) missing.push(`${field.label}: please provide ${followUp.label?.trim() || "more details"}`);
+      }
     }
     for (const field of fieldsToCheck) {
       if (!isVisible(field, responses)) continue;
@@ -237,11 +315,23 @@ export function DynamicForm({
       setStepErrors([REVIEW_REQUIRED_MESSAGE]);
       return;
     }
-    await onSubmit(responses, Object.values(uploadedFiles), consented);
+    // Files from a follow-up box the person has since switched away from are not sent.
+    const files = Object.entries(uploadedFiles)
+      .filter(([key]) => {
+        if (!key.endsWith("__other")) return true;
+        const owner = fields.find((f) => otherTextKey(f.fieldKey) === key);
+        const mode = owner && isVisible(owner, responses) ? followUpFor(owner, responses[owner.fieldKey])?.mode : undefined;
+        return mode === "file" || mode === "text_or_file";
+      })
+      .map(([, file]) => file);
+    await onSubmit(responses, files, consented);
   };
 
   const renderField = (field: FormField) => {
     if (!isVisible(field, responses)) return null;
+    // A cascading question with nothing to pick for the chosen answer is left out entirely.
+    const parentKey = field.config.optionsDependOn?.fieldKey;
+    if (parentKey && !isEmpty(responses[parentKey]) && optionsFor(field, responses).length === 0) return null;
     const value = responses[field.fieldKey];
 
     return (
@@ -261,7 +351,42 @@ export function DynamicForm({
   };
 
   /** Free-text box that appears right under a choice field when an "Other" option is picked. */
+  const renderFollowUp = (field: FormField, followUp: FollowUp) => {
+    const key = otherTextKey(field.fieldKey);
+    const asksText = followUp.mode !== "file";
+    const asksFile = followUp.mode !== "text";
+    const prompt = followUp.label?.trim() || (asksFile && !asksText ? "Upload a file" : "Tell us more");
+    const uploaded = uploadedFiles[key];
+    const isUploading = uploadingKey === key;
+    return (
+      <div className="mt-1 flex flex-col gap-2 rounded-lg border border-border/70 bg-muted/30 p-3">
+        <Label htmlFor={key} className="text-sm">
+          {prompt}
+          {followUp.required && <span className="text-destructive"> *</span>}
+        </Label>
+        {asksText && (
+          <Textarea
+            id={key}
+            rows={3}
+            maxLength={2000}
+            value={(responses[key] as string) ?? ""}
+            onChange={(e) => setResponses((r) => ({ ...r, [key]: e.target.value }))}
+          />
+        )}
+        {asksFile && (
+          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-input bg-background px-4 py-4 text-sm text-muted-foreground hover:bg-muted">
+            {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
+            {isUploading ? "Uploading..." : uploaded ? uploaded.filename : asksText ? "Or upload a file" : "Click to upload a file"}
+            <input type="file" className="sr-only" onChange={(e) => handleFollowUpFile(field, e.target.files?.[0])} />
+          </label>
+        )}
+      </div>
+    );
+  };
+
   const renderOtherInput = (field: FormField, value: unknown) => {
+    const followUp = followUpFor(field, value);
+    if (followUp) return renderFollowUp(field, followUp);
     if (!chosenOptions(value).some(isOtherOption)) return null;
     const key = otherTextKey(field.fieldKey);
     return (
@@ -385,10 +510,16 @@ export function DynamicForm({
         const selected = Array.isArray(value) ? (value as string[]) : [];
         return (
           <div className="flex flex-col gap-2">
+            {field.config.maxSelections !== undefined && (
+              <p className="text-xs text-muted-foreground">
+                Choose up to {field.config.maxSelections} ({selected.length} selected)
+              </p>
+            )}
             {optionsFor(field, responses).map((option) => (
               <label key={option} className="flex items-center gap-2 text-sm">
                 <Checkbox
                   checked={selected.includes(option)}
+                  disabled={!selected.includes(option) && field.config.maxSelections !== undefined && selected.length >= field.config.maxSelections}
                   onCheckedChange={(checked) => {
                     const next = checked ? [...selected, option] : selected.filter((o) => o !== option);
                     setValue(field.fieldKey, next);

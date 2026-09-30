@@ -46,6 +46,18 @@ export const fieldConfigSchema = z
         map: z.record(z.array(z.string().min(1))),
       })
       .optional(),
+    // Multiple choice: the most options a person may tick.
+    maxSelections: z.number().int().min(1).max(100).optional(),
+    // Choices that ask for more: option (or "Yes"/"No") -> what to ask for.
+    followUps: z
+      .record(
+        z.object({
+          mode: z.enum(["text", "file", "text_or_file"]),
+          label: z.string().max(200).optional(),
+          required: z.boolean().optional(),
+        }),
+      )
+      .optional(),
     currencyCode: z.string().length(3).optional(),
     maxRating: z.number().int().min(2).max(10).optional(),
   })

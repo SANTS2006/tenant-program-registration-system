@@ -30,7 +30,10 @@ function formatValue(value: unknown, otherText?: unknown): string {
     }
     return value.map(expand).join(", ");
   }
-  if (typeof value === "boolean") return value ? "Yes" : "No";
+  // A single choice (or Yes/No) that asked for more details shows them next to the answer.
+  const label = typeof value === "boolean" ? (value ? "Yes" : "No") : undefined;
+  if (typeof otherText === "string" && otherText && typeof value !== "object") return `${label ?? String(value)}: ${otherText}`;
+  if (label) return label;
   return expand(value);
 }
 
@@ -236,10 +239,19 @@ function ResponseGroup({
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       {fields.map((field) => {
         const fileMatches = files.filter((f) => f.fieldKey === field.fieldKey);
+        const followUpFiles = files.filter((f) => f.fieldKey === otherTextKey(field.fieldKey));
         return (
           <div key={field.fieldKey}>
             <dt className="text-xs uppercase text-muted-foreground">{field.label}</dt>
-            {fileMatches.length > 0 ? (
+            {followUpFiles.length > 0 && (
+              <dd className="mt-1 flex flex-col gap-2">
+                <span className="text-sm">{formatValue(responses[field.fieldKey], responses[otherTextKey(field.fieldKey)])}</span>
+                {followUpFiles.map((f) => (
+                  <FileRow key={f.id} file={f} onDownload={onDownload} />
+                ))}
+              </dd>
+            )}
+            {followUpFiles.length > 0 ? null : fileMatches.length > 0 ? (
               <dd className="mt-1 flex flex-col gap-2">
                 {fileMatches.map((f) => (
                   <FileRow key={f.id} file={f} onDownload={onDownload} />

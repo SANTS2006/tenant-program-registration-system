@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type { FieldConfig } from "@/types/api";
+import type { FieldConfig, FollowUp } from "@/types/api";
 import type { EditableField } from "./types";
 
 type UpdateConfig = (patch: Partial<FieldConfig>) => void;
@@ -108,6 +108,94 @@ export function DefaultValueEditor({ draft, updateConfig }: { draft: EditableFie
       <Label>Default value (optional)</Label>
       {input}
       <p className="text-xs text-muted-foreground">Pre-filled on the form; registrants can still change it.</p>
+    </div>
+  );
+}
+
+const FOLLOW_UP_TYPES = new Set(["single_choice", "dropdown", "yes_no"]);
+
+/** The most options a person may tick on a multiple choice question. */
+export function MaxSelectionsEditor({ draft, updateConfig }: { draft: EditableField; updateConfig: UpdateConfig }) {
+  if (draft.type !== "multiple_choice") return null;
+  const count = (draft.config.options ?? []).filter(Boolean).length;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label htmlFor="max-selections">Limit how many can be selected (optional)</Label>
+      <Input
+        id="max-selections"
+        type="number"
+        min={1}
+        max={count || undefined}
+        placeholder="No limit"
+        value={draft.config.maxSelections ?? ""}
+        onChange={(e) => updateConfig({ maxSelections: e.target.value ? Math.max(1, Number(e.target.value)) : undefined })}
+      />
+      <p className="text-xs text-muted-foreground">For example, enter 2 to let people pick no more than two options.</p>
+    </div>
+  );
+}
+
+/**
+ * Lets an option ask for more, e.g. "Do you have a design in mind?" -> Yes shows a box to describe
+ * or upload the design, No shows nothing.
+ */
+export function FollowUpEditor({ draft, updateConfig }: { draft: EditableField; updateConfig: UpdateConfig }) {
+  if (!FOLLOW_UP_TYPES.has(draft.type) || draft.config.optionsDependOn) return null;
+  const choices = draft.type === "yes_no" ? ["Yes", "No"] : (draft.config.options ?? []).filter((o) => o.trim() && !/^other/i.test(o.trim()));
+  if (choices.length === 0) return null;
+  const followUps = draft.config.followUps ?? {};
+
+  const setFollowUp = (option: string, next: FollowUp | undefined) => {
+    const copy = { ...followUps };
+    if (next) copy[option] = next;
+    else delete copy[option];
+    updateConfig({ followUps: Object.keys(copy).length ? copy : undefined });
+  };
+
+  return (
+    <div className="flex flex-col gap-3 rounded-md border border-dashed border-border p-3">
+      <p className="text-sm font-medium">Ask for more details</p>
+      <p className="-mt-2 text-xs text-muted-foreground">
+        Turn this on for an option to show an extra box when it is chosen. Options left off show nothing extra.
+      </p>
+      {choices.map((option) => {
+        const followUp = followUps[option];
+        return (
+          <div key={option} className="flex flex-col gap-2">
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={Boolean(followUp)}
+                onCheckedChange={(checked) => setFollowUp(option, checked === true ? { mode: "text", label: "" } : undefined)}
+              />
+              When “{option}” is chosen, ask for more
+            </label>
+            {followUp && (
+              <div className="ml-6 flex flex-col gap-2">
+                <Select value={followUp.mode} onValueChange={(mode) => setFollowUp(option, { ...followUp, mode: mode as FollowUp["mode"] })}>
+                  <SelectTrigger aria-label={`What to ask for when ${option} is chosen`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="text">A written answer</SelectItem>
+                    <SelectItem value="file">An uploaded file</SelectItem>
+                    <SelectItem value="text_or_file">A written answer or an uploaded file</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  aria-label={`Prompt shown when ${option} is chosen`}
+                  placeholder="What should they enter? e.g. Describe or upload your design"
+                  value={followUp.label ?? ""}
+                  onChange={(e) => setFollowUp(option, { ...followUp, label: e.target.value })}
+                />
+                <label className="flex items-center gap-2 text-xs">
+                  <Checkbox checked={followUp.required === true} onCheckedChange={(checked) => setFollowUp(option, { ...followUp, required: checked === true })} />
+                  Required
+                </label>
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

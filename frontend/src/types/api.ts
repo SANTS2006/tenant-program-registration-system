@@ -116,6 +116,16 @@ export interface FieldConfig {
   optionsDependOn?: { fieldKey: string; map: Record<string, string[]> };
   currencyCode?: string;
   maxRating?: number;
+  /** Multiple choice: the most options a person may tick. */
+  maxSelections?: number;
+  /** Choices that ask for more: option (or "Yes"/"No") -> what to ask for. */
+  followUps?: Record<string, FollowUp>;
+}
+
+export interface FollowUp {
+  mode: "text" | "file" | "text_or_file";
+  label?: string;
+  required?: boolean;
 }
 
 export interface ConditionalRule {

@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ApiError } from "@/lib/api";
-import { DynamicForm, type UploadedFileInfo } from "./DynamicForm";
+import { clearSavedDraft, DynamicForm, type UploadedFileInfo } from "./DynamicForm";
 import { BusinessCoverHeader, FormCoverHeader } from "./FormCoverHeader";
 import { getPublicForm, getPublicProgram, submitRegistration, uploadPublicFile } from "./api";
 import { usePageMeta } from "@/lib/seo";
@@ -53,11 +53,14 @@ export function PublicRegistrationPage({ variant = "registration" }: { variant?:
     );
   }
 
+  const draftKey = data ? `draft:${isOrder ? "order" : "program"}:${slug}:${data.form.id}` : undefined;
+
   const handleSubmit = async (responses: Record<string, unknown>, files: UploadedFileInfo[], consentAccepted: boolean) => {
     setSubmitting(true);
     setErrors([]);
     try {
       const result = await submitRegistration(slug!, responses, files, consentAccepted);
+      clearSavedDraft(draftKey);
       navigate(isOrder ? `/order/${slug}/confirmation` : `/programs/${slug}/confirmation`, { state: result });
     } catch (err) {
       if (err instanceof ApiError && Array.isArray(err.details)) {
@@ -93,6 +96,7 @@ export function PublicRegistrationPage({ variant = "registration" }: { variant?:
           consentText={data.form.consentText}
           onUploadFile={(file, fieldKey) => uploadPublicFile(slug!, fieldKey, file)}
           onSubmit={handleSubmit}
+          storageKey={draftKey}
           onCancel={isOrder ? undefined : () => navigate(`/programs/${slug}`)}
           submitLabel={isOrder ? "Place order" : undefined}
         />

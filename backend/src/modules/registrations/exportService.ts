@@ -38,7 +38,11 @@ export function formatCellValue(value: unknown): string {
 export function withOtherText(value: unknown, otherText: unknown): unknown {
   if (typeof otherText !== "string" || !otherText) return value;
   const expand = (option: unknown) => (typeof option === "string" && isOtherOption(option) ? `${option}: ${otherText}` : option);
-  return Array.isArray(value) ? value.map(expand) : expand(value);
+  if (Array.isArray(value)) return value.map(expand);
+  // A single choice (or Yes/No) that asked for more details: show them next to the answer.
+  if (typeof value === "boolean") return `${value ? "Yes" : "No"}: ${otherText}`;
+  if (typeof value === "string" && value) return `${value}: ${otherText}`;
+  return value;
 }
 
 async function buildFieldColumns(programId: string): Promise<ExportColumn[]> {

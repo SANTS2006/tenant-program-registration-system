@@ -29,6 +29,23 @@ export function otherTextKey(fieldKey: string): string {
   return `${fieldKey}__other`;
 }
 
+export interface FollowUp {
+  mode: "text" | "file" | "text_or_file";
+  label?: string;
+  required?: boolean;
+}
+
+const FOLLOW_UP_TEXT_MAX_LENGTH = 2000;
+const SINGLE_VALUE_FOLLOW_UP_TYPES = new Set(["single_choice", "dropdown", "yes_no"]);
+
+/** What a chosen option asks for on top of the choice itself (e.g. "Yes" -> describe your design). */
+function followUpFor(field: FieldRow, value: unknown): FollowUp | null {
+  if (!SINGLE_VALUE_FOLLOW_UP_TYPES.has(field.type)) return null;
+  const followUps = ((field.config as Record<string, unknown>)?.followUps ?? {}) as Record<string, FollowUp>;
+  const key = typeof value === "boolean" ? (value ? "Yes" : "No") : String(value ?? "");
+  return followUps[key] ?? null;
+}
+
 interface OptionsDependOn {
   fieldKey: string;
   map: Record<string, string[]>;
@@ -180,6 +197,9 @@ function validateFieldValue(
           if (!options.includes(item)) errors.push(`${label} contains an invalid option`);
         }
       }
+      if (typeof config.maxSelections === "number" && arr.length > config.maxSelections) {
+        errors.push(`${label}: choose at most ${config.maxSelections} option${config.maxSelections === 1 ? "" : "s"}`);
+      }
       return arr;
     }
     case "yes_no": {
@@ -236,6 +256,26 @@ export function validateAndNormalizeResponses(
 
     const value = validateFieldValue(field, rawResponses[field.fieldKey], errors, rawResponses);
     cleaned[field.fieldKey] = value;
+
+    const followUp = isEmptyValue(value) ? null : followUpFor(field, value);
+    if (followUp) {
+      const key = otherTextKey(field.fieldKey);
+      const text = String(rawResponses[key] ?? "").trim();
+      const uploaded = followUp.mode === "text" ? [] : (filesByField.get(key) ?? []);
+      const asksText = followUp.mode !== "file";
+      const asksFile = followUp.mode !== "text";
+      const prompt = followUp.label?.trim() || "more details";
+      if (text.length > FOLLOW_UP_TEXT_MAX_LENGTH) errors.push(`${field.label}: ${prompt} must be at most ${FOLLOW_UP_TEXT_MAX_LENGTH} characters`);
+      if (followUp.required) {
+        const missing =
+          followUp.mode === "text_or_file" ? !text && uploaded.length === 0 : asksText && !asksFile ? !text : asksFile && !asksText ? uploaded.length === 0 : false;
+        if (missing) errors.push(`${field.label}: please provide ${prompt}`);
+      }
+      // The description and any uploaded file names are kept together, so every export and email shows both.
+      const parts = [asksText ? text : "", ...uploaded.map((f) => `[file: ${f.filename}]`)].filter(Boolean);
+      cleaned[key] = parts.length ? parts.join(" ") : null;
+      continue;
+    }
 
     const chosen = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
     if (chosen.some((option) => isOtherOption(String(option)))) {
