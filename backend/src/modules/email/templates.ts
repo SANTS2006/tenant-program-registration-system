@@ -702,12 +702,16 @@ export function orderUpdateEmail(params: {
   customerName: string;
   orderNumber: string;
   status: string;
+  /** The business's own name for this status, if it has renamed it. */
+  statusLabel?: string;
   note?: string | null;
   isNew: boolean;
   placedAt: Date;
   answers: { label: string; value: string }[];
 }): { subject: string; html: string } {
-  const status = ORDER_STATUS_TEXT[params.status] ?? { label: orderStatusLabel(params.status), line: `Your order is now ${orderStatusLabel(params.status).toLowerCase()}.` };
+  const known = ORDER_STATUS_TEXT[params.status];
+  const label = params.statusLabel ?? known?.label ?? orderStatusLabel(params.status);
+  const status = { label, line: known?.line ?? `Your order is now ${label.toLowerCase()}.` };
   const strong = (value: string) => `<strong style="color:${BRAND.heading};">${escapeHtml(value)}</strong>`;
   const body = [
     paragraph(`Hi ${strong(params.customerName)},`),

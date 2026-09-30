@@ -8,7 +8,7 @@ import {
   index,
   unique,
 } from "drizzle-orm/pg-core";
-import { registrationStatusEnum } from "./enums";
+
 import { programs } from "./programs";
 import { forms } from "./forms";
 import { users } from "./users";
@@ -24,7 +24,7 @@ export const registrations = pgTable(
       .notNull()
       .references(() => forms.id, { onDelete: "restrict" }),
     registrationNumber: text("registration_number").notNull(),
-    status: registrationStatusEnum("status").notNull().default("submitted"),
+    status: text("status").notNull().default("submitted"),
     applicantName: text("applicant_name"),
     applicantEmail: text("applicant_email"),
     applicantPhone: text("applicant_phone"),
@@ -70,8 +70,8 @@ export const registrationStatusHistory = pgTable(
     registrationId: uuid("registration_id")
       .notNull()
       .references(() => registrations.id, { onDelete: "cascade" }),
-    fromStatus: registrationStatusEnum("from_status"),
-    toStatus: registrationStatusEnum("to_status").notNull(),
+    fromStatus: text("from_status"),
+    toStatus: text("to_status").notNull(),
     changedBy: uuid("changed_by").references(() => users.id, { onDelete: "set null" }),
     note: text("note"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

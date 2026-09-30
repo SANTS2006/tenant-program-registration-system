@@ -6,7 +6,7 @@ import { db } from "../../db/client.js";
 import { businessDocuments, businesses, businessMembers, programs, registrations } from "../../db/schema/index.js";
 import { AppError } from "../../lib/errors.js";
 import { buildPaginatedResult, toOffsetLimit, type PaginationInput } from "../../lib/pagination.js";
-import { resolveDocumentSettings, type BusinessDocumentKind, type DocumentSettings } from "../../shared/designs/index.js";
+import { resolveAllStatuses, resolveDocumentSettings, resolveStatuses, type BusinessDocumentKind, type DocumentSettings, type StatusKind } from "../../shared/designs/index.js";
 import * as programsRepo from "../programs/repository.js";
 import type { AuthenticatedUser } from "../users/types.js";
 import { listAccessibleBusinessIds } from "./access.js";
@@ -149,6 +149,21 @@ export async function saveDocumentSettings(businessId: string, kind: BusinessDoc
     .where(eq(businesses.id, businessId))
     .returning();
   return documentSettings(row!, kind);
+}
+
+/** The statuses this business uses for orders, invoices, and receipts. */
+export function businessStatuses(business: Pick<BusinessRow, "statusConfig">, kind: StatusKind) {
+  return resolveStatuses(business.statusConfig, kind);
+}
+
+export function allBusinessStatuses(business: Pick<BusinessRow, "statusConfig">) {
+  return resolveAllStatuses(business.statusConfig);
+}
+
+export async function saveStatusConfig(businessId: string, config: Record<StatusKind, { key: string; label: string; color: string }[]>) {
+  await getBusiness(businessId);
+  const [row] = await db.update(businesses).set({ statusConfig: config, updatedAt: new Date() }).where(eq(businesses.id, businessId)).returning();
+  return row!;
 }
 
 export function orderFormUrl(slug: string) {

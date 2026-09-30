@@ -8,7 +8,9 @@ import { usePageMeta } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 import type { Program } from "@/types/api";
 import { useProgram } from "../programs/hooks";
+import type { SubmissionTerms } from "../programs/ProgramDetailLayout";
 import { ORDER_TERMS } from "../programs/ProgramDetailLayout";
+import { statusLabel, statusTone } from "./statuses";
 import { getBusiness, type Business } from "./api";
 import { businessKeys } from "./BusinessesListPage";
 
@@ -53,6 +55,15 @@ export function BusinessLayout() {
     );
   }
   if (isLoading || !business) return <p className="text-sm text-muted-foreground">Loading business...</p>;
+
+  // Orders use the business's own statuses, worded and coloured as it chose.
+  const orderStatuses = business.statusConfig.order;
+  const terms: SubmissionTerms = {
+    ...ORDER_TERMS,
+    statuses: orderStatuses.map((s) => s.key),
+    statusLabel: (status) => statusLabel(orderStatuses, status),
+    statusTone: (status) => statusTone(orderStatuses, status),
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -99,7 +110,7 @@ export function BusinessLayout() {
           business,
           program,
           submissionPath: (id: string) => `/admin/businesses/${business.id}/orders/${id}`,
-          terms: ORDER_TERMS,
+          terms,
         }}
       />
     </div>

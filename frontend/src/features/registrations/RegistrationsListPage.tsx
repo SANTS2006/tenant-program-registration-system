@@ -47,7 +47,7 @@ export function RegistrationsListPage() {
       {
         accessorKey: "status",
         header: "Status",
-        cell: (c) => <RegistrationStatusBadge status={c.getValue<string>()} label={terms.statusLabel(c.getValue<RegistrationStatus>())} />,
+        cell: (c) => <RegistrationStatusBadge status={c.getValue<string>()} label={terms.statusLabel(c.getValue<RegistrationStatus>())} tone={terms.statusTone?.(c.getValue<RegistrationStatus>())} />,
       },
       {
         accessorKey: "submittedAt",

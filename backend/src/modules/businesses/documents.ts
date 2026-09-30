@@ -17,8 +17,8 @@ import {
 import { sendEmail } from "../email/service.js";
 import { businessDocumentEmail } from "../email/templates.js";
 import { fetchImageDataUri, LOGO_TRANSFORM, svgPagesToPdf } from "../idcards/pdf.js";
-import { documentSettings, getBusiness, type BusinessRow } from "./service.js";
-import { statusesFor, type SaveDocumentInput } from "./schemas.js";
+import { businessStatuses, documentSettings, getBusiness, type BusinessRow } from "./service.js";
+import type { SaveDocumentInput } from "./schemas.js";
 
 export type DocumentRow = typeof businessDocuments.$inferSelect;
 
@@ -40,12 +40,13 @@ export function toView(doc: DocumentRow) {
   };
 }
 
-function defaultStatus(kind: BusinessDocumentKind) {
-  return kind === "invoice" ? "draft" : "issued";
+/** New documents start on the business's first status. */
+function defaultStatus(business: BusinessRow, kind: BusinessDocumentKind) {
+  return businessStatuses(business, kind)[0]!.key;
 }
 
-function checkStatus(kind: BusinessDocumentKind, status: string | undefined) {
-  if (status && !statusesFor(kind).includes(status)) throw AppError.validation(`"${status}" isn't a ${kind} status`);
+function checkStatus(business: BusinessRow, kind: BusinessDocumentKind, status: string | undefined) {
+  if (status && !businessStatuses(business, kind).some((s) => s.key === status)) throw AppError.validation(`"${status}" isn't one of this business's ${kind} statuses`);
 }
 
 function amounts(input: SaveDocumentInput) {
@@ -63,7 +64,7 @@ function amounts(input: SaveDocumentInput) {
 
 export async function createDocument(businessId: string, kind: BusinessDocumentKind, input: SaveDocumentInput, userId: string) {
   const business = await getBusiness(businessId);
-  checkStatus(kind, input.status);
+  checkStatus(business, kind, input.status);
   const settings = documentSettings(business, kind);
 
   // Numbers run 1, 2, 3... per business; a clash from two saves at once just takes the next one.
@@ -81,7 +82,7 @@ export async function createDocument(businessId: string, kind: BusinessDocumentK
           kind,
           sequence,
           number: `${settings.prefix.toUpperCase()}-${String(sequence).padStart(4, "0")}`,
-          status: input.status ?? defaultStatus(kind),
+          status: input.status ?? defaultStatus(business, kind),
           clientName: input.clientName,
           clientEmail: input.clientEmail,
           clientPhone: input.clientPhone,
@@ -127,7 +128,7 @@ export async function findDocument(businessId: string, kind: BusinessDocumentKin
 /** Saves changes; the document then shows as "Updated". */
 export async function updateDocument(businessId: string, kind: BusinessDocumentKind, documentId: string, input: SaveDocumentInput, userId: string) {
   await findDocument(businessId, kind, documentId);
-  checkStatus(kind, input.status);
+  checkStatus(await getBusiness(businessId), kind, input.status);
   const [row] = await db
     .update(businessDocuments)
     .set({
@@ -264,7 +265,7 @@ export async function sendDocument(businessId: string, kind: BusinessDocumentKin
       sentAt: new Date(),
       lastSentTo: to,
       // A draft invoice becomes "sent"; a receipt becomes "sent" unless it was voided.
-      ...(doc.status === "draft" || doc.status === "issued" ? { status: "sent" } : {}),
+      ...((doc.status === "draft" || doc.status === "issued") && businessStatuses(business, kind).some((s) => s.key === "sent") ? { status: "sent" } : {}),
     })
     .where(eq(businessDocuments.id, doc.id))
     .returning();

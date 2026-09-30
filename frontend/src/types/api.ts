@@ -195,7 +195,9 @@ export type RegistrationStatus =
   | "processing"
   | "ready"
   | "delivered"
-  | "completed";
+  | "completed"
+  // A business can add its own order statuses.
+  | (string & {});
 
 export interface Registration {
   id: string;

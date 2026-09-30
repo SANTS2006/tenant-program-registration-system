@@ -19,6 +19,8 @@ export interface SubmissionTerms {
   numberLabel: string;
   statuses: RegistrationStatus[];
   statusLabel: (status: RegistrationStatus) => string;
+  /** A status's own colour, when its business has chosen one. */
+  statusTone?: (status: RegistrationStatus) => "default" | "secondary" | "success" | "warning" | "destructive" | "outline";
 }
 
 const labelize = (status: string) => status.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());

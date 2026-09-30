@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { env } from "../../config/env.js";
 import { db } from "../../db/client.js";
 import { businesses } from "../../db/schema/index.js";
+import { resolveStatuses, statusLabelFor } from "../../shared/designs/index.js";
 import { sendEmail } from "../email/service.js";
 import { documentVerifiedNotificationEmail, newRegistrationNotificationEmail, orderUpdateEmail } from "../email/templates.js";
 import * as programsRepo from "../programs/repository.js";
@@ -96,6 +97,7 @@ export async function notifyCustomer(
       customerName: registration.applicantName ?? "there",
       orderNumber: registration.registrationNumber,
       status: registration.status,
+      statusLabel: statusLabelFor(resolveStatuses(business.statusConfig, "order"), registration.status),
       note: params.note,
       isNew: params.isNew,
       placedAt: registration.submittedAt,

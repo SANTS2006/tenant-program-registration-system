@@ -1,4 +1,4 @@
-import type { DocumentSettings, LineItem } from "@designs";
+import type { DocumentSettings, LineItem, StatusDef, StatusKind } from "@designs";
 import { apiFetch, downloadAuthenticatedFile } from "@/lib/api";
 import type { PaginatedResult } from "@/types/api";
 import { uploadToCloudinary, type UploadSignature } from "../programs/api";
@@ -23,6 +23,8 @@ export interface Business {
   notifyCustomerOnStatus: boolean;
   invoiceSettings: DocumentSettings;
   receiptSettings: DocumentSettings;
+  /** The business's own order, invoice, and receipt statuses. */
+  statusConfig: Record<StatusKind, StatusDef[]>;
   createdAt: string;
   myRole?: "admin" | "viewer" | null;
   orderForm: { id: string; slug: string; status: string; registrationEnabled: boolean; notifyOnRegistration: boolean } | null;
@@ -112,6 +114,8 @@ export const createBusiness = (input: { name: string; description?: string; emai
   apiFetch<Business>("/businesses", { method: "POST", body: input });
 export const updateBusiness = (businessId: string, input: Partial<Business>) =>
   apiFetch<Business>(`/businesses/${businessId}`, { method: "PATCH", body: input });
+export const saveStatusConfig = (businessId: string, config: Record<StatusKind, StatusDef[]>) =>
+  apiFetch<Business>(`/businesses/${businessId}/statuses`, { method: "PUT", body: config });
 export const deleteBusiness = (businessId: string) => apiFetch<null>(`/businesses/${businessId}`, { method: "DELETE" });
 export const getOrderShareInfo = (businessId: string) =>
   apiFetch<{ url: string; live: boolean; acceptingOrders: boolean; qrCodeDataUrl: string | null }>(`/businesses/${businessId}/order-form/share`);

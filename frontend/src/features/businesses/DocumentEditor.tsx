@@ -3,8 +3,6 @@ import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import {
   computeTotals,
   formatMoney,
-  INVOICE_STATUSES,
-  RECEIPT_STATUSES,
   renderBusinessDocument,
   type DocumentSettings,
   type LineItem,
@@ -17,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { DesignSvg } from "../designs/DesignSvg";
 import type { Business, BusinessDocument, DocumentInput, DocumentKind } from "./api";
+import { statusLabel } from "./statuses";
 
 /** Line items are edited as text so half-typed numbers like "1." don't get in the way. */
 export interface DraftItem {
@@ -48,21 +47,11 @@ let itemKey = 0;
 const blankItem = (): DraftItem => ({ key: itemKey++, description: "", quantity: "1", unitPrice: "" });
 const isoDay = (date: Date) => date.toISOString().slice(0, 10);
 
-export const STATUS_LABELS: Record<string, string> = {
-  draft: "Draft",
-  sent: "Sent",
-  partially_paid: "Partly paid",
-  paid: "Paid",
-  cancelled: "Cancelled",
-  issued: "Issued",
-  void: "Void",
-};
-
-export function emptyDraft(kind: DocumentKind, settings: DocumentSettings): DocumentDraft {
+export function emptyDraft(kind: DocumentKind, settings: DocumentSettings, firstStatus?: string): DocumentDraft {
   const today = new Date();
   const due = new Date(today.getTime() + settings.dueDays * 24 * 60 * 60 * 1000);
   return {
-    status: kind === "invoice" ? "draft" : "issued",
+    status: firstStatus ?? (kind === "invoice" ? "draft" : "issued"),
     clientName: "",
     clientEmail: "",
     clientPhone: "",
@@ -238,7 +227,9 @@ export function DocumentEditor({
   const setItem = (index: number, patch: Partial<DraftItem>) => set({ items: draft.items.map((item, i) => (i === index ? { ...item, ...patch } : item)) });
   const totals = computeTotals(draftItems(draft), toNumber(draft.discount), toNumber(draft.taxRate), toNumber(draft.amountPaid));
   const money = (v: number) => formatMoney(v, business.currency);
-  const statuses: readonly string[] = kind === "invoice" ? INVOICE_STATUSES : RECEIPT_STATUSES;
+  const statuses = business.statusConfig[kind];
+  // A document can carry a status its business has since removed; keep it selectable.
+  const statusChoices = statuses.some((s) => s.key === draft.status) || !draft.status ? statuses : [...statuses, { key: draft.status, label: statusLabel(statuses, draft.status), color: "gray" as const }];
   const who = kind === "invoice" ? "Bill to" : "Received from";
 
   return (
@@ -292,9 +283,9 @@ export function DocumentEditor({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {statuses.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {STATUS_LABELS[s] ?? s}
+                  {statusChoices.map((s) => (
+                    <SelectItem key={s.key} value={s.key}>
+                      {s.label}
                     </SelectItem>
                   ))}
                 </SelectContent>

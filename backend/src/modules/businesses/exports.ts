@@ -12,15 +12,8 @@ type DocView = ReturnType<typeof documents.toView>;
 type ItemRow = DocView["items"][number] & { number: string; clientName: string };
 type Analytics = Awaited<ReturnType<typeof documents.documentAnalytics>>;
 
-const STATUS_LABELS: Record<string, string> = {
-  draft: "Draft",
-  sent: "Sent",
-  partially_paid: "Partly paid",
-  paid: "Paid",
-  cancelled: "Cancelled",
-  issued: "Issued",
-  void: "Void",
-};
+/** key -> the business's own label for it. */
+const labelsOf = (defs: { key: string; label: string }[]) => new Map(defs.map((d) => [d.key, d.label]));
 
 function kindOf(value: string): BusinessDocumentKind {
   if (value === "invoices") return "invoice";
@@ -40,6 +33,7 @@ export async function businessExportRoutes(app: FastifyInstance) {
       documents.listDocuments(request.params.businessId, kind, query, { page: 1, pageSize: EXPORT_ROW_LIMIT }),
     ]);
     const settings = businessService.documentSettings(business, kind);
+    const statusLabels = labelsOf(businessService.businessStatuses(business, kind));
     const noun = kind === "invoice" ? "Invoice" : "Receipt";
 
     const list: ExportSheet<DocView> = {
@@ -47,7 +41,7 @@ export async function businessExportRoutes(app: FastifyInstance) {
       rows: items,
       columns: [
         { label: `${noun} number`, value: (d) => d.number },
-        { label: "Status", value: (d) => STATUS_LABELS[d.status] ?? d.status },
+        { label: "Status", value: (d) => statusLabels.get(d.status) ?? d.status },
         { label: "Updated", value: (d) => d.updated },
         { label: "Client", value: (d) => d.clientName },
         { label: "Client email", value: (d) => d.clientEmail },
@@ -95,11 +89,11 @@ export async function businessExportRoutes(app: FastifyInstance) {
       form ? registrationsRepo.getProgramStats(form.id) : null,
     ]);
 
-    const statusSheet = (name: string, data: Analytics): ExportSheet<Analytics["byStatus"][number]> => ({
+    const statusSheet = (name: string, data: Analytics, kind: "invoice" | "receipt"): ExportSheet<Analytics["byStatus"][number]> => ({
       name,
       rows: data.byStatus,
       columns: [
-        { label: "Status", value: (s) => STATUS_LABELS[s.status] ?? s.status },
+        { label: "Status", value: (s) => labelsOf(businessService.businessStatuses(business, kind)).get(s.status) ?? s.status },
         { label: "Count", value: (s) => s.count },
         { label: "Share (%)", value: (s) => (data.count ? Math.round((s.count / data.count) * 100) : 0) },
         { label: "Amount", value: (s) => s.total, numFmt: MONEY_FORMAT },
@@ -125,7 +119,7 @@ export async function businessExportRoutes(app: FastifyInstance) {
       name: "Orders by status",
       rows: Object.entries(orders?.byStatus ?? {}),
       columns: [
-        { label: "Status", value: ([status]) => status },
+        { label: "Status", value: ([status]) => labelsOf(businessService.businessStatuses(business, "order")).get(status) ?? status },
         { label: "Orders", value: ([, count]) => count },
         { label: "Share (%)", value: ([, count]) => (orders?.total ? Math.round((count / orders.total) * 100) : 0) },
       ],
@@ -152,8 +146,8 @@ export async function businessExportRoutes(app: FastifyInstance) {
     return sendTableExport(reply, format, `${business.name} analysis`, [
       summary,
       orderStatuses,
-      statusSheet("Invoices by status", invoices),
-      statusSheet("Receipts by status", receipts),
+      statusSheet("Invoices by status", invoices, "invoice"),
+      statusSheet("Receipts by status", receipts, "receipt"),
       monthly,
       clients,
     ]);

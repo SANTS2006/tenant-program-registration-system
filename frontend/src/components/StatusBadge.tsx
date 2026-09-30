@@ -32,6 +32,14 @@ export function ProgramStatusBadge({ status }: { status: string }) {
   return <Badge variant={PROGRAM_STATUS_VARIANTS[status] ?? "secondary"}>{labelize(status)}</Badge>;
 }
 
-export function RegistrationStatusBadge({ status, label }: { status: string; label?: string }) {
-  return <Badge variant={REGISTRATION_STATUS_VARIANTS[status] ?? "secondary"}>{label ?? labelize(status)}</Badge>;
+export function RegistrationStatusBadge({
+  status,
+  label,
+  tone,
+}: {
+  status: string;
+  label?: string;
+  tone?: "default" | "secondary" | "success" | "warning" | "destructive" | "outline";
+}) {
+  return <Badge variant={tone ?? REGISTRATION_STATUS_VARIANTS[status] ?? "secondary"}>{label ?? labelize(status)}</Badge>;
 }

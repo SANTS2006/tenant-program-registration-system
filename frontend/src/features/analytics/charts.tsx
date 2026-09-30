@@ -92,7 +92,7 @@ export function RegistrationTrendChart({
   );
 }
 
-export function StatusPieChart({ byStatus, height = 260 }: { byStatus: Record<string, number>; height?: number }) {
+export function StatusPieChart({ byStatus, height = 260, labelFor }: { byStatus: Record<string, number>; height?: number; labelFor?: (status: string) => string }) {
   const { theme, ink } = useChartInk();
   const entries = Object.entries(byStatus).filter(([, count]) => count > 0);
 
@@ -101,7 +101,7 @@ export function StatusPieChart({ byStatus, height = 260 }: { byStatus: Record<st
   }
 
   const data = entries.map(([status, count]) => ({
-    name: status.replace("_", " "),
+    name: labelFor ? labelFor(status) : status.replace("_", " "),
     value: count,
     color: STATUS_COLORS[status]?.[theme] ?? categoricalPalette(theme)[0],
   }));

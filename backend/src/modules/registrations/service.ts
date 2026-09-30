@@ -3,11 +3,13 @@ import type { PaginationInput } from "../../lib/pagination.js";
 import { buildPaginatedResult } from "../../lib/pagination.js";
 import { sendEmail } from "../email/service.js";
 import { registrationConfirmationEmail } from "../email/templates.js";
+import { resolveStatuses } from "../../shared/designs/index.js";
+import { getBusiness } from "../businesses/service.js";
 import * as formsService from "../forms/service.js";
 import { notifyCustomer, notifyNewRegistration } from "../notifications/service.js";
 import * as programsRepo from "../programs/repository.js";
 import * as registrationsRepo from "./repository.js";
-import { orderStatusChoices, programStatusChoices, type ListRegistrationsQuery, type SubmitRegistrationInput, type UpdateStatusInput } from "./schemas.js";
+import { programStatusChoices, type ListRegistrationsQuery, type SubmitRegistrationInput, type UpdateStatusInput } from "./schemas.js";
 import { counterBucket, formatRegistrationNumber, resolveNumberingConfig } from "./numbering.js";
 import { extractApplicantContact, validateAndNormalizeResponses } from "./validation.js";
 
@@ -170,7 +172,9 @@ export async function updateRegistrationStatus(
   if (!registration) throw AppError.notFound("Registration not found");
   const program = await programsRepo.findProgramById(programId);
   if (!program) throw AppError.notFound("Program not found");
-  const allowed: readonly string[] = program.kind === "order_form" ? orderStatusChoices : programStatusChoices;
+  const business = program.kind === "order_form" && program.businessId ? await getBusiness(program.businessId) : null;
+  const orderStatuses = resolveStatuses(business?.statusConfig, "order");
+  const allowed: readonly string[] = program.kind === "order_form" ? orderStatuses.map((s) => s.key) : programStatusChoices;
   if (!allowed.includes(input.status)) throw AppError.validation(`"${input.status}" isn't a valid ${program.kind === "order_form" ? "order" : "registration"} status`);
 
   const updated = await registrationsRepo.updateRegistrationStatus(

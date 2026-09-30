@@ -1,5 +1,5 @@
 import { boolean, index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
-import { registrationStatusEnum, verificationDocumentEnum } from "./enums";
+import { verificationDocumentEnum } from "./enums";
 import { programs } from "./programs";
 import { registrations } from "./registrations";
 import { users } from "./users";
@@ -18,7 +18,7 @@ export const documentVerifications = pgTable(
     documentType: verificationDocumentEnum("document_type").notNull(),
     valid: boolean("valid").notNull(),
     // The registration's status at the moment it was scanned.
-    registrationStatus: registrationStatusEnum("registration_status").notNull(),
+    registrationStatus: text("registration_status").notNull(),
     // Set when a signed-in team member of the program did the scan.
     verifiedBy: uuid("verified_by").references(() => users.id, { onDelete: "set null" }),
     ipAddress: text("ip_address"),

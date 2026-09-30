@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { paginationSchema } from "../../lib/pagination.js";
-import { INVOICE_STATUSES, RECEIPT_STATUSES } from "../../shared/designs/index.js";
+import { STATUS_COLORS } from "../../shared/designs/index.js";
 
 const optionalText = (max: number) =>
   z
@@ -80,9 +80,31 @@ export const saveDocumentSchema = z.object({
   customFields: z.record(z.string().max(40), z.string().max(300)).default({}),
 });
 
-export function statusesFor(kind: "invoice" | "receipt"): readonly string[] {
-  return kind === "invoice" ? INVOICE_STATUSES : RECEIPT_STATUSES;
-}
+const statusList = (required: readonly string[]) =>
+  z
+    .array(
+      z.object({
+        key: z.string().trim().min(1).max(30).regex(/^[a-z0-9_]+$/, "Status keys use lowercase letters, numbers and underscores"),
+        label: z.string().trim().min(1, "Every status needs a name").max(40),
+        color: z.enum(STATUS_COLORS as unknown as [string, ...string[]]),
+      }),
+    )
+    .min(1, "Keep at least one status")
+    .max(20)
+    .superRefine((list, ctx) => {
+      const keys = list.map((s) => s.key);
+      if (new Set(keys).size !== keys.length) ctx.addIssue({ code: "custom", message: "Two statuses have the same name" });
+      for (const key of required) {
+        if (!keys.includes(key)) ctx.addIssue({ code: "custom", message: `The "${key}" status is needed and can't be removed (you can rename it)` });
+      }
+    });
+
+// "submitted" is where every new order starts; invoices and receipts start on their first status.
+export const statusConfigSchema = z.object({
+  order: statusList(["submitted"]),
+  invoice: statusList([]),
+  receipt: statusList([]),
+});
 
 export const listDocumentsQuerySchema = paginationSchema.extend({
   search: z.string().trim().min(1).optional(),

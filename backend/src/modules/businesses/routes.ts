@@ -16,6 +16,7 @@ import {
   listDocumentsQuerySchema,
   saveDocumentSchema,
   sendDocumentSchema,
+  statusConfigSchema,
   updateBusinessSchema,
 } from "./schemas.js";
 import * as businessService from "./service.js";
@@ -47,6 +48,7 @@ async function businessView(request: FastifyRequest, business: businessService.B
     myRole,
     invoiceSettings: businessService.documentSettings(business, "invoice"),
     receiptSettings: businessService.documentSettings(business, "receipt"),
+    statusConfig: businessService.allBusinessStatuses(business),
     orderForm: orderForm
       ? {
           id: orderForm.id,
@@ -111,6 +113,12 @@ export async function businessRoutes(app: FastifyInstance) {
   });
 
   // How invoices and receipts look and which extra fields they ask for.
+  app.put<{ Params: BusinessParams }>("/:businessId/statuses", admin, async (request, reply) => {
+    const business = await businessService.saveStatusConfig(request.params.businessId, statusConfigSchema.parse(request.body));
+    await audit(request, "business.statuses_update", "business", business.id);
+    return sendSuccess(reply, await businessView(request, business), "Statuses saved");
+  });
+
   app.put<{ Params: KindParams }>("/:businessId/settings/:kind", admin, async (request, reply) => {
     const kind = kindOf(request.params.kind);
     const settings = await businessService.saveDocumentSettings(request.params.businessId, kind, documentSettingsSchema.parse(request.body));

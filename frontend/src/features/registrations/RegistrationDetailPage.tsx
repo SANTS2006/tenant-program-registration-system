@@ -123,7 +123,7 @@ export function RegistrationDetailPage() {
                   {downloading === "ticket" ? "Preparing..." : "Ticket"}
                 </Button>
               )}
-              <RegistrationStatusBadge status={registration.status} label={terms.statusLabel(registration.status)} />
+              <RegistrationStatusBadge status={registration.status} label={terms.statusLabel(registration.status)} tone={terms.statusTone?.(registration.status)} />
             </div>
           </CardHeader>
           <CardContent>

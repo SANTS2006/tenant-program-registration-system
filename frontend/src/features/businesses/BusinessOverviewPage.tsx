@@ -19,6 +19,7 @@ import { programKeys } from "../programs/hooks";
 import { deleteBusiness, getOrderShareInfo, updateBusiness, uploadBusinessImage, type Business } from "./api";
 import { businessKeys } from "./BusinessesListPage";
 import { RegistrationNumberCard } from "../programs/RegistrationNumberCard";
+import { StatusSettingsCard } from "./StatusSettingsCard";
 import { useBusinessOutletContext } from "./BusinessLayout";
 
 function useRefresh(business: Business) {
@@ -338,6 +339,7 @@ export function BusinessOverviewPage() {
         <OrderPageCard business={business} canEdit={canEdit} />
         <NotificationsCard business={business} canEdit={canEdit} />
         {canEdit && program && <RegistrationNumberCard program={program} />}
+        {canEdit && <StatusSettingsCard business={business} />}
       </div>
       <div className="flex flex-col gap-6">
         <DetailsCard business={business} canEdit={canEdit} />

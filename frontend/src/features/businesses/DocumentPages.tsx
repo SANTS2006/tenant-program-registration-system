@@ -33,7 +33,8 @@ import {
   type DocumentKind,
 } from "./api";
 import { useBusinessOutletContext } from "./BusinessLayout";
-import { DocumentEditor, draftFromDocument, emptyDraft, STATUS_LABELS, toInput, type DocumentDraft } from "./DocumentEditor";
+import { DocumentEditor, draftFromDocument, emptyDraft, toInput, type DocumentDraft } from "./DocumentEditor";
+import { statusLabel, statusTone } from "./statuses";
 
 const label = (kind: DocumentKind) => (kind === "invoice" ? "Invoice" : "Receipt");
 const docKeys = {
@@ -45,18 +46,9 @@ function settingsFor(business: Business, kind: DocumentKind) {
   return kind === "invoice" ? business.invoiceSettings : business.receiptSettings;
 }
 
-const STATUS_VARIANTS: Record<string, "secondary" | "success" | "warning" | "destructive" | "outline"> = {
-  draft: "secondary",
-  sent: "outline",
-  partially_paid: "warning",
-  paid: "success",
-  cancelled: "destructive",
-  issued: "secondary",
-  void: "destructive",
-};
-
-export function DocumentStatusBadge({ status }: { status: string }) {
-  return <Badge variant={STATUS_VARIANTS[status] ?? "secondary"}>{STATUS_LABELS[status] ?? status}</Badge>;
+export function DocumentStatusBadge({ business, kind, status }: { business: Business; kind: DocumentKind; status: string }) {
+  const defs = business.statusConfig[kind];
+  return <Badge variant={statusTone(defs, status)}>{statusLabel(defs, status)}</Badge>;
 }
 
 // ---------------------------------------------------------------------------
@@ -176,7 +168,7 @@ function DocumentsListPage({ kind }: { kind: DocumentKind }) {
     queryKey: docKeys.list(business.id, kind, params),
     queryFn: () => listDocuments(business.id, kind, params),
   });
-  const statuses = kind === "invoice" ? ["draft", "sent", "partially_paid", "paid", "cancelled"] : ["issued", "sent", "void"];
+  const statuses = business.statusConfig[kind];
   const base = `/admin/businesses/${business.id}/${kindPath(kind)}`;
 
   return (
@@ -229,8 +221,8 @@ function DocumentsListPage({ kind }: { kind: DocumentKind }) {
           <SelectContent>
             <SelectItem value="all">All statuses</SelectItem>
             {statuses.map((s) => (
-              <SelectItem key={s} value={s}>
-                {STATUS_LABELS[s]}
+              <SelectItem key={s.key} value={s.key}>
+                {s.label}
               </SelectItem>
             ))}
           </SelectContent>
@@ -298,7 +290,7 @@ function DocumentsListPage({ kind }: { kind: DocumentKind }) {
                   <td className="whitespace-nowrap px-4 py-3">{new Date(doc.issueDate).toLocaleDateString()}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">{formatMoney(doc.total, doc.currency)}</td>
                   <td className="px-4 py-3">
-                    <DocumentStatusBadge status={doc.status} />
+                    <DocumentStatusBadge business={business} kind={kind} status={doc.status} />
                   </td>
                 </tr>
               ))}
@@ -332,7 +324,7 @@ function LiveDocumentPage({ kind }: { kind: DocumentKind }) {
   usePageMeta({ title: `New ${label(kind).toLowerCase()} · ${business.name}` });
   const settings = settingsFor(business, kind);
   const queryClient = useQueryClient();
-  const [draft, setDraft] = React.useState<DocumentDraft>(() => emptyDraft(kind, settings));
+  const [draft, setDraft] = React.useState<DocumentDraft>(() => emptyDraft(kind, settings, business.statusConfig[kind][0]?.key));
   const [saving, setSaving] = React.useState(false);
   const [lastSaved, setLastSaved] = React.useState<BusinessDocument | null>(null);
   const base = `/admin/businesses/${business.id}/${kindPath(kind)}`;
@@ -345,7 +337,7 @@ function LiveDocumentPage({ kind }: { kind: DocumentKind }) {
       const doc = await createDocument(business.id, kind, input);
       await queryClient.invalidateQueries({ queryKey: ["business-docs", business.id, kind] });
       setLastSaved(doc);
-      setDraft(emptyDraft(kind, settings));
+      setDraft(emptyDraft(kind, settings, business.statusConfig[kind][0]?.key));
       window.scrollTo({ top: 0, behavior: "smooth" });
       toast.success(`${label(kind)} ${doc.number} saved`);
     } catch (err) {
@@ -400,7 +392,7 @@ function LiveDocumentPage({ kind }: { kind: DocumentKind }) {
               <Save className="h-4 w-4" />
               Save {label(kind).toLowerCase()}
             </Button>
-            <Button variant="ghost" onClick={() => setDraft(emptyDraft(kind, settings))} disabled={saving}>
+            <Button variant="ghost" onClick={() => setDraft(emptyDraft(kind, settings, business.statusConfig[kind][0]?.key))} disabled={saving}>
               Clear
             </Button>
           </>
@@ -490,7 +482,7 @@ function DocumentDetailPage({ kind }: { kind: DocumentKind }) {
             <h2 className="text-xl font-semibold">
               {label(kind)} {doc.number}
             </h2>
-            <DocumentStatusBadge status={doc.status} />
+            <DocumentStatusBadge business={business} kind={kind} status={doc.status} />
             {doc.updated && <Badge variant="warning">Updated {doc.editedAt ? new Date(doc.editedAt).toLocaleDateString() : ""}</Badge>}
           </div>
           <p className="text-sm text-muted-foreground">

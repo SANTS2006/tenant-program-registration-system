@@ -6,6 +6,7 @@ import { businesses } from "../../db/schema/index.js";
 import { renderDetailsPdf, type DetailsSection } from "../../lib/detailsPdf.js";
 import { participantFileName } from "../../lib/downloadName.js";
 import { AppError } from "../../lib/errors.js";
+import { resolveStatuses, statusLabelFor } from "../../shared/designs/index.js";
 import * as formsRepo from "../forms/repository.js";
 import { fetchImageDataUri, LOGO_TRANSFORM } from "../idcards/pdf.js";
 import * as programsRepo from "../programs/repository.js";
@@ -37,8 +38,19 @@ export interface SubmissionSummary {
   registrationNumber: string;
   applicantName: string | null;
   status: string;
+  /** The status as its business (or the default wording) names it. */
+  statusLabel: string;
   submittedAt: string;
   sections: { title: string; rows: { label: string; value: string }[] }[];
+}
+
+const humanize = (status: string) => status.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+
+/** An order's status is worded by its business; a registration's is just tidied up. */
+async function statusLabelOf(program: programsRepo.ProgramRow, status: string) {
+  if (program.kind !== "order_form" || !program.businessId) return humanize(status);
+  const [business] = await db.select().from(businesses).where(eq(businesses.id, program.businessId)).limit(1);
+  return statusLabelFor(resolveStatuses(business?.statusConfig, "order"), status);
 }
 
 async function summarize(program: programsRepo.ProgramRow, registration: registrationsRepo.RegistrationRow): Promise<SubmissionSummary> {
@@ -74,6 +86,7 @@ async function summarize(program: programsRepo.ProgramRow, registration: registr
     registrationNumber: registration.registrationNumber,
     applicantName: registration.applicantName,
     status: registration.status,
+    statusLabel: await statusLabelOf(program, registration.status),
     submittedAt: registration.submittedAt.toISOString(),
     sections: grouped.filter((g) => g.rows.length > 0),
   };
@@ -93,9 +106,7 @@ export async function submissionSummaryByToken(token: string) {
   return summarize(program, registration);
 }
 
-function statusLabel(status: string) {
-  return status.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
-}
+
 
 async function summaryPdf(program: programsRepo.ProgramRow, registration: registrationsRepo.RegistrationRow) {
   // An order is headed with its business's name and logo.
@@ -122,7 +133,7 @@ async function summaryPdf(program: programsRepo.ProgramRow, registration: regist
       { label: isOrder ? "Order number" : "Registration number", value: summary.registrationNumber },
       { label: "Submitted", value: `${submitted} UTC` },
       ...(summary.applicantName ? [{ label: "Name", value: summary.applicantName }] : []),
-      { label: "Status", value: statusLabel(summary.status) },
+      { label: "Status", value: summary.statusLabel },
     ],
     sections,
     footer: `${business?.name ?? program.name} - ${summary.registrationNumber}`,

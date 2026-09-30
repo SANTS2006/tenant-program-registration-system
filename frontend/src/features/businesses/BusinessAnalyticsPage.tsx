@@ -1,21 +1,21 @@
 import { useQuery } from "@tanstack/react-query";
 import { ExportButtons } from "@/components/ExportButtons";
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { formatMoney } from "@designs";
+import { formatMoney, type StatusDef } from "@designs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/StatCard";
 import { StatusPieChart } from "../analytics/charts";
 import { ProgramAnalyticsPage } from "../programs/ProgramAnalyticsPage";
 import { getBusinessAnalytics, type DocumentAnalytics } from "./api";
 import { useBusinessOutletContext } from "./BusinessLayout";
-import { STATUS_LABELS } from "./DocumentEditor";
+import { statusLabel } from "./statuses";
 
 function monthLabel(key: string) {
   const [year, month] = key.split("-").map(Number);
   return new Date(Date.UTC(year!, month! - 1, 1)).toLocaleDateString(undefined, { month: "short", year: "2-digit", timeZone: "UTC" });
 }
 
-function StatusTable({ data, currency, kind }: { data: DocumentAnalytics; currency: string; kind: "invoice" | "receipt" }) {
+function StatusTable({ data, currency, kind, defs }: { data: DocumentAnalytics; currency: string; kind: "invoice" | "receipt"; defs: StatusDef[] }) {
   if (data.count === 0) return <p className="text-sm text-muted-foreground">No {kind}s yet.</p>;
   return (
     <table className="w-full text-sm">
@@ -30,7 +30,7 @@ function StatusTable({ data, currency, kind }: { data: DocumentAnalytics; curren
       <tbody>
         {data.byStatus.map((row) => (
           <tr key={row.status} className="border-b border-border/50 last:border-0">
-            <th scope="row" className="py-2 pr-3 text-left font-medium">{STATUS_LABELS[row.status] ?? row.status}</th>
+            <th scope="row" className="py-2 pr-3 text-left font-medium">{statusLabel(defs, row.status)}</th>
             <td className="py-2 pr-3 text-right tabular-nums">{row.count}</td>
             <td className="py-2 pr-3 text-right tabular-nums">{Math.round((row.count / data.count) * 100)}%</td>
             <td className="py-2 text-right tabular-nums">{formatMoney(row.total, currency)}</td>
@@ -94,7 +94,7 @@ export function BusinessAnalyticsPage() {
           </CardHeader>
           <CardContent>
             {data.orders && data.orders.total > 0 ? (
-              <StatusPieChart byStatus={data.orders.byStatus} />
+              <StatusPieChart byStatus={data.orders.byStatus} labelFor={(status) => statusLabel(business.statusConfig.order, status)} />
             ) : (
               <p className="text-sm text-muted-foreground">No orders yet.</p>
             )}
@@ -109,7 +109,7 @@ export function BusinessAnalyticsPage() {
             <CardDescription>{data.invoices.count} in total</CardDescription>
           </CardHeader>
           <CardContent>
-            <StatusTable data={data.invoices} currency={business.currency} kind="invoice" />
+            <StatusTable data={data.invoices} currency={business.currency} kind="invoice" defs={business.statusConfig.invoice} />
           </CardContent>
         </Card>
         <Card>
@@ -118,7 +118,7 @@ export function BusinessAnalyticsPage() {
             <CardDescription>{data.receipts.count} in total</CardDescription>
           </CardHeader>
           <CardContent>
-            <StatusTable data={data.receipts} currency={business.currency} kind="receipt" />
+            <StatusTable data={data.receipts} currency={business.currency} kind="receipt" defs={business.statusConfig.receipt} />
           </CardContent>
         </Card>
         <Card>
