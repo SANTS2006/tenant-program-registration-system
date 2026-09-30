@@ -36,6 +36,7 @@ export function formatRegistrationNumber(config: RegistrationNumberConfig, seque
 }
 
 export function RegistrationNumberCard({ program }: { program: Program }) {
+  const noun = program.kind === "order_form" ? "order" : "registration";
   const updateProgram = useUpdateProgram(program.id);
   const saved = React.useMemo(() => ({ ...DEFAULTS, ...program.registrationNumberConfig }), [program.registrationNumberConfig]);
   const [config, setConfig] = React.useState<RegistrationNumberConfig>(saved);
@@ -59,7 +60,7 @@ export function RegistrationNumberCard({ program }: { program: Program }) {
   const save = async () => {
     try {
       await updateProgram.mutateAsync({ registrationNumberConfig: config });
-      toast.success("Registration number format saved");
+      toast.success(noun === "order" ? "Order number format saved" : "Registration number format saved");
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Failed to save the format");
     }
@@ -70,13 +71,17 @@ export function RegistrationNumberCard({ program }: { program: Program }) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <Hash className="h-4 w-4 text-primary" />
-          Registration numbers
+          {noun === "order" ? "Order numbers" : "Registration numbers"}
         </CardTitle>
-        <CardDescription>Choose how registration numbers look for this program. Changes apply to new registrations.</CardDescription>
+        <CardDescription>
+          {noun === "order"
+            ? "Choose how order numbers look. Changes apply to new orders."
+            : "Choose how registration numbers look for this program. Changes apply to new registrations."}
+        </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
         <div className="rounded-xl border border-border/70 bg-gradient-brand-soft px-5 py-4 text-center">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Registration numbers will look like</p>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">{noun === "order" ? "Order" : "Registration"} numbers will look like</p>
           <p className="gradient-text mt-1 tabular-nums text-xl font-semibold tracking-wide">
             {formatRegistrationNumber(config, 1)}, {formatRegistrationNumber(config, 2)} …
           </p>

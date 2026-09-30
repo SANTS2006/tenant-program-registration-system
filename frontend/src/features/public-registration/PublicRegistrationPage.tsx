@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ApiError } from "@/lib/api";
 import { clearSavedDraft, DynamicForm, type UploadedFileInfo } from "./DynamicForm";
-import { BusinessCoverHeader, FormCoverHeader } from "./FormCoverHeader";
+import { FormCoverHeader } from "./FormCoverHeader";
 import { getPublicForm, getPublicProgram, submitRegistration, uploadPublicFile } from "./api";
 import { usePageMeta } from "@/lib/seo";
 
@@ -76,7 +76,11 @@ export function PublicRegistrationPage({ variant = "registration" }: { variant?:
   return (
     <Card className="overflow-hidden">
       {isOrder && business ? (
-        <BusinessCoverHeader business={business} />
+        <FormCoverHeader
+          name={business.name}
+          thumbnailUrl={business.logoUrl}
+          description={[business.description, [business.phone, business.email, business.address].filter(Boolean).join(" · ")].filter(Boolean).join("\n\n")}
+        />
       ) : (
         program && <FormCoverHeader name={program.name} thumbnailUrl={program.thumbnailUrl} description={program.description} />
       )}

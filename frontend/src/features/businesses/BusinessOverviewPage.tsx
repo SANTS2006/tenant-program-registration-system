@@ -18,6 +18,7 @@ import { closeRegistration, reopenRegistration, updateProgram } from "../program
 import { programKeys } from "../programs/hooks";
 import { deleteBusiness, getOrderShareInfo, updateBusiness, uploadBusinessImage, type Business } from "./api";
 import { businessKeys } from "./BusinessesListPage";
+import { RegistrationNumberCard } from "../programs/RegistrationNumberCard";
 import { useBusinessOutletContext } from "./BusinessLayout";
 
 function useRefresh(business: Business) {
@@ -329,13 +330,14 @@ function DeleteCard({ business }: { business: Business }) {
 }
 
 export function BusinessOverviewPage() {
-  const { business } = useBusinessOutletContext();
+  const { business, program } = useBusinessOutletContext();
   const canEdit = business.myRole === "admin";
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <div className="flex flex-col gap-6">
         <OrderPageCard business={business} canEdit={canEdit} />
         <NotificationsCard business={business} canEdit={canEdit} />
+        {canEdit && program && <RegistrationNumberCard program={program} />}
       </div>
       <div className="flex flex-col gap-6">
         <DetailsCard business={business} canEdit={canEdit} />
