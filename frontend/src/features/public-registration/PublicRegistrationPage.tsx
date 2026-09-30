@@ -101,8 +101,9 @@ export function PublicRegistrationPage({ variant = "registration" }: { variant?:
           onUploadFile={(file, fieldKey) => uploadPublicFile(slug!, fieldKey, file)}
           onSubmit={handleSubmit}
           storageKey={draftKey}
+          reviewBeforeSubmit={isOrder}
           onCancel={isOrder ? undefined : () => navigate(`/programs/${slug}`)}
-          submitLabel={isOrder ? "Place order" : undefined}
+          submitLabel={isOrder ? "Confirm and place order" : undefined}
         />
       </CardContent>
     </Card>

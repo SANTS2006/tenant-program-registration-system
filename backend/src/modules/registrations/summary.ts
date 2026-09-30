@@ -40,23 +40,27 @@ export interface SubmissionSummary {
   status: string;
   /** The status as its business (or the default wording) names it. */
   statusLabel: string;
+  /** "order_form" for a business's order, otherwise a program registration. */
+  kind: "program" | "order_form";
+  /** For an order: who it was placed with, so the printed copy can carry their name and colour. */
+  business: { name: string; logoUrl: string | null; accentColor: string } | null;
   submittedAt: string;
   sections: { title: string; rows: { label: string; value: string }[] }[];
 }
 
 const humanize = (status: string) => status.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
 
-/** An order's status is worded by its business; a registration's is just tidied up. */
-async function statusLabelOf(program: programsRepo.ProgramRow, status: string) {
-  if (program.kind !== "order_form" || !program.businessId) return humanize(status);
+async function orderBusiness(program: programsRepo.ProgramRow) {
+  if (program.kind !== "order_form" || !program.businessId) return null;
   const [business] = await db.select().from(businesses).where(eq(businesses.id, program.businessId)).limit(1);
-  return statusLabelFor(resolveStatuses(business?.statusConfig, "order"), status);
+  return business ?? null;
 }
 
 async function summarize(program: programsRepo.ProgramRow, registration: registrationsRepo.RegistrationRow): Promise<SubmissionSummary> {
-  const [{ sections, fields }, files] = await Promise.all([
+  const [{ sections, fields }, files, business] = await Promise.all([
     formsRepo.getContent(registration.formId),
     registrationsRepo.getRegistrationFiles(registration.id),
+    orderBusiness(program),
   ]);
   const responses = (registration.responses as Record<string, unknown>) ?? {};
 
@@ -86,7 +90,10 @@ async function summarize(program: programsRepo.ProgramRow, registration: registr
     registrationNumber: registration.registrationNumber,
     applicantName: registration.applicantName,
     status: registration.status,
-    statusLabel: await statusLabelOf(program, registration.status),
+    // An order's status is worded by its business; a registration's is just tidied up.
+    statusLabel: business ? statusLabelFor(resolveStatuses(business.statusConfig, "order"), registration.status) : humanize(registration.status),
+    kind: program.kind === "order_form" ? "order_form" : "program",
+    business: business ? { name: business.name, logoUrl: business.logoUrl, accentColor: business.brandColor } : null,
     submittedAt: registration.submittedAt.toISOString(),
     sections: grouped.filter((g) => g.rows.length > 0),
   };

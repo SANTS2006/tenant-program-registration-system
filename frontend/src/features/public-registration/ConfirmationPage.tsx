@@ -114,7 +114,7 @@ export function ConfirmationPage({ variant = "registration" }: { variant?: "regi
               ? "Thank you for your order. We've emailed you a confirmation and will let you know as it progresses."
               : "Thank you for registering. We've received your submission.")}
         </p>
-        {result.showRegistrationNumber !== false && (
+        {(isOrder || result.showRegistrationNumber !== false) && (
           <div className="rounded-xl border border-border/70 bg-gradient-brand-soft px-6 py-3">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">{isOrder ? "Order Number" : "Registration Number"}</p>
             <p className="gradient-text text-lg font-semibold tracking-wide">{result.registrationNumber}</p>
@@ -172,7 +172,7 @@ export function ConfirmationPage({ variant = "registration" }: { variant?: "regi
             )}
           </div>
         )}
-        {result.receiptToken && <SubmissionDetails token={result.receiptToken} heading={isOrder ? "Your order details" : undefined} />}
+        {result.receiptToken && <SubmissionDetails token={result.receiptToken} heading={isOrder ? "Your order details" : undefined} variant={variant} />}
       </CardContent>
     </Card>
   );

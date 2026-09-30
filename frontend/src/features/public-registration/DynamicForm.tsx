@@ -34,6 +34,8 @@ interface DynamicFormProps {
   requireReviewConfirmation?: boolean;
   /** When set, answers are kept in this browser so a refresh doesn't lose them; cleared on submit or "Clear form". */
   storageKey?: string;
+  /** Shows a summary of the answers to confirm before the form is actually submitted. */
+  reviewBeforeSubmit?: boolean;
 }
 
 interface SavedDraft {
@@ -181,6 +183,7 @@ export function DynamicForm({
   onCancel,
   requireReviewConfirmation = true,
   storageKey,
+  reviewBeforeSubmit = false,
 }: DynamicFormProps) {
   const orderedSections = [...sections].sort((a, b) => a.orderIndex - b.orderIndex);
   const hasSections = orderedSections.length > 0;
@@ -195,6 +198,7 @@ export function DynamicForm({
   const [uploadingKey, setUploadingKey] = React.useState<string | null>(null);
   const [stepErrors, setStepErrors] = React.useState<string[]>([]);
   const [reviewConfirmed, setReviewConfirmed] = React.useState(false);
+  const [reviewing, setReviewing] = React.useState(false);
 
   const fieldsBySection = (sectionId: string | null) =>
     fields.filter((f) => f.sectionId === sectionId).sort((a, b) => a.orderIndex - b.orderIndex);
@@ -315,6 +319,15 @@ export function DynamicForm({
       setStepErrors([REVIEW_REQUIRED_MESSAGE]);
       return;
     }
+    if (reviewBeforeSubmit && !reviewing) {
+      setReviewing(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    await submitNow();
+  };
+
+  const submitNow = async () => {
     // Files from a follow-up box the person has since switched away from are not sent.
     const files = Object.entries(uploadedFiles)
       .filter(([key]) => {
@@ -626,6 +639,75 @@ export function DynamicForm({
 
   const combinedErrors = [...(errors ?? []), ...stepErrors];
 
+  /** What the person entered for a question, as plain text for the review screen. */
+  const answerText = (field: FormField): string => {
+    if (FILE_TYPES.has(field.type)) return uploadedFiles[field.fieldKey]?.filename ?? "";
+    const value = responses[field.fieldKey];
+    const extra = String(responses[otherTextKey(field.fieldKey)] ?? "").trim();
+    const followUpFile = uploadedFiles[otherTextKey(field.fieldKey)]?.filename;
+    if (isEmpty(value)) return "";
+    const pieces = (Array.isArray(value) ? value.map(String) : [typeof value === "boolean" ? (value ? "Yes" : "No") : String(value)]).map((v) =>
+      isOtherOption(v) && extra ? `${v}: ${extra}` : v,
+    );
+    let text = pieces.join(", ");
+    if (!Array.isArray(value) && extra && !isOtherOption(String(value))) text += `: ${extra}`;
+    if (followUpFile) text += ` [file: ${followUpFile}]`;
+    return text;
+  };
+
+  if (reviewing) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-xl font-semibold">Check your answers</h2>
+          <p className="text-sm text-muted-foreground">Look everything over. If something is wrong, go back and fix it before you confirm.</p>
+        </div>
+        {combinedErrors.length > 0 && (
+          <div role="alert" className="flex flex-col gap-1 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+            <div className="flex items-center gap-2 font-medium">
+              <AlertCircle className="h-4 w-4" />
+              Please fix the following
+            </div>
+            <ul className="list-disc pl-6">
+              {combinedErrors.map((err, i) => (
+                <li key={i}>{err}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {groups.map((group) => {
+          const rows = group.fields
+            .filter((f) => isVisible(f, responses))
+            .map((f) => ({ label: f.label, value: answerText(f) }))
+            .filter((row) => row.value !== "");
+          if (rows.length === 0) return null;
+          return (
+            <div key={group.id ?? "unassigned"} className="flex flex-col gap-2">
+              {hasSections && <h3 className="text-xs font-semibold uppercase tracking-wide text-primary">{group.title}</h3>}
+              <dl className="divide-y divide-border/60 rounded-lg border border-border/60">
+                {rows.map((row, i) => (
+                  <div key={`${row.label}-${i}`} className="grid gap-1 px-3 py-2 text-sm sm:grid-cols-[40%_1fr] sm:gap-3">
+                    <dt className="text-muted-foreground">{row.label}</dt>
+                    <dd className="whitespace-pre-line break-words font-medium">{row.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          );
+        })}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Button type="button" variant="outline" onClick={() => setReviewing(false)} disabled={submitting}>
+            <ChevronLeft className="h-4 w-4" />
+            Edit my answers
+          </Button>
+          <Button type="button" onClick={() => void submitNow()} loading={submitting}>
+            {submitting ? "Submitting..." : (submitLabel ?? "Confirm and submit")}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
       {!isSingle && steps.length > 1 && (
@@ -717,7 +799,7 @@ export function DynamicForm({
           </Button>
           {isSingle || isLastStep ? (
             <Button type="submit" loading={submitting}>
-              {submitting ? "Submitting..." : (submitLabel ?? "Submit registration")}
+              {reviewBeforeSubmit ? "Review your answers" : submitting ? "Submitting..." : (submitLabel ?? "Submit registration")}
             </Button>
           ) : (
             <Button type="button" onClick={handleNext}>
