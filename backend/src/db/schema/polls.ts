@@ -154,7 +154,7 @@ export const pollVotes = pgTable(
     voterId: uuid("voter_id")
       .notNull()
       .references(() => voterAccounts.id, { onDelete: "cascade" }),
-    // "<position>:<voter>" when each voter may vote once per position, otherwise unique per vote,
+    // "<position>:e:<canonical email>" when each email may vote once per position, otherwise unique per vote,
     // so the database itself refuses a second vote even if two arrive at the same moment.
     ballotKey: text("ballot_key").notNull(),
     ipAddress: text("ip_address"),

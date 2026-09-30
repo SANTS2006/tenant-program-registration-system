@@ -3,6 +3,7 @@ import { AppError } from "../../lib/errors.js";
 import { sendSuccess } from "../../lib/response.js";
 import { getDashboardTrendHandler } from "../analytics/controller.js";
 import { getInsights } from "./insights.js";
+import { getModuleInsights } from "./modules.js";
 import { getOverview } from "./service.js";
 import { date, exportFormatSchema, sendTableExport, type ExportSheet } from "../../lib/tableExport.js";
 
@@ -16,13 +17,17 @@ export async function dashboardRoutes(app: FastifyInstance) {
     if (!request.user) throw AppError.unauthorized();
     return sendSuccess(reply, await getInsights(request.user));
   });
+  app.get("/modules", async (request, reply) => {
+    if (!request.user) throw AppError.unauthorized();
+    return sendSuccess(reply, await getModuleInsights(request.user));
+  });
   app.get("/analytics/trend", getDashboardTrendHandler);
 
   // The dashboard's tables as a download: program performance, recent registrations, recent scans.
   app.get("/export", async (request, reply) => {
     if (!request.user) throw AppError.unauthorized();
     const { format } = exportFormatSchema.parse(request.query);
-    const insights = await getInsights(request.user);
+    const [insights, modules] = await Promise.all([getInsights(request.user), getModuleInsights(request.user)]);
     type Insights = typeof insights;
     const programs: ExportSheet<Insights["programs"][number]> = {
       name: "Programs",
@@ -61,6 +66,28 @@ export async function dashboardRoutes(app: FastifyInstance) {
         { label: "Scanned by", value: (s) => s.verifiedByName ?? "Not signed in" },
       ],
     };
-    return sendTableExport(reply, format, "Dashboard", [programs, registrations, scans]);
+    const pollSheet: ExportSheet<(typeof modules)["polls"]["top"][number]> = {
+      name: "Polls",
+      rows: modules.polls.top,
+      columns: [
+        { label: "Poll", value: (p) => p.name },
+        { label: "State", value: (p) => p.state },
+        { label: "Positions", value: (p) => p.positions },
+        { label: "People who voted", value: (p) => p.voters },
+        { label: "Votes cast", value: (p) => p.votes },
+        { label: "Closes", value: (p) => date(p.closesAt) },
+      ],
+    };
+    const businessSheet: ExportSheet<(typeof modules)["businesses"]["top"][number]> = {
+      name: "Businesses",
+      rows: modules.businesses.top,
+      columns: [
+        { label: "Business", value: (b) => b.name },
+        { label: "Orders", value: (b) => b.orders },
+        { label: "Invoices", value: (b) => b.invoices },
+        { label: "Receipts", value: (b) => b.receipts },
+      ],
+    };
+    return sendTableExport(reply, format, "Dashboard", [programs, registrations, scans, pollSheet, businessSheet]);
   });
 }

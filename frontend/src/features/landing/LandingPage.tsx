@@ -28,9 +28,9 @@ import { usePageMeta } from "@/lib/seo";
 const NAV = [
   { href: "#features", label: "Features" },
   { href: "#how-it-works", label: "How it works" },
+  { href: "#voting", label: "Voting" },
+  { href: "#businesses", label: "Businesses" },
   { href: "#designs", label: "Designs" },
-  { href: "#analytics", label: "Analytics" },
-  { href: "#security", label: "Security" },
   { href: "#faq", label: "FAQ" },
   { href: "/contact", label: "Contact" },
 ];
@@ -206,8 +206,8 @@ function Hero() {
           </Reveal>
           <Reveal delay={240}>
             <p className="max-w-xl text-lg text-muted-foreground">
-              Build registration forms, share them with a link or QR code, review every application, and issue ID cards
-              and tickets from a single, secure workspace for your organization.
+              Build registration forms, run voting polls, take orders, and send invoices and receipts. Share everything with a link or
+              QR code, review every response, and issue ID cards and tickets from a single, secure workspace.
             </p>
           </Reveal>
           <Reveal delay={360} className="flex flex-wrap gap-3">
@@ -359,10 +359,10 @@ export function LandingPage() {
             eyebrow="Features"
             title={
               <>
-                Everything you need to <span className="gradient-text">run registrations</span>
+                Everything you need to <span className="gradient-text">run your programs</span>
               </>
             }
-            description="One platform for the whole journey, from designing the form to exporting the final list of participants."
+            description="One platform for the whole journey: registrations, voting polls, orders, invoices, and receipts, from building the form to exporting the final list."
           />
           <FeaturesGrid />
         </Section>

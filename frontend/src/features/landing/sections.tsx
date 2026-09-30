@@ -25,6 +25,12 @@ import {
   Share2,
   ShieldCheck,
   Smartphone,
+  ShoppingBag,
+  Receipt,
+  Vote,
+  Store,
+  FileText,
+  Palette,
   Sparkles,
   Ticket,
   UserCog,
@@ -35,6 +41,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Reveal, Tilt } from "./motion";
 import { AnalyticsMock, FormBuilderMock, VerificationsMock } from "./visuals";
+import { BusinessMock, PollsMock } from "./moduleVisuals";
 import { DocumentsShowcase } from "./lazyShowcase";
 
 export function SectionHeading({
@@ -70,8 +77,8 @@ export function SectionHeading({
 export const CAPABILITIES = [
   { value: "23", label: "question types, from text to file uploads" },
   { value: "50+", label: "ready-made ID card and ticket designs" },
-  { value: "3", label: "team roles with per-program access" },
-  { value: "Excel", label: "& CSV exports, ready to share" },
+  { value: "Live", label: "voting polls with results as votes come in" },
+  { value: "PDF", label: "invoices and receipts, emailed to your clients" },
 ];
 
 const FEATURES: { icon: LucideIcon; title: string; description: string }[] = [
@@ -149,6 +156,46 @@ const FEATURES: { icon: LucideIcon; title: string; description: string }[] = [
     icon: Gauge,
     title: "Live check-in numbers",
     description: "See total scans, people verified, scans today, and invalid attempts at a glance while your event is running.",
+  },
+  {
+    icon: Vote,
+    title: "Voting polls",
+    description: "Run elections with positions and candidates (with photos). Share one link for the whole poll or a link for each position, with QR codes.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "One vote per person",
+    description: "Voters confirm their email, each email can vote once, and you can limit voting to your own email domain. Ballots stay secret.",
+  },
+  {
+    icon: BarChart3,
+    title: "Live results",
+    description: "Watch percentages and places update as votes arrive, then export the results and the list of who voted.",
+  },
+  {
+    icon: Store,
+    title: "Businesses & order forms",
+    description: "Give every business its own branded order page. Customers fill in the form, review their answers, and get a confirmation with their order number.",
+  },
+  {
+    icon: ShoppingBag,
+    title: "Order tracking",
+    description: "Move orders through your own statuses, like New, Preparing, and Ready, and each customer is emailed at every step.",
+  },
+  {
+    icon: FileText,
+    title: "Invoices",
+    description: "Create invoices in seconds with three layouts, your colors, tax, and extra fields. Download them or email a PDF to the client.",
+  },
+  {
+    icon: Receipt,
+    title: "Receipts",
+    description: "Issue receipts for payments received, edit them any time (they show as Updated), and save them as a PDF or a picture.",
+  },
+  {
+    icon: Palette,
+    title: "Your words and colors",
+    description: "Name your own order, invoice, and receipt statuses, set your own order numbers, and keep your logo on everything customers see.",
   },
 ];
 
@@ -349,6 +396,43 @@ export function Spotlights() {
         }
         reverse
       />
+      <Spotlight
+        id="voting"
+        eyebrow="Voting polls"
+        title="Elections people can trust, with results in real time"
+        description="Build a ballot of positions and candidates, open voting, and share a link or QR code. Voters sign in with a confirmed email, vote once, and everyone can follow the standings live."
+        points={[
+          "Positions and candidates with photos, and a link for the whole poll or for one position",
+          "One vote per email, enforced by the system, with optional email-domain limits",
+          "Sign up or sign in with email and password or Google, with a forgot-password flow",
+          "Automatic closing time, live percentages and places, and a clear “You've already voted” message",
+          "Secret ballots: admins see who voted, never who they voted for",
+        ]}
+        visual={
+          <Tilt max={6} innerClassName="rounded-2xl">
+            <PollsMock />
+          </Tilt>
+        }
+      />
+      <Spotlight
+        id="businesses"
+        eyebrow="Businesses"
+        title="Orders, invoices, and receipts for every business"
+        description="Add a business and it gets its own order page built with the same form builder, plus invoices and receipts that carry its name, logo, and colors."
+        points={[
+          "A live order page with your form, an answers review, and a printable order with its number and status",
+          "Your own statuses and order numbers, with a branded email to the customer at each step",
+          "Invoices and receipts with three layouts, tax, extra fields, PDF and image downloads",
+          "Email an invoice or receipt to the client with the PDF attached",
+          "Analytics for orders, amounts invoiced, and top clients, all exportable to Excel or CSV",
+        ]}
+        visual={
+          <Tilt max={6} innerClassName="rounded-2xl">
+            <BusinessMock />
+          </Tilt>
+        }
+        reverse
+      />
     </div>
   );
 }
@@ -457,6 +541,9 @@ export const USE_CASES = [
   "Conferences & events",
   "Recruitment drives",
   "Community & NGO programs",
+  "Student and club elections",
+  "Shops and small businesses",
+  "Order taking and invoicing",
 ];
 
 export const EXPERIENCE: { icon: LucideIcon; label: string }[] = [
@@ -491,8 +578,16 @@ const FAQS = [
     a: "Invite teammates from the Team page as a program admin or viewer. They receive an email with their sign-in details, and you choose which programs each person can access.",
   },
   {
+    q: "How do voting polls keep votes fair and private?",
+    a: "Voters create a voter account and confirm their email with a code. When one vote per email is on, the system refuses a second vote for the same position, even from an address written a different way. Admins can see who voted, but never which candidate they chose.",
+  },
+  {
+    q: "What can a business do on the platform?",
+    a: "Each business gets an order page, order tracking with your own statuses, and branded invoices and receipts. Customers are emailed a confirmation and updates, and invoices and receipts can be emailed as PDFs or downloaded as pictures.",
+  },
+  {
     q: "Can I get my data out?",
-    a: "Anytime. Export registrations to Excel or CSV, either all of them or filtered by status, date, or search, and download any uploaded file.",
+    a: "Anytime. Every table, including registrations, orders, invoices, receipts, poll results, and voters, can be exported to Excel or CSV, and any uploaded file can be downloaded.",
   },
 ];
 

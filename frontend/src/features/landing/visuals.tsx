@@ -12,7 +12,7 @@ const STATUS_STYLES: Record<string, string> = {
   Submitted: "bg-sky-500/15 text-sky-600 dark:text-sky-400",
 };
 
-function BrowserFrame({ children, className }: { children: React.ReactNode; className?: string }) {
+export function BrowserFrame({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
     <div className={cn("overflow-hidden rounded-2xl border border-border/70 bg-card shadow-2xl shadow-blue-500/10", className)}>
       <div className="flex items-center gap-1.5 border-b border-border/70 bg-muted/50 px-4 py-2.5">

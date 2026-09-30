@@ -26,6 +26,7 @@ import { getDashboardTrend } from "../analytics/api";
 import { CATEGORICAL_LIGHT } from "../analytics/palette";
 import { DocumentBadge, ResultBadge } from "../verifications/VerificationsPage";
 import { getDashboardInsights, type DashboardInsights } from "./insights";
+import { ModuleSections } from "./ModuleSections";
 import type { DashboardOverview } from "@/types/api";
 import { useAuth } from "@/app/AuthContext";
 import { usePageMeta } from "@/lib/seo";
@@ -233,7 +234,7 @@ export function DashboardPage() {
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
             Welcome back, <span className="gradient-text">{user?.name.split(" ")[0]}</span>
           </h1>
-          <p className="text-sm text-muted-foreground">Here's what's happening across your programs.</p>
+          <p className="text-sm text-muted-foreground">Here's what's happening across your programs, polls, and businesses.</p>
         </div>
         <ExportButtons path="/dashboard/export" fileLabel="Dashboard" />
       </div>
@@ -287,6 +288,8 @@ export function DashboardPage() {
           </div>
         </>
       )}
+
+      <ModuleSections />
 
       {insights && (
         <>

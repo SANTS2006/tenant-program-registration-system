@@ -2,9 +2,9 @@ import * as React from "react";
 import { useLocation } from "react-router-dom";
 
 export const SITE_NAME = "Program Registration Platform";
-const DEFAULT_TITLE = `${SITE_NAME} | Registration forms, applicants, ID cards and tickets`;
+const DEFAULT_TITLE = `${SITE_NAME} | Registrations, voting polls, orders and invoices`;
 const DEFAULT_DESCRIPTION =
-  "Build registration forms, share them by link or QR code, manage applicants, and issue ID cards and tickets from one secure platform.";
+  "Build registration forms, run voting polls, take orders, send invoices and receipts, and issue ID cards and tickets from one secure platform.";
 
 export interface PageMeta {
   /** The page's own title; the site name is added after it. */
