@@ -5,6 +5,7 @@ import QRCode from "qrcode";
 import { toast } from "sonner";
 import { ArrowLeft, Download, FileDown, ImageDown, Mail, Plus, Printer, Save, Search, Trash2, IdCard } from "lucide-react";
 import { CARD_TEMPLATES, cardTemplateInfo, renderBusinessCard, type CardContent as BusinessCardContent, type CardTemplate } from "@designs";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ExportButtons } from "@/components/ExportButtons";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -347,6 +348,7 @@ function CardEditorPage({ mode }: { mode: "new" | "edit" }) {
   const [saving, setSaving] = React.useState(false);
   const [uploading, setUploading] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
+  const [confirmDelete, setConfirmDelete] = React.useState(false);
   const canDelete = business.myRole === "admin";
   React.useEffect(() => {
     if (existing) setInput(cardInputOf(existing));
@@ -393,7 +395,7 @@ function CardEditorPage({ mode }: { mode: "new" | "edit" }) {
   };
 
   const remove = async () => {
-    if (!cardId || !window.confirm("Delete this card?")) return;
+    if (!cardId) return;
     setDeleting(true);
     try {
       await deleteCard(business.id, cardId);
@@ -403,6 +405,7 @@ function CardEditorPage({ mode }: { mode: "new" | "edit" }) {
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Failed to delete the card");
       setDeleting(false);
+      setConfirmDelete(false);
     }
   };
 
@@ -421,7 +424,7 @@ function CardEditorPage({ mode }: { mode: "new" | "edit" }) {
         <div className="flex flex-wrap items-center gap-2">
           {existing && <CardActions business={business} card={existing} />}
           {mode === "edit" && canDelete && (
-            <Button variant="outline" onClick={remove} loading={deleting} aria-label="Delete card">
+            <Button variant="outline" onClick={() => setConfirmDelete(true)} aria-label="Delete card">
               <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
           )}
@@ -548,6 +551,15 @@ function CardEditorPage({ mode }: { mode: "new" | "edit" }) {
           {mode === "new" && <p className="text-xs text-muted-foreground">Save the card to print it, download it, or email it.</p>}
         </div>
       </div>
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={`Delete ${input.name || "this card"}?`}
+        description="The card is removed from your list. Copies you have already printed, downloaded or emailed are not affected."
+        confirmLabel="Delete card"
+        busy={deleting}
+        onConfirm={remove}
+      />
     </div>
   );
 }

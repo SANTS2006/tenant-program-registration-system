@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Crown, Mail, Trash2, UserPlus, Users } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -73,13 +74,20 @@ export function MembersCard({ kind, id, currentUserId }: { kind: AccessKind; id:
     }
   };
 
-  const remove = async (person: Person) => {
-    if (!window.confirm(`Remove ${person.name}'s access to this ${noun}?`)) return;
+  const [toRemove, setToRemove] = React.useState<Person | null>(null);
+  const [removing, setRemoving] = React.useState(false);
+
+  const remove = async () => {
+    if (!toRemove) return;
+    setRemoving(true);
     try {
-      set(await apiFetch<Person[]>(`${path}/${person.userId}`, { method: "DELETE" }));
+      set(await apiFetch<Person[]>(`${path}/${toRemove.userId}`, { method: "DELETE" }));
       toast.success("Access removed");
+      setToRemove(null);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Couldn't remove access");
+    } finally {
+      setRemoving(false);
     }
   };
 
@@ -166,7 +174,7 @@ export function MembersCard({ kind, id, currentUserId }: { kind: AccessKind; id:
                     <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button variant="ghost" size="icon" aria-label={`Remove ${person.name}`} onClick={() => void remove(person)}>
+                <Button variant="ghost" size="icon" aria-label={`Remove ${person.name}`} onClick={() => setToRemove(person)}>
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               </div>
@@ -175,6 +183,15 @@ export function MembersCard({ kind, id, currentUserId }: { kind: AccessKind; id:
         ))}
         {data && data.length === 0 && <p className="text-sm text-muted-foreground">Only you so far.</p>}
       </CardContent>
+      <ConfirmDialog
+        open={!!toRemove}
+        onOpenChange={(open) => !open && setToRemove(null)}
+        title={`Remove ${toRemove?.name ?? "this person"}'s access?`}
+        description={`They will no longer be able to open this ${noun}. Their account and anything else they have access to stays as it is, and you can give them access again later.`}
+        confirmLabel="Remove access"
+        busy={removing}
+        onConfirm={remove}
+      />
     </Card>
   );
 }
