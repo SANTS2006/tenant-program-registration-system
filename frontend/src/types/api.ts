@@ -117,6 +117,13 @@ export interface FieldConfig {
   optionsDependOn?: { fieldKey: string; map: Record<string, string[]> };
   currencyCode?: string;
   maxRating?: number;
+  /** Dates: earliest and latest allowed (YYYY-MM-DD or "today"); dates of birth can also limit age. */
+  minDate?: string;
+  maxDate?: string;
+  minAge?: number;
+  maxAge?: number;
+  /** Fill this field from another field's answer until the person types in it. */
+  autoFillFrom?: string;
   /** Multiple choice: the most options a person may tick. */
   maxSelections?: number;
   /** Choices that ask for more: option (or "Yes"/"No") -> what to ask for. */

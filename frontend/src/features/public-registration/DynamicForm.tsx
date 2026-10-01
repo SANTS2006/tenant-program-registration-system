@@ -164,6 +164,87 @@ function initialResponses(fields: FormField[]): Record<string, unknown> {
   return pruneDependentAnswers(fields, responses);
 }
 
+const DAY_MS = 86_400_000;
+const pad = (n: number) => String(n).padStart(2, "0");
+const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+/** The earliest and latest day a date field accepts right now, from its limits and (for birth dates) age range. */
+function dateBounds(field: FormField): { min?: string; max?: string } {
+  const { minDate, maxDate, minAge, maxAge } = field.config;
+  const today = new Date();
+  const resolve = (v: string | undefined) => (v === "today" ? ymd(today) : v);
+  let min = resolve(minDate);
+  let max = resolve(maxDate);
+  if (field.type === "date_of_birth") {
+    if (typeof minAge === "number") {
+      const youngest = new Date(today.getFullYear() - minAge, today.getMonth(), today.getDate());
+      const day = ymd(youngest);
+      if (!max || day < max) max = day;
+    }
+    if (typeof maxAge === "number") {
+      const oldest = new Date(today.getFullYear() - maxAge - 1, today.getMonth(), today.getDate() + 1);
+      const day = ymd(oldest);
+      if (!min || day > min) min = day;
+    }
+  }
+  return { min, max };
+}
+
+function dateProblem(field: FormField, value: unknown): string | null {
+  if (!["date", "date_of_birth", "datetime"].includes(field.type) || typeof value !== "string" || !value) return null;
+  const day = value.slice(0, 10);
+  const { min, max } = dateBounds(field);
+  if (min && day < min) return `${field.label} can't be earlier than ${min}`;
+  if (max && day > max) return `${field.label} can't be later than ${max}`;
+  return null;
+}
+
+/** An answer copied from another field, in the shape the target field expects (or undefined to leave it empty). */
+function autoFillValue(target: FormField, source: unknown): unknown {
+  if (isEmpty(source)) return undefined;
+  const options = target.config.options ?? [];
+  switch (target.type) {
+    case "multiple_choice": {
+      const list = (Array.isArray(source) ? source : [source]).map(String);
+      return list.filter((v) => !options.length || options.includes(v));
+    }
+    case "single_choice":
+    case "dropdown":
+    case "gender":
+    case "country": {
+      const value = Array.isArray(source) ? String(source[0] ?? "") : String(source);
+      return !options.length || options.includes(value) ? value : undefined;
+    }
+    case "yes_no":
+      return typeof source === "boolean" ? source : undefined;
+    case "number":
+    case "currency":
+    case "rating":
+      return Number.isNaN(Number(source)) ? undefined : Number(source);
+    default:
+      return Array.isArray(source) ? source.join(", ") : typeof source === "boolean" ? (source ? "Yes" : "No") : String(source);
+  }
+}
+
+/** Copies a changed answer into every untouched field set to follow it, and onward through chains. */
+function applyAutoFill(fields: FormField[], responses: Record<string, unknown>, changedKey: string, touched: Set<string>) {
+  let next = responses;
+  const queue = [changedKey];
+  for (let guard = 0; queue.length && guard < 100; guard++) {
+    const source = queue.shift()!;
+    for (const field of fields) {
+      if (field.config.autoFillFrom !== source || touched.has(field.fieldKey)) continue;
+      const value = autoFillValue(field, next[source]);
+      if (JSON.stringify(value) === JSON.stringify(next[field.fieldKey])) continue;
+      next = { ...next };
+      if (value === undefined) delete next[field.fieldKey];
+      else next[field.fieldKey] = value;
+      queue.push(field.fieldKey);
+    }
+  }
+  return next;
+}
+
 function chosenOptions(value: unknown): string[] {
   if (Array.isArray(value)) return value.map(String);
   return typeof value === "string" ? [value] : [];
@@ -233,6 +314,7 @@ export function DynamicForm({
   // Empties every answer and upload at once, and returns to the first step.
   const clearForm = () => {
     clearSavedDraft(storageKey);
+    touched.current.clear();
     setResponses({});
     setUploadedFiles({});
     setStepErrors([]);
@@ -240,8 +322,20 @@ export function DynamicForm({
     setReviewConfirmed(false);
   };
 
-  const setValue = (key: string, value: unknown) =>
-    setResponses((r) => pruneDependentAnswers(fields, { ...r, [key]: value }));
+  // Questions the person has typed in themselves no longer follow the question they copy from.
+  const touched = React.useRef<Set<string>>(
+    new Set(
+      fields
+        .filter((f) => f.config.autoFillFrom && draft && !isEmpty(draft.responses[f.fieldKey]))
+        .filter((f) => JSON.stringify(autoFillValue(f, draft!.responses[f.config.autoFillFrom!])) !== JSON.stringify(draft!.responses[f.fieldKey]))
+        .map((f) => f.fieldKey),
+    ),
+  );
+
+  const setValue = (key: string, value: unknown) => {
+    touched.current.add(key);
+    setResponses((r) => pruneDependentAnswers(fields, applyAutoFill(fields, { ...r, [key]: value }, key, touched.current)));
+  };
 
   const handleFileChange = async (field: FormField, file: File | undefined) => {
     if (!file || !onUploadFile) return;
@@ -277,6 +371,11 @@ export function DynamicForm({
       const isFile = field.type.endsWith("_upload");
       const hasValue = isFile ? !!uploadedFiles[field.fieldKey] : !isEmpty(responses[field.fieldKey]);
       if (!hasValue) missing.push(`${field.label} is required`);
+    }
+    for (const field of fieldsToCheck) {
+      if (!isVisible(field, responses)) continue;
+      const problem = dateProblem(field, responses[field.fieldKey]);
+      if (problem) missing.push(problem);
     }
     for (const field of fieldsToCheck) {
       if (!isVisible(field, responses)) continue;
@@ -468,23 +567,29 @@ export function DynamicForm({
           />
         );
       case "date":
-      case "date_of_birth":
+      case "date_of_birth": {
+        const { min, max } = dateBounds(field);
         return (
-          <Input {...common} type="date" value={(value as string) ?? ""} onChange={(e) => setValue(field.fieldKey, e.target.value)} />
+          <Input {...common} type="date" min={min} max={max} value={(value as string) ?? ""} onChange={(e) => setValue(field.fieldKey, e.target.value)} />
         );
+      }
       case "time":
         return (
           <Input {...common} type="time" value={(value as string) ?? ""} onChange={(e) => setValue(field.fieldKey, e.target.value)} />
         );
-      case "datetime":
+      case "datetime": {
+        const { min, max } = dateBounds(field);
         return (
           <Input
             {...common}
             type="datetime-local"
+            min={min ? `${min}T00:00` : undefined}
+            max={max ? `${max}T23:59` : undefined}
             value={(value as string) ?? ""}
             onChange={(e) => setValue(field.fieldKey, e.target.value)}
           />
         );
+      }
       case "single_choice":
       case "gender":
       case "country":

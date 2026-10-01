@@ -92,6 +92,40 @@ function isFieldVisible(field: FieldRow, responses: Record<string, unknown>): bo
   return rules.every((rule) => evaluateRule(rule, responses));
 }
 
+const DAY_MS = 86_400_000;
+
+const dayOf = (value: string) => value.slice(0, 10);
+
+/** "today" or a YYYY-MM-DD limit, as a day. */
+function limitDay(limit: unknown): string | null {
+  if (limit === "today") return new Date().toISOString().slice(0, 10);
+  return typeof limit === "string" && /^\d{4}-\d{2}-\d{2}$/.test(limit) ? limit : null;
+}
+
+function yearsBetween(birth: string, today: string): number {
+  const [by, bm, bd] = birth.split("-").map(Number) as [number, number, number];
+  const [ty, tm, td] = today.split("-").map(Number) as [number, number, number];
+  return ty - by - (tm < bm || (tm === bm && td < bd) ? 1 : 0);
+}
+
+/** Messages for a date outside the allowed range (a day of slack for "today", as time zones differ). */
+export function dateLimitErrors(label: string, type: string, config: Record<string, unknown>, value: string): string[] {
+  const errors: string[] = [];
+  const day = dayOf(value);
+  const slack = (limit: unknown) => (limit === "today" ? DAY_MS : 0);
+  const min = limitDay(config.minDate);
+  const max = limitDay(config.maxDate);
+  const ms = (d: string) => Date.parse(`${d}T00:00:00Z`);
+  if (min && ms(day) < ms(min) - slack(config.minDate)) errors.push(`${label} can't be earlier than ${min}`);
+  if (max && ms(day) > ms(max) + slack(config.maxDate)) errors.push(`${label} can't be later than ${max}`);
+  if (type === "date_of_birth") {
+    const age = yearsBetween(day, new Date().toISOString().slice(0, 10));
+    if (typeof config.minAge === "number" && age < config.minAge) errors.push(`${label}: you must be at least ${config.minAge} years old`);
+    if (typeof config.maxAge === "number" && age > config.maxAge) errors.push(`${label}: you must be ${config.maxAge} years old or younger`);
+  }
+  return errors;
+}
+
 function validateFieldValue(
   field: FieldRow,
   value: unknown,
@@ -169,7 +203,11 @@ function validateFieldValue(
     case "date_of_birth":
     case "datetime": {
       const date = new Date(String(value));
-      if (Number.isNaN(date.getTime())) errors.push(`${label} must be a valid date`);
+      if (Number.isNaN(date.getTime())) {
+        errors.push(`${label} must be a valid date`);
+        return String(value);
+      }
+      errors.push(...dateLimitErrors(label, field.type, config, String(value)));
       return String(value);
     }
     case "time": {

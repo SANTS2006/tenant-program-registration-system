@@ -46,6 +46,13 @@ export const fieldConfigSchema = z
         map: z.record(z.array(z.string().min(1))),
       })
       .optional(),
+    // Dates: the earliest and latest allowed (YYYY-MM-DD, or "today"); for dates of birth, an age range.
+    minDate: z.string().regex(/^(today|\d{4}-\d{2}-\d{2})$/).optional(),
+    maxDate: z.string().regex(/^(today|\d{4}-\d{2}-\d{2})$/).optional(),
+    minAge: z.number().int().min(0).max(150).optional(),
+    maxAge: z.number().int().min(0).max(150).optional(),
+    // Fill this field from the answer to another field, until the person types in it themselves.
+    autoFillFrom: z.string().min(1).max(100).optional(),
     // Multiple choice: the most options a person may tick.
     maxSelections: z.number().int().min(1).max(100).optional(),
     // Choices that ask for more: option (or "Yes"/"No") -> what to ask for.

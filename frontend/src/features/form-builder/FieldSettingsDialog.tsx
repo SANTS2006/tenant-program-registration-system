@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, X } from "lucide-react";
-import { DefaultValueEditor, DependentOptionsEditor, FollowUpEditor, MaxSelectionsEditor } from "./FieldAdvancedSettings";
+import { AutoFillEditor, DateLimitEditor, DefaultValueEditor, DependentOptionsEditor, FollowUpEditor, MaxSelectionsEditor } from "./FieldAdvancedSettings";
 import { metaFor } from "./fieldTypes";
 import type { EditableField } from "./types";
 import { slugifyKey } from "@/lib/utils";
@@ -202,8 +202,11 @@ export function FieldSettingsDialog({
             </div>
           )}
 
+          <DateLimitEditor draft={draft} updateConfig={updateConfig} />
           <MaxSelectionsEditor draft={draft} updateConfig={updateConfig} />
           <FollowUpEditor draft={draft} updateConfig={updateConfig} />
+
+          <AutoFillEditor draft={draft} otherFields={otherFields} updateConfig={updateConfig} />
 
           <DefaultValueEditor draft={draft} updateConfig={updateConfig} />
 

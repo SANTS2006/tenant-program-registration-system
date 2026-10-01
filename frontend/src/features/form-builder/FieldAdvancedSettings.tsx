@@ -112,6 +112,111 @@ export function DefaultValueEditor({ draft, updateConfig }: { draft: EditableFie
   );
 }
 
+const DATE_TYPES = new Set(["date", "date_of_birth", "datetime"]);
+
+/** The earliest and latest date a person may enter; dates of birth can limit age instead. */
+export function DateLimitEditor({ draft, updateConfig }: { draft: EditableField; updateConfig: UpdateConfig }) {
+  if (!DATE_TYPES.has(draft.type)) return null;
+  const { minDate, maxDate } = draft.config;
+  const isDob = draft.type === "date_of_birth";
+  const dateValue = (v: string | undefined) => (v && v !== "today" ? v : "");
+  return (
+    <div className="flex flex-col gap-3 rounded-md border border-dashed border-border p-3">
+      <p className="text-sm font-medium">Limit the date</p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="min-date">Earliest date allowed</Label>
+          <Input
+            id="min-date"
+            type="date"
+            value={dateValue(minDate)}
+            disabled={minDate === "today"}
+            onChange={(e) => updateConfig({ minDate: e.target.value || undefined })}
+          />
+          <label className="flex items-center gap-2 text-xs">
+            <Checkbox checked={minDate === "today"} onCheckedChange={(c) => updateConfig({ minDate: c === true ? "today" : undefined })} />
+            No dates in the past (today or later)
+          </label>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="max-date">Latest date allowed</Label>
+          <Input
+            id="max-date"
+            type="date"
+            value={dateValue(maxDate)}
+            disabled={maxDate === "today"}
+            onChange={(e) => updateConfig({ maxDate: e.target.value || undefined })}
+          />
+          <label className="flex items-center gap-2 text-xs">
+            <Checkbox checked={maxDate === "today"} onCheckedChange={(c) => updateConfig({ maxDate: c === true ? "today" : undefined })} />
+            No dates in the future (today or earlier)
+          </label>
+        </div>
+      </div>
+      {isDob && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="min-age">Youngest age allowed (years)</Label>
+            <Input
+              id="min-age"
+              type="number"
+              min={0}
+              placeholder="No limit"
+              value={draft.config.minAge ?? ""}
+              onChange={(e) => updateConfig({ minAge: e.target.value ? Math.max(0, Number(e.target.value)) : undefined })}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="max-age">Oldest age allowed (years)</Label>
+            <Input
+              id="max-age"
+              type="number"
+              min={0}
+              placeholder="No limit"
+              value={draft.config.maxAge ?? ""}
+              onChange={(e) => updateConfig({ maxAge: e.target.value ? Math.max(0, Number(e.target.value)) : undefined })}
+            />
+          </div>
+        </div>
+      )}
+      <p className="text-xs text-muted-foreground">
+        {isDob ? "For example, set the youngest age to 18 so nobody younger can register." : "Dates outside this range are refused, and the date picker greys them out."}
+      </p>
+    </div>
+  );
+}
+
+const NO_AUTOFILL_TYPES = new Set(["image_upload", "pdf_upload", "document_upload", "consent"]);
+
+/** Fills this field from the answer given to another field, until the person types in it themselves. */
+export function AutoFillEditor({ draft, otherFields, updateConfig }: { draft: EditableField; otherFields: EditableField[]; updateConfig: UpdateConfig }) {
+  if (NO_AUTOFILL_TYPES.has(draft.type)) return null;
+  const sources = otherFields.filter((f) => !NO_AUTOFILL_TYPES.has(f.type) && f.fieldKey !== draft.fieldKey && f.config.autoFillFrom !== draft.fieldKey);
+  if (sources.length === 0 && !draft.config.autoFillFrom) return null;
+  const current = draft.config.autoFillFrom;
+  return (
+    <div className="flex flex-col gap-1.5 rounded-md border border-dashed border-border p-3">
+      <Label>Fill this in automatically (optional)</Label>
+      <Select value={current ?? NONE} onValueChange={(v) => updateConfig({ autoFillFrom: v === NONE ? undefined : v })}>
+        <SelectTrigger aria-label="Fill from another question">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={NONE}>Don&apos;t fill automatically</SelectItem>
+          {sources.map((f) => (
+            <SelectItem key={f.fieldKey} value={f.fieldKey}>
+              Copy from: {f.label || f.fieldKey}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <p className="text-xs text-muted-foreground">
+        This answer is copied from the chosen question as it is filled in. The person can still change it, and it stops following once they do.
+      </p>
+    </div>
+  );
+}
+
 const FOLLOW_UP_TYPES = new Set(["single_choice", "dropdown", "yes_no"]);
 
 /** The most options a person may tick on a multiple choice question. */
