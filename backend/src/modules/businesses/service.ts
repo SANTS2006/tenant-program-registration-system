@@ -119,6 +119,7 @@ export async function listBusinesses(user: AuthenticatedUser, query: { page: num
     orderCount: Number(orderCounts.find((o) => o.businessId === b.id)?.value ?? 0),
     invoiceCount: Number(documentCounts.find((d) => d.businessId === b.id && d.kind === "invoice")?.value ?? 0),
     receiptCount: Number(documentCounts.find((d) => d.businessId === b.id && d.kind === "receipt")?.value ?? 0),
+    quotationCount: Number(documentCounts.find((d) => d.businessId === b.id && d.kind === "quotation")?.value ?? 0),
   }));
   return buildPaginatedResult(items, Number(total?.value ?? 0), pagination);
 }
@@ -138,14 +139,18 @@ export async function deleteBusiness(businessId: string) {
 }
 
 export function documentSettings(business: BusinessRow, kind: BusinessDocumentKind): DocumentSettings {
-  return resolveDocumentSettings(kind, kind === "invoice" ? business.invoiceSettings : business.receiptSettings, business.brandColor);
+  const stored = kind === "invoice" ? business.invoiceSettings : kind === "receipt" ? business.receiptSettings : business.quotationSettings;
+  return resolveDocumentSettings(kind, stored, business.brandColor);
 }
 
 export async function saveDocumentSettings(businessId: string, kind: BusinessDocumentKind, settings: DocumentSettings) {
   await getBusiness(businessId);
   const [row] = await db
     .update(businesses)
-    .set({ ...(kind === "invoice" ? { invoiceSettings: settings } : { receiptSettings: settings }), updatedAt: new Date() })
+    .set({
+      ...(kind === "invoice" ? { invoiceSettings: settings } : kind === "receipt" ? { receiptSettings: settings } : { quotationSettings: settings }),
+      updatedAt: new Date(),
+    })
     .where(eq(businesses.id, businessId))
     .returning();
   return documentSettings(row!, kind);
@@ -160,7 +165,7 @@ export function allBusinessStatuses(business: Pick<BusinessRow, "statusConfig">)
   return resolveAllStatuses(business.statusConfig);
 }
 
-export async function saveStatusConfig(businessId: string, config: Record<StatusKind, { key: string; label: string; color: string }[]>) {
+export async function saveStatusConfig(businessId: string, config: Partial<Record<StatusKind, { key: string; label: string; color: string }[]>>) {
   await getBusiness(businessId);
   const [row] = await db.update(businesses).set({ statusConfig: config, updatedAt: new Date() }).where(eq(businesses.id, businessId)).returning();
   return row!;

@@ -25,6 +25,7 @@ const SECTIONS: { kind: StatusKind; title: string; hint: string }[] = [
   { kind: "order", title: "Orders", hint: "Steps an order goes through. New orders always start on “New”." },
   { kind: "invoice", title: "Invoices", hint: "New invoices start on the first status in the list." },
   { kind: "receipt", title: "Receipts", hint: "New receipts start on the first status in the list." },
+  { kind: "quotation", title: "Quotations", hint: "New quotations start on the first status in the list." },
 ];
 
 interface Row extends StatusDef {
@@ -42,10 +43,11 @@ export function StatusSettingsCard({ business }: { business: Business }) {
     order: toRows(saved.order),
     invoice: toRows(saved.invoice),
     receipt: toRows(saved.receipt),
+    quotation: toRows(saved.quotation),
   }));
   const [saving, setSaving] = React.useState(false);
 
-  const dirty = JSON.stringify(rows) !== JSON.stringify({ order: toRows(saved.order), invoice: toRows(saved.invoice), receipt: toRows(saved.receipt) });
+  const dirty = JSON.stringify(rows) !== JSON.stringify({ order: toRows(saved.order), invoice: toRows(saved.invoice), receipt: toRows(saved.receipt), quotation: toRows(saved.quotation) });
 
   const update = (kind: StatusKind, next: Row[]) => setRows((r) => ({ ...r, [kind]: next }));
   const patch = (kind: StatusKind, index: number, change: Partial<Row>) =>
@@ -81,7 +83,12 @@ export function StatusSettingsCard({ business }: { business: Business }) {
     try {
       const updated = await saveStatusConfig(business.id, config);
       queryClient.setQueryData(businessKeys.detail(business.id), updated);
-      setRows({ order: toRows(updated.statusConfig.order), invoice: toRows(updated.statusConfig.invoice), receipt: toRows(updated.statusConfig.receipt) });
+      setRows({
+        order: toRows(updated.statusConfig.order),
+        invoice: toRows(updated.statusConfig.invoice),
+        receipt: toRows(updated.statusConfig.receipt),
+        quotation: toRows(updated.statusConfig.quotation),
+      });
       toast.success("Statuses saved");
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Couldn't save the statuses");

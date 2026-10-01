@@ -3,8 +3,8 @@ import { apiFetch, downloadAuthenticatedFile } from "@/lib/api";
 import type { PaginatedResult } from "@/types/api";
 import { uploadToCloudinary, type UploadSignature } from "../programs/api";
 
-export type DocumentKind = "invoice" | "receipt";
-export const kindPath = (kind: DocumentKind) => (kind === "invoice" ? "invoices" : "receipts");
+export type DocumentKind = "invoice" | "receipt" | "quotation";
+export const kindPath = (kind: DocumentKind) => (kind === "invoice" ? "invoices" : kind === "receipt" ? "receipts" : "quotations");
 
 export interface Business {
   id: string;
@@ -23,6 +23,7 @@ export interface Business {
   notifyCustomerOnStatus: boolean;
   invoiceSettings: DocumentSettings;
   receiptSettings: DocumentSettings;
+  quotationSettings: DocumentSettings;
   /** The business's own order, invoice, and receipt statuses. */
   statusConfig: Record<StatusKind, StatusDef[]>;
   createdAt: string;
@@ -31,6 +32,7 @@ export interface Business {
   orderCount?: number;
   invoiceCount?: number;
   receiptCount?: number;
+  quotationCount?: number;
 }
 
 export interface BusinessDocument {
@@ -97,6 +99,7 @@ export interface DocumentAnalytics {
 export interface BusinessAnalytics {
   invoices: DocumentAnalytics;
   receipts: DocumentAnalytics;
+  quotations?: DocumentAnalytics;
   orders: { total: number; today: number; thisWeek: number; thisMonth: number; byStatus: Record<string, number> } | null;
 }
 

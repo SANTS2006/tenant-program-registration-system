@@ -27,6 +27,7 @@ export const businesses = pgTable(
     // How invoices and receipts look and what they ask for (see modules/businesses/documentSettings).
     invoiceSettings: jsonb("invoice_settings").notNull().default({}),
     receiptSettings: jsonb("receipt_settings").notNull().default({}),
+    quotationSettings: jsonb("quotation_settings").notNull().default({}),
     // Each business's own order, invoice and receipt statuses: { order?: [{key,label,color}], invoice?, receipt? }.
     statusConfig: jsonb("status_config").notNull().default({}),
     // Emails the customer each time their order's status changes.

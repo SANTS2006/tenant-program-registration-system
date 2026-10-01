@@ -4,7 +4,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ArrowLeft, Download, FileDown, ImageDown, ListChecks, Mail, Plus, Save, Search, Settings2, Trash2 } from "lucide-react";
-import { formatMoney } from "@designs";
+import { DOCUMENT_WORDING, formatMoney } from "@designs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,14 +36,14 @@ import { useBusinessOutletContext } from "./BusinessLayout";
 import { DocumentEditor, draftFromDocument, emptyDraft, toInput, type DocumentDraft } from "./DocumentEditor";
 import { statusLabel, statusTone } from "./statuses";
 
-const label = (kind: DocumentKind) => (kind === "invoice" ? "Invoice" : "Receipt");
+const label = (kind: DocumentKind) => DOCUMENT_WORDING[kind].noun;
 const docKeys = {
   list: (businessId: string, kind: DocumentKind, params: object) => ["business-docs", businessId, kind, "list", params] as const,
   detail: (businessId: string, kind: DocumentKind, id: string) => ["business-docs", businessId, kind, "detail", id] as const,
 };
 
 function settingsFor(business: Business, kind: DocumentKind) {
-  return kind === "invoice" ? business.invoiceSettings : business.receiptSettings;
+  return kind === "invoice" ? business.invoiceSettings : kind === "receipt" ? business.receiptSettings : business.quotationSettings;
 }
 
 export function DocumentStatusBadge({ business, kind, status }: { business: Business; kind: DocumentKind; status: string }) {
@@ -558,6 +558,9 @@ function DocumentDetailPage({ kind }: { kind: DocumentKind }) {
   );
 }
 
+export const QuotationsPage = () => <DocumentsListPage kind="quotation" />;
+export const NewQuotationPage = () => <LiveDocumentPage kind="quotation" />;
+export const QuotationDetailPage = () => <DocumentDetailPage kind="quotation" />;
 export const InvoicesPage = () => <DocumentsListPage kind="invoice" />;
 export const ReceiptsPage = () => <DocumentsListPage kind="receipt" />;
 export const NewInvoicePage = () => <LiveDocumentPage kind="invoice" />;

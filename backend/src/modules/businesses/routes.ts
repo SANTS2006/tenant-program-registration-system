@@ -3,7 +3,7 @@ import { attachmentDisposition } from "../../lib/downloadName.js";
 import { AppError } from "../../lib/errors.js";
 import { sendSuccess } from "../../lib/response.js";
 import { requireRole } from "../../middleware/authorize.js";
-import type { BusinessDocumentKind } from "../../shared/designs/index.js";
+import { DOCUMENT_WORDING, type BusinessDocumentKind } from "../../shared/designs/index.js";
 import { recordAudit } from "../audit/service.js";
 import * as registrationsRepo from "../registrations/repository.js";
 import { createUploadSignature } from "../uploads/service.js";
@@ -30,6 +30,7 @@ type DocParams = KindParams & { documentId: string };
 function kindOf(value: string): BusinessDocumentKind {
   if (value === "invoices") return "invoice";
   if (value === "receipts") return "receipt";
+  if (value === "quotations") return "quotation";
   throw AppError.notFound("Not found");
 }
 
@@ -48,6 +49,7 @@ async function businessView(request: FastifyRequest, business: businessService.B
     myRole,
     invoiceSettings: businessService.documentSettings(business, "invoice"),
     receiptSettings: businessService.documentSettings(business, "receipt"),
+    quotationSettings: businessService.documentSettings(business, "quotation"),
     statusConfig: businessService.allBusinessStatuses(business),
     orderForm: orderForm
       ? {
@@ -104,12 +106,13 @@ export async function businessRoutes(app: FastifyInstance) {
   /** Orders, invoices, and receipts at a glance. */
   app.get<{ Params: BusinessParams }>("/:businessId/analytics", viewer, async (request, reply) => {
     const form = await businessService.findOrderForm(request.params.businessId);
-    const [invoices, receipts, orders] = await Promise.all([
+    const [invoices, receipts, quotations, orders] = await Promise.all([
       documents.documentAnalytics(request.params.businessId, "invoice"),
       documents.documentAnalytics(request.params.businessId, "receipt"),
+      documents.documentAnalytics(request.params.businessId, "quotation"),
       form ? registrationsRepo.getProgramStats(form.id) : null,
     ]);
-    return sendSuccess(reply, { invoices, receipts, orders });
+    return sendSuccess(reply, { invoices, receipts, quotations, orders });
   });
 
   // How invoices and receipts look and which extra fields they ask for.
@@ -137,7 +140,7 @@ export async function businessRoutes(app: FastifyInstance) {
     const kind = kindOf(request.params.kind);
     const doc = await documents.createDocument(request.params.businessId, kind, saveDocumentSchema.parse(request.body), request.user!.id);
     await audit(request, `business.${kind}_create`, kind, doc.id);
-    return sendSuccess(reply, doc, `${kind === "invoice" ? "Invoice" : "Receipt"} saved`, 201);
+    return sendSuccess(reply, doc, `${DOCUMENT_WORDING[kind].noun} saved`, 201);
   });
 
   app.get<{ Params: DocParams }>("/:businessId/:kind/:documentId", viewer, async (request, reply) => {
@@ -155,7 +158,7 @@ export async function businessRoutes(app: FastifyInstance) {
       request.user!.id,
     );
     await audit(request, `business.${kind}_update`, kind, doc.id);
-    return sendSuccess(reply, doc, `${kind === "invoice" ? "Invoice" : "Receipt"} updated`);
+    return sendSuccess(reply, doc, `${DOCUMENT_WORDING[kind].noun} updated`);
   });
 
   app.delete<{ Params: DocParams }>("/:businessId/:kind/:documentId", admin, async (request, reply) => {

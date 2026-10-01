@@ -2,6 +2,7 @@ import * as React from "react";
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import {
   computeTotals,
+  DOCUMENT_WORDING,
   formatMoney,
   renderBusinessDocument,
   type DocumentSettings,
@@ -51,13 +52,13 @@ export function emptyDraft(kind: DocumentKind, settings: DocumentSettings, first
   const today = new Date();
   const due = new Date(today.getTime() + settings.dueDays * 24 * 60 * 60 * 1000);
   return {
-    status: firstStatus ?? (kind === "invoice" ? "draft" : "issued"),
+    status: firstStatus ?? (kind === "receipt" ? "issued" : "draft"),
     clientName: "",
     clientEmail: "",
     clientPhone: "",
     clientAddress: "",
     issueDate: isoDay(today),
-    dueDate: kind === "invoice" ? isoDay(due) : isoDay(today),
+    dueDate: kind === "receipt" ? isoDay(today) : isoDay(due),
     paymentMethod: "",
     items: [blankItem()],
     discount: "",
@@ -178,7 +179,7 @@ export function DocumentPreview({
     <div className="flex flex-col gap-2">
       <DesignSvg
         svg={pages[current]!}
-        label={`${kind === "invoice" ? "Invoice" : "Receipt"} preview, page ${current + 1} of ${pages.length}`}
+        label={`${DOCUMENT_WORDING[kind].noun} preview, page ${current + 1} of ${pages.length}`}
         className="rounded-lg border border-border/70 bg-white shadow-lg"
       />
       {pages.length > 1 && (
@@ -230,7 +231,7 @@ export function DocumentEditor({
   const statuses = business.statusConfig[kind];
   // A document can carry a status its business has since removed; keep it selectable.
   const statusChoices = statuses.some((s) => s.key === draft.status) || !draft.status ? statuses : [...statuses, { key: draft.status, label: statusLabel(statuses, draft.status), color: "gray" as const }];
-  const who = kind === "invoice" ? "Bill to" : "Received from";
+  const who = kind === "invoice" ? "Bill to" : kind === "quotation" ? "Prepared for" : "Received from";
 
   return (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,440px)]">
@@ -265,11 +266,11 @@ export function DocumentEditor({
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="doc-issueDate">{kind === "invoice" ? "Issue date" : "Date"}</Label>
+              <Label htmlFor="doc-issueDate">{DOCUMENT_WORDING[kind].dateLabel}</Label>
               <Input id="doc-issueDate" type="date" value={draft.issueDate} onChange={(e) => set({ issueDate: e.target.value })} />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="doc-dueDate">{kind === "invoice" ? "Due date" : "Paid on"}</Label>
+              <Label htmlFor="doc-dueDate">{DOCUMENT_WORDING[kind].endLabel}</Label>
               <Input id="doc-dueDate" type="date" value={draft.dueDate} onChange={(e) => set({ dueDate: e.target.value })} />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -384,7 +385,7 @@ export function DocumentEditor({
                 </Label>
                 <Input id="doc-amountPaid" inputMode="decimal" className="h-8 w-32 text-right" value={draft.amountPaid} onChange={(e) => set({ amountPaid: e.target.value })} />
               </div>
-              {(totals.amountPaid > 0 || kind === "receipt") && (
+              {(totals.amountPaid > 0 || kind === "receipt") && kind !== "quotation" && (
                 <div className="flex items-center justify-between font-medium">
                   <span>{kind === "invoice" ? "Balance due" : "Balance"}</span>
                   <span className="tabular-nums">{money(totals.balance)}</span>

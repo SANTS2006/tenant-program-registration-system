@@ -66,4 +66,4 @@ export const pollStatusEnum = pgEnum("poll_status", ["draft", "open", "closed"])
 
 // A program is a registration program; an order form is a business's order page built on the same form tools.
 export const programKindEnum = pgEnum("program_kind", ["program", "order_form"]);
-export const businessDocumentKindEnum = pgEnum("business_document_kind", ["invoice", "receipt"]);
+export const businessDocumentKindEnum = pgEnum("business_document_kind", ["invoice", "receipt", "quotation"]);

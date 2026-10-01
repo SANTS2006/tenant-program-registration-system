@@ -2,7 +2,7 @@
 // add its own. These are the statuses a business starts with, and the helpers that resolve what it
 // has chosen. Shared by the server (to check a status is allowed) and the browser (to show them).
 
-export type StatusKind = "order" | "invoice" | "receipt";
+export type StatusKind = "order" | "invoice" | "receipt" | "quotation";
 export type StatusColor = "gray" | "blue" | "green" | "amber" | "red";
 
 export interface StatusDef {
@@ -40,6 +40,13 @@ export const DEFAULT_STATUSES: Record<StatusKind, StatusDef[]> = {
     { key: "sent", label: "Sent", color: "blue" },
     { key: "void", label: "Void", color: "red" },
   ],
+  quotation: [
+    { key: "draft", label: "Draft", color: "gray" },
+    { key: "sent", label: "Sent", color: "blue" },
+    { key: "accepted", label: "Accepted", color: "green" },
+    { key: "declined", label: "Declined", color: "red" },
+    { key: "expired", label: "Expired", color: "amber" },
+  ],
 };
 
 const isColor = (value: unknown): value is StatusColor => STATUS_COLORS.includes(value as StatusColor);
@@ -60,7 +67,12 @@ export function resolveStatuses(config: unknown, kind: StatusKind): StatusDef[] 
 
 /** All three lists, resolved. */
 export function resolveAllStatuses(config: unknown): Record<StatusKind, StatusDef[]> {
-  return { order: resolveStatuses(config, "order"), invoice: resolveStatuses(config, "invoice"), receipt: resolveStatuses(config, "receipt") };
+  return {
+    order: resolveStatuses(config, "order"),
+    invoice: resolveStatuses(config, "invoice"),
+    receipt: resolveStatuses(config, "receipt"),
+    quotation: resolveStatuses(config, "quotation"),
+  };
 }
 
 const humanize = (key: string) => key.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());

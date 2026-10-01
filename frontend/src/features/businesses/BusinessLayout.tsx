@@ -26,6 +26,7 @@ const tabs = [
   { to: "", label: "Overview", end: true },
   { to: "order-form", label: "Order Form", end: false },
   { to: "orders", label: "Orders", end: false },
+  { to: "quotations", label: "Quotations", end: false },
   { to: "invoices", label: "Invoices", end: false },
   { to: "receipts", label: "Receipts", end: false },
   { to: "analytics", label: "Analytics", end: false },

@@ -54,6 +54,10 @@ const VotePage = lazyPage(() => import("@/features/vote/VotePage"), "VotePage");
 const BusinessesListPage = lazyPage(() => import("@/features/businesses/BusinessesListPage"), "BusinessesListPage");
 const BusinessLayout = lazyPage(() => import("@/features/businesses/BusinessLayout"), "BusinessLayout");
 const BusinessOverviewPage = lazyPage(() => import("@/features/businesses/BusinessOverviewPage"), "BusinessOverviewPage");
+const QuotationsPage = lazyPage(() => import("@/features/businesses/DocumentPages"), "QuotationsPage");
+const NewQuotationPage = lazyPage(() => import("@/features/businesses/DocumentPages"), "NewQuotationPage");
+const QuotationDetailPage = lazyPage(() => import("@/features/businesses/DocumentPages"), "QuotationDetailPage");
+const QuotationSettingsPage = lazyPage(() => import("@/features/businesses/DocumentSettingsPage"), "QuotationSettingsPage");
 const InvoicesPage = lazyPage(() => import("@/features/businesses/DocumentPages"), "InvoicesPage");
 const ReceiptsPage = lazyPage(() => import("@/features/businesses/DocumentPages"), "ReceiptsPage");
 const NewInvoicePage = lazyPage(() => import("@/features/businesses/DocumentPages"), "NewInvoicePage");
@@ -128,6 +132,10 @@ export function AppRoutes() {
                 <Route path="order-form" element={<BusinessOrderFormPage />} />
                 <Route path="orders" element={<BusinessOrdersPage />} />
                 <Route path="orders/:registrationId" element={<BusinessOrderDetailPage />} />
+                <Route path="quotations" element={<QuotationsPage />} />
+                <Route path="quotations/new" element={<NewQuotationPage />} />
+                <Route path="quotations/settings" element={<QuotationSettingsPage />} />
+                <Route path="quotations/:documentId" element={<QuotationDetailPage />} />
                 <Route path="invoices" element={<InvoicesPage />} />
                 <Route path="invoices/new" element={<NewInvoicePage />} />
                 <Route path="invoices/settings" element={<InvoiceSettingsPage />} />

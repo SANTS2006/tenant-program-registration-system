@@ -2,7 +2,7 @@ import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Save, Trash2 } from "lucide-react";
-import { renderBusinessDocument, type DocumentSettings, type DocumentTemplate } from "@designs";
+import { DOCUMENT_TEMPLATES, DOCUMENT_WORDING, renderBusinessDocument, type DocumentSettings } from "@designs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,12 +18,6 @@ import { kindPath, saveDocumentSettings, type Business, type DocumentKind } from
 import { businessKeys } from "./BusinessesListPage";
 import { useBusinessOutletContext } from "./BusinessLayout";
 import { DocumentPreview, emptyDraft, type DocumentDraft } from "./DocumentEditor";
-
-const TEMPLATES: { id: DocumentTemplate; name: string }[] = [
-  { id: "classic", name: "Classic" },
-  { id: "modern", name: "Modern" },
-  { id: "minimal", name: "Minimal" },
-];
 
 function sampleDraft(kind: DocumentKind, settings: DocumentSettings): DocumentDraft {
   let key = 1000;
@@ -43,7 +37,7 @@ function sampleDraft(kind: DocumentKind, settings: DocumentSettings): DocumentDr
   };
 }
 
-function TemplateThumb({ business, settings, kind, active, onSelect }: { business: Business; settings: DocumentSettings; kind: DocumentKind; active: boolean; onSelect: () => void }) {
+function TemplateThumb({ business, settings, kind, active, onSelect, name, description }: { business: Business; settings: DocumentSettings; kind: DocumentKind; active: boolean; onSelect: () => void; name: string; description: string }) {
   const svg = React.useMemo(() => {
     const draft = sampleDraft(kind, settings);
     return renderBusinessDocument(
@@ -72,18 +66,21 @@ function TemplateThumb({ business, settings, kind, active, onSelect }: { busines
       aria-pressed={active}
       className={cn("flex flex-col gap-2 rounded-xl border-2 p-2 text-sm font-medium transition", active ? "border-primary shadow-glow" : "border-border/70 hover:border-primary/40")}
     >
-      <DesignSvg svg={svg} label={`${settings.template} layout`} className="rounded-md border border-border/50 bg-white" />
-      <span className="capitalize">{settings.template}</span>
+      <DesignSvg svg={svg} label={`${name} layout`} className="mx-auto max-h-64 w-auto rounded-md border border-border/50 bg-white" />
+      <span className="text-left">
+        <span className="block">{name}</span>
+        <span className="block text-xs font-normal text-muted-foreground">{description}</span>
+      </span>
     </button>
   );
 }
 
 function DocumentSettingsPage({ kind }: { kind: DocumentKind }) {
   const { business } = useBusinessOutletContext();
-  const noun = kind === "invoice" ? "Invoice" : "Receipt";
+  const noun = DOCUMENT_WORDING[kind].noun;
   usePageMeta({ title: `${noun} design · ${business.name}` });
   const queryClient = useQueryClient();
-  const initial = kind === "invoice" ? business.invoiceSettings : business.receiptSettings;
+  const initial = kind === "invoice" ? business.invoiceSettings : kind === "receipt" ? business.receiptSettings : business.quotationSettings;
   const [settings, setSettings] = React.useState<DocumentSettings>(initial);
   const [saving, setSaving] = React.useState(false);
   const set = (patch: Partial<DocumentSettings>) => setSettings((s) => ({ ...s, ...patch }));
@@ -140,12 +137,14 @@ function DocumentSettingsPage({ kind }: { kind: DocumentKind }) {
               <CardDescription>Your logo and business details from the Overview tab appear at the top.</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
-              <div className="grid grid-cols-3 gap-3">
-                {TEMPLATES.map((t) => (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {DOCUMENT_TEMPLATES.filter((t) => t.kinds.includes(kind)).map((t) => (
                   <TemplateThumb
                     key={t.id}
                     business={business}
                     kind={kind}
+                    name={t.name}
+                    description={t.description}
                     settings={{ ...settings, template: t.id }}
                     active={settings.template === t.id}
                     onSelect={() => set({ template: t.id })}
@@ -207,9 +206,9 @@ function DocumentSettingsPage({ kind }: { kind: DocumentKind }) {
                   onChange={(e) => set({ defaultTaxRate: Math.min(100, Math.max(0, Number(e.target.value) || 0)) })}
                 />
               </div>
-              {kind === "invoice" && (
+              {kind !== "receipt" && (
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="settings-dueDays">Payment due after (days)</Label>
+                  <Label htmlFor="settings-dueDays">{kind === "quotation" ? "Valid for (days)" : "Payment due after (days)"}</Label>
                   <Input
                     id="settings-dueDays"
                     inputMode="numeric"
@@ -267,9 +266,9 @@ function DocumentSettingsPage({ kind }: { kind: DocumentKind }) {
               <CardDescription>Filled in on every new {noun.toLowerCase()}; you can still change it each time.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4">
-              {kind === "invoice" && (
+              {kind !== "receipt" && (
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="settings-payment">Payment details</Label>
+                  <Label htmlFor="settings-payment">{kind === "quotation" ? "Payment terms" : "Payment details"}</Label>
                   <Textarea
                     id="settings-payment"
                     rows={3}
@@ -314,3 +313,5 @@ function DocumentSettingsPage({ kind }: { kind: DocumentKind }) {
 
 export const InvoiceSettingsPage = () => <DocumentSettingsPage kind="invoice" />;
 export const ReceiptSettingsPage = () => <DocumentSettingsPage kind="receipt" />;
+
+export const QuotationSettingsPage = () => <DocumentSettingsPage kind="quotation" />;

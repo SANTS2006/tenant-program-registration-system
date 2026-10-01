@@ -2,7 +2,7 @@ import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Receipt, Search, ShoppingBag, Store, FileText } from "lucide-react";
+import { ClipboardList, Plus, Receipt, Search, ShoppingBag, Store, FileText } from "lucide-react";
 import { useAuth } from "@/app/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardInteractive } from "@/components/ui/card";
@@ -187,6 +187,10 @@ export function BusinessesListPage() {
                   <span className="flex items-center gap-1 rounded-full bg-black/70 px-2 py-1 shadow-md backdrop-blur-sm">
                     <ShoppingBag className="h-4 w-4" aria-hidden="true" />
                     {business.orderCount ?? 0} orders
+                  </span>
+                  <span className="flex items-center gap-1 rounded-full bg-black/70 px-2 py-1 shadow-md backdrop-blur-sm">
+                    <ClipboardList className="h-4 w-4" aria-hidden="true" />
+                    {business.quotationCount ?? 0} quotes
                   </span>
                   <span className="flex items-center gap-1 rounded-full bg-black/70 px-2 py-1 shadow-md backdrop-blur-sm">
                     <FileText className="h-4 w-4" aria-hidden="true" />

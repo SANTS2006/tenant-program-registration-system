@@ -15,7 +15,7 @@ function monthLabel(key: string) {
   return new Date(Date.UTC(year!, month! - 1, 1)).toLocaleDateString(undefined, { month: "short", year: "2-digit", timeZone: "UTC" });
 }
 
-function StatusTable({ data, currency, kind, defs }: { data: DocumentAnalytics; currency: string; kind: "invoice" | "receipt"; defs: StatusDef[] }) {
+function StatusTable({ data, currency, kind, defs }: { data: DocumentAnalytics; currency: string; kind: "invoice" | "receipt" | "quotation"; defs: StatusDef[] }) {
   if (data.count === 0) return <p className="text-sm text-muted-foreground">No {kind}s yet.</p>;
   return (
     <table className="w-full text-sm">
@@ -112,6 +112,17 @@ export function BusinessAnalyticsPage() {
             <StatusTable data={data.invoices} currency={business.currency} kind="invoice" defs={business.statusConfig.invoice} />
           </CardContent>
         </Card>
+        {data.quotations && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Quotations</CardTitle>
+              <CardDescription>{data.quotations.count} in total</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <StatusTable data={data.quotations} currency={business.currency} kind="quotation" defs={business.statusConfig.quotation} />
+            </CardContent>
+          </Card>
+        )}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Receipts</CardTitle>

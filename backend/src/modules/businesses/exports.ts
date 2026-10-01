@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { AppError } from "../../lib/errors.js";
 import { date, EXPORT_ROW_LIMIT, exportFormatSchema, MONEY_FORMAT, sendTableExport, type ExportSheet } from "../../lib/tableExport.js";
-import { lineAmount, type BusinessDocumentKind } from "../../shared/designs/index.js";
+import { DOCUMENT_WORDING, lineAmount, type BusinessDocumentKind } from "../../shared/designs/index.js";
 import * as registrationsRepo from "../registrations/repository.js";
 import { requireBusinessAccess } from "./access.js";
 import * as documents from "./documents.js";
@@ -18,6 +18,7 @@ const labelsOf = (defs: { key: string; label: string }[]) => new Map(defs.map((d
 function kindOf(value: string): BusinessDocumentKind {
   if (value === "invoices") return "invoice";
   if (value === "receipts") return "receipt";
+  if (value === "quotations") return "quotation";
   throw AppError.notFound("Not found");
 }
 
@@ -34,7 +35,7 @@ export async function businessExportRoutes(app: FastifyInstance) {
     ]);
     const settings = businessService.documentSettings(business, kind);
     const statusLabels = labelsOf(businessService.businessStatuses(business, kind));
-    const noun = kind === "invoice" ? "Invoice" : "Receipt";
+    const noun = DOCUMENT_WORDING[kind].noun;
 
     const list: ExportSheet<DocView> = {
       name: `${noun}s`,
@@ -47,8 +48,8 @@ export async function businessExportRoutes(app: FastifyInstance) {
         { label: "Client email", value: (d) => d.clientEmail },
         { label: "Client phone", value: (d) => d.clientPhone },
         { label: "Client address", value: (d) => d.clientAddress },
-        { label: kind === "invoice" ? "Issue date" : "Date", value: (d) => date(d.issueDate) },
-        { label: kind === "invoice" ? "Due date" : "Paid on", value: (d) => date(d.dueDate) },
+        { label: DOCUMENT_WORDING[kind].dateLabel, value: (d) => date(d.issueDate) },
+        { label: DOCUMENT_WORDING[kind].endLabel, value: (d) => date(d.dueDate) },
         { label: "Payment method", value: (d) => d.paymentMethod },
         { label: "Currency", value: (d) => d.currency },
         { label: "Subtotal", value: (d) => d.subtotal, numFmt: MONEY_FORMAT },

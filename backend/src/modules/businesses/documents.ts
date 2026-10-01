@@ -5,8 +5,8 @@ import { AppError } from "../../lib/errors.js";
 import { buildPaginatedResult, toOffsetLimit, type PaginationInput } from "../../lib/pagination.js";
 import {
   computeTotals,
-  DOC_PAGE_HEIGHT,
-  DOC_PAGE_WIDTH,
+  DOCUMENT_WORDING,
+  documentPageSize,
   formatDocDate,
   formatMoney,
   renderBusinessDocument,
@@ -121,7 +121,7 @@ export async function findDocument(businessId: string, kind: BusinessDocumentKin
       ),
     )
     .limit(1);
-  if (!row) throw AppError.notFound(`${kind === "invoice" ? "Invoice" : "Receipt"} not found`);
+  if (!row) throw AppError.notFound(`${DOCUMENT_WORDING[kind].noun} not found`);
   return row;
 }
 
@@ -218,7 +218,8 @@ export function documentFileName(doc: DocumentRow, business: BusinessRow, extens
 export async function documentPdf(businessId: string, kind: BusinessDocumentKind, documentId: string) {
   const [business, doc] = await Promise.all([getBusiness(businessId), findDocument(businessId, kind, documentId)]);
   const pages = await renderPages(doc, business);
-  return { buffer: await svgPagesToPdf(pages, DOC_PAGE_WIDTH, DOC_PAGE_HEIGHT), fileName: documentFileName(doc, business, "pdf") };
+  const size = documentPageSize(documentContent(doc, business), { ...business }, documentSettings(business, doc.kind));
+  return { buffer: await svgPagesToPdf(pages, size.width, size.height), fileName: documentFileName(doc, business, "pdf") };
 }
 
 /** The pages as SVG (with the logo embedded), for downloading as images in the browser. */
@@ -234,7 +235,8 @@ export async function sendDocument(businessId: string, kind: BusinessDocumentKin
   if (!to) throw AppError.validation("Enter the email address to send this to");
 
   const pages = await renderPages(doc, business);
-  const pdf = await svgPagesToPdf(pages, DOC_PAGE_WIDTH, DOC_PAGE_HEIGHT);
+  const size = documentPageSize(documentContent(doc, business), { ...business }, documentSettings(business, doc.kind));
+  const pdf = await svgPagesToPdf(pages, size.width, size.height);
   const totals = computeTotals(doc.items as LineItem[], num(doc.discount), num(doc.taxRate), num(doc.amountPaid));
   const email = businessDocumentEmail({
     kind,
@@ -242,7 +244,7 @@ export async function sendDocument(businessId: string, kind: BusinessDocumentKin
     clientName: doc.clientName,
     number: doc.number,
     issueDate: formatDocDate(doc.issueDate),
-    dueDate: kind === "invoice" && doc.dueDate ? formatDocDate(doc.dueDate) : null,
+    dueDate: kind !== "receipt" && doc.dueDate ? formatDocDate(doc.dueDate) : null,
     total: formatMoney(totals.total, doc.currency),
     balance: totals.balance > 0 && kind === "invoice" ? formatMoney(totals.balance, doc.currency) : null,
     updated: !!doc.editedAt,
@@ -315,7 +317,7 @@ export async function documentAnalytics(businessId: string, kind: BusinessDocume
   const statuses = byStatus.map((s) => ({ status: s.status, count: Number(s.count), total: num(s.total), paid: num(s.paid) }));
   const live = statuses.filter((s) => s.status !== "cancelled" && s.status !== "void");
   const total = live.reduce((sum, s) => sum + s.total, 0);
-  const paid = kind === "receipt" ? live.reduce((sum, s) => sum + s.paid, 0) : statuses.filter((s) => s.status === "paid").reduce((sum, s) => sum + s.total, 0) + statuses.filter((s) => s.status === "partially_paid").reduce((sum, s) => sum + s.paid, 0);
+  const paid = kind === "quotation" ? statuses.filter((s) => s.status === "accepted").reduce((sum, s) => sum + s.total, 0) : kind === "receipt" ? live.reduce((sum, s) => sum + s.paid, 0) : statuses.filter((s) => s.status === "paid").reduce((sum, s) => sum + s.total, 0) + statuses.filter((s) => s.status === "partially_paid").reduce((sum, s) => sum + s.paid, 0);
 
   // Fill the months with no documents so the chart has a bar for every month.
   const months: { month: string; count: number; total: number }[] = [];

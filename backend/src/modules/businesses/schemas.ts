@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { paginationSchema } from "../../lib/pagination.js";
-import { STATUS_COLORS } from "../../shared/designs/index.js";
+import { DOCUMENT_TEMPLATES, STATUS_COLORS, type DocumentTemplate } from "../../shared/designs/index.js";
 
 const optionalText = (max: number) =>
   z
@@ -39,7 +39,7 @@ export const updateBusinessSchema = z
 export const documentSettingsSchema = z.object({
   prefix: z.string().trim().min(1).max(12).regex(/^[A-Za-z0-9-]+$/, "Letters, numbers and dashes only"),
   title: z.string().trim().min(1).max(40),
-  template: z.enum(["classic", "modern", "minimal"]),
+  template: z.enum(DOCUMENT_TEMPLATES.map((t) => t.id) as [DocumentTemplate, ...DocumentTemplate[]]),
   accentColor: hexColor,
   taxLabel: z.string().trim().min(1).max(30),
   defaultTaxRate: z.number().min(0).max(100),
@@ -104,6 +104,7 @@ export const statusConfigSchema = z.object({
   order: statusList(["submitted"]),
   invoice: statusList([]),
   receipt: statusList([]),
+  quotation: statusList([]).optional(),
 });
 
 export const listDocumentsQuerySchema = paginationSchema.extend({

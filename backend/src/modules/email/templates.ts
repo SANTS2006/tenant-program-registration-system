@@ -637,7 +637,7 @@ function businessContactLine(business: BusinessEmailBrand) {
 }
 
 export function businessDocumentEmail(params: {
-  kind: "invoice" | "receipt";
+  kind: "invoice" | "receipt" | "quotation";
   business: BusinessEmailBrand;
   clientName: string;
   number: string;
@@ -648,7 +648,7 @@ export function businessDocumentEmail(params: {
   updated: boolean;
   message?: string;
 }): { subject: string; html: string } {
-  const label = params.kind === "invoice" ? "Invoice" : "Receipt";
+  const label = params.kind === "invoice" ? "Invoice" : params.kind === "quotation" ? "Quotation" : "Receipt";
   const strong = (value: string) => `<strong style="color:${BRAND.heading};">${escapeHtml(value)}</strong>`;
   const body = [
     paragraph(`Hi ${strong(params.clientName)},`),
@@ -657,12 +657,14 @@ export function businessDocumentEmail(params: {
       : paragraph(
           params.kind === "invoice"
             ? `Please find ${params.updated ? "the updated" : "your"} invoice ${strong(params.number)} from ${strong(params.business.name)} attached.`
-            : `Thank you for your payment. Your ${params.updated ? "updated " : ""}receipt ${strong(params.number)} from ${strong(params.business.name)} is attached.`,
+            : params.kind === "quotation"
+              ? `Thank you for your interest. Please find ${params.updated ? "the updated" : "your"} quotation ${strong(params.number)} from ${strong(params.business.name)} attached.`
+              : `Thank you for your payment. Your ${params.updated ? "updated " : ""}receipt ${strong(params.number)} from ${strong(params.business.name)} is attached.`,
         ),
     detailsTable([
       { label: `${label} number`, value: params.number, mono: true },
       { label: "Date", value: params.issueDate },
-      ...(params.dueDate ? [{ label: "Due date", value: params.dueDate }] : []),
+      ...(params.dueDate ? [{ label: params.kind === "quotation" ? "Valid until" : "Due date", value: params.dueDate }] : []),
       { label: "Total", value: params.total },
       ...(params.balance ? [{ label: "Amount due", value: params.balance }] : []),
     ]),
