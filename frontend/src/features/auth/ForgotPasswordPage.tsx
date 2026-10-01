@@ -16,11 +16,15 @@ export function ForgotPasswordPage() {
   const [sentTo, setSentTo] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
 
+  const [touched, setTouched] = React.useState(false);
+  const address = email.trim();
+  const problem = !address ? "Please enter your email address" : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address) ? "Enter a valid email address, like name@example.com" : "";
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const address = email.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) {
-      toast.error("Enter a valid email address");
+    if (problem) {
+      setTouched(true);
+      document.getElementById("email")?.focus();
       return;
     }
     setSubmitting(true);
@@ -66,7 +70,15 @@ export function ForgotPasswordPage() {
             className="h-12 rounded-full px-5"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            onBlur={() => setTouched(true)}
+            aria-invalid={touched && problem ? true : undefined}
+            aria-describedby={touched && problem ? "email-error" : undefined}
           />
+          {touched && problem && (
+            <p id="email-error" role="alert" className="px-2 text-sm text-destructive">
+              {problem}
+            </p>
+          )}
         </div>
         <Button type="submit" size="lg" className="h-12 rounded-full" loading={submitting}>
           {submitting ? "Sending..." : "Send reset link"}

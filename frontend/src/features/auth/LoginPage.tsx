@@ -15,8 +15,12 @@ import { ApiError } from "@/lib/api";
 import { usePageMeta } from "@/lib/seo";
 
 const loginSchema = z.object({
-  email: z.string().email("Enter a valid email address"),
-  password: z.string().min(1, "Password is required"),
+  email: z
+    .string()
+    .trim()
+    .min(1, "Please enter your email address")
+    .email("Enter a valid email address, like name@example.com"),
+  password: z.string().min(1, "Please enter your password"),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
@@ -52,7 +56,7 @@ export function LoginPage() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) });
+  } = useForm<LoginForm>({ resolver: zodResolver(loginSchema), mode: "onTouched" });
 
   if (!isLoading && user) {
     return <Navigate to="/admin" replace />;
@@ -130,9 +134,11 @@ export function LoginPage() {
                     autoComplete="email"
                     placeholder="Enter your email"
                     className="h-12 rounded-full px-5"
+                    aria-invalid={errors.email ? true : undefined}
+                    aria-describedby={errors.email ? "email-error" : undefined}
                     {...register("email")}
                   />
-                  {errors.email && <p className="px-2 text-sm text-destructive">{errors.email.message}</p>}
+                  {errors.email && <p id="email-error" role="alert" className="px-2 text-sm text-destructive">{errors.email.message}</p>}
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="password" className="sr-only">
@@ -145,7 +151,9 @@ export function LoginPage() {
                       autoComplete="current-password"
                       placeholder="Password"
                       className="h-12 rounded-full px-5 pr-12"
-                      {...register("password")}
+                      aria-invalid={errors.password ? true : undefined}
+                    aria-describedby={errors.password ? "password-error" : undefined}
+                    {...register("password")}
                     />
                     <button
                       type="button"
@@ -156,7 +164,7 @@ export function LoginPage() {
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  {errors.password && <p className="px-2 text-sm text-destructive">{errors.password.message}</p>}
+                  {errors.password && <p id="password-error" role="alert" className="px-2 text-sm text-destructive">{errors.password.message}</p>}
                   <Link to="/forgot-password" className="self-end px-2 text-sm font-medium text-primary hover:opacity-80">
                     Forgot password?
                   </Link>

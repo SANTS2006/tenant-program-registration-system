@@ -59,12 +59,19 @@ export function VoterForgotPasswordPage() {
   const [email, setEmail] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [problem, setProblem] = React.useState<string | null>(null);
+  const [touched, setTouched] = React.useState(false);
+  const emailProblem = !email.trim() ? "Please enter your email address" : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ? "Enter a valid email address, like name@example.com" : "";
 
   if (early) return <>{early}</>;
   if (!poll) return null;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (emailProblem) {
+      setTouched(true);
+      document.getElementById("forgot-email")?.focus();
+      return;
+    }
     setBusy(true);
     setProblem(null);
     try {
@@ -98,11 +105,18 @@ export function VoterForgotPasswordPage() {
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
+                onBlur={() => setTouched(true)}
+                aria-invalid={touched && emailProblem ? true : undefined}
+                aria-describedby={touched && emailProblem ? "forgot-email-error" : undefined}
                 autoFocus
               />
+              {touched && emailProblem && (
+                <p id="forgot-email-error" role="alert" className="text-sm text-destructive">
+                  {emailProblem}
+                </p>
+              )}
             </div>
-            <Button type="submit" loading={busy} disabled={!email.includes("@")} className="w-full">
+            <Button type="submit" loading={busy} className="w-full">
               Send me a code
             </Button>
           </form>
@@ -133,13 +147,27 @@ export function VoterResetPasswordPage() {
   if (early) return <>{early}</>;
   if (!poll) return null;
 
-  const tooShort = password.length > 0 && password.length < MIN_LENGTH;
-  const mismatch = confirm.length > 0 && confirm !== password;
-  const ready = email.includes("@") && code.length >= 6 && password.length >= MIN_LENGTH && password === confirm;
+  const [touched, setTouched] = React.useState<Record<string, boolean>>({});
+  const [triedSubmit, setTriedSubmit] = React.useState(false);
+  const errs = {
+    email: !email.trim() ? "Please enter your email address" : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ? "Enter a valid email address, like name@example.com" : "",
+    code: code.length < 6 ? "Please enter the 6-character code from your email" : "",
+    password: !password ? "Please enter a new password" : password.length < MIN_LENGTH ? `Use at least ${MIN_LENGTH} characters` : "",
+    confirm: !confirm ? "Please confirm your new password" : confirm !== password ? "Passwords don't match" : "",
+  };
+  const shown = (key: keyof typeof errs) => ((touched[key] || triedSubmit) && errs[key]) || "";
+  const touch = (key: string) => () => setTouched((t) => ({ ...t, [key]: true }));
+  const tooShort = !!shown("password");
+  const mismatch = !!shown("confirm");
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ready) return;
+    const firstBad = (["email", "code", "password", "confirm"] as const).find((key) => errs[key]);
+    if (firstBad) {
+      setTriedSubmit(true);
+      document.getElementById(firstBad === "email" ? "reset-email" : firstBad === "password" ? "reset-password" : firstBad === "confirm" ? "reset-confirm" : "code-0")?.focus();
+      return;
+    }
     setBusy(true);
     setProblem(null);
     try {
@@ -186,7 +214,21 @@ export function VoterResetPasswordPage() {
             {!params.get("email") && (
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="reset-email">Email</Label>
-                <Input id="reset-email" type="email" autoComplete="email" placeholder="Enter your email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <Input
+                  id="reset-email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onBlur={touch("email")}
+                  aria-invalid={shown("email") ? true : undefined}
+                />
+                {shown("email") && (
+                  <p role="alert" className="text-sm text-destructive">
+                    {shown("email")}
+                  </p>
+                )}
               </div>
             )}
             {params.get("email") && (
@@ -198,6 +240,11 @@ export function VoterResetPasswordPage() {
             <div className="flex flex-col items-center gap-1.5">
               <Label className="self-start">Code from your email</Label>
               <CodeInput value={code} onChange={setCode} disabled={busy} autoFocus />
+              {shown("code") && (
+                <p role="alert" className="self-start text-sm text-destructive">
+                  {shown("code")}
+                </p>
+              )}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="reset-password">New password</Label>
@@ -207,8 +254,12 @@ export function VoterResetPasswordPage() {
                 placeholder="Enter your new password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onBlur={touch("password")}
+                aria-invalid={tooShort ? true : undefined}
               />
-              <p className={tooShort ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>At least {MIN_LENGTH} characters.</p>
+              <p role={tooShort ? "alert" : undefined} className={tooShort ? "text-sm text-destructive" : "text-xs text-muted-foreground"}>
+                {tooShort ? shown("password") : `At least ${MIN_LENGTH} characters.`}
+              </p>
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="reset-confirm">Confirm new password</Label>
@@ -218,10 +269,16 @@ export function VoterResetPasswordPage() {
                 placeholder="Confirm your new password"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
+                onBlur={touch("confirm")}
+                aria-invalid={mismatch ? true : undefined}
               />
-              {mismatch && <p className="text-xs text-destructive">Passwords don&apos;t match</p>}
+              {mismatch && (
+                <p role="alert" className="text-sm text-destructive">
+                  {shown("confirm")}
+                </p>
+              )}
             </div>
-            <Button type="submit" loading={busy} disabled={!ready} className="w-full">
+            <Button type="submit" loading={busy} className="w-full">
               <KeyRound className="h-4 w-4" />
               Save new password
             </Button>

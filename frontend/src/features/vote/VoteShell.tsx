@@ -41,7 +41,7 @@ export function VoteShell({ poll, children }: { poll?: VotePoll; children: React
   return (
     <div className="flex min-h-screen flex-col bg-transparent">
       <header className="sticky top-0 z-30 border-b border-border/70 bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-3 px-4 py-3">
+        <div className="mx-auto flex w-[90%] max-w-[1600px] items-center justify-between gap-3 py-3">
           <div className="flex min-w-0 items-center gap-3">
             {poll && <PollLogo poll={poll} size="h-10 w-10" />}
             <div className="min-w-0">
@@ -60,7 +60,7 @@ export function VoteShell({ poll, children }: { poll?: VotePoll; children: React
           </div>
         </div>
       </header>
-      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-4xl flex-1 px-4 py-6 focus:outline-none sm:py-10">
+      <main id="main-content" tabIndex={-1} className="mx-auto w-[90%] max-w-[1600px] min-w-0 flex-1 py-6 focus:outline-none sm:py-10">
         {children}
       </main>
       <footer className="py-6 text-center text-xs text-muted-foreground">Secure voting by Program Registration Platform</footer>

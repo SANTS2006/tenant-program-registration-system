@@ -49,7 +49,7 @@ function Ballot({
   return (
     <fieldset disabled={disabled} className="flex flex-col gap-3">
       <legend className="sr-only">Choose one candidate for {position.title}</legend>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3">
         {position.candidates.map((candidate) => {
           const checked = selected === candidate.id;
           return (
@@ -402,9 +402,9 @@ function VoteFlow() {
           </div>
         )}
 
-        <div className={cn("grid gap-6", poll.showResults && "lg:grid-cols-[1fr_320px]")}>
-          <div className="flex flex-col gap-5">
-            {position.imageUrl && <img src={position.imageUrl} alt="" className="max-h-48 w-full rounded-2xl object-cover" />}
+        <div className={cn("grid min-w-0 gap-6", poll.showResults && "md:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] md:items-start")}>
+          <div className="flex min-w-0 flex-col gap-5">
+            {position.imageUrl && <img src={position.imageUrl} alt="" className="max-h-80 w-full rounded-2xl bg-card object-contain" />}
             {position.description && <p className="text-sm text-muted-foreground">{position.description}</p>}
             <p className="text-sm font-medium">Choose one candidate:</p>
             <Ballot position={position} selected={selected} onSelect={setSelected} disabled={submitting} />
@@ -428,7 +428,11 @@ function VoteFlow() {
               </div>
             </div>
           </div>
-          {poll.showResults && <LiveResultsCard results={results} positionId={position.id} />}
+          {poll.showResults && (
+            <div className="min-w-0 md:sticky md:top-20">
+              <LiveResultsCard results={results} positionId={position.id} />
+            </div>
+          )}
         </div>
       </div>
 

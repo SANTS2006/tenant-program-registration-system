@@ -17,11 +17,29 @@ import { usePageMeta } from "@/lib/seo";
 
 const registerSchema = z
   .object({
-    organizationName: z.string().min(2, "Enter your organization or account name"),
-    name: z.string().min(2, "Enter your full name"),
-    email: z.string().email("Enter a valid email address"),
-    password: z.string().min(8, "At least 8 characters"),
-    confirmPassword: z.string().min(1, "Confirm your password"),
+    organizationName: z
+      .string()
+      .trim()
+      .min(1, "Please enter your organization or account name")
+      .min(2, "The name must be at least 2 characters"),
+    name: z
+      .string()
+      .trim()
+      .min(1, "Please enter your full name")
+      .min(2, "Enter your full name (at least 2 letters)")
+      .regex(/[A-Za-z]/, "Your name should contain letters"),
+    email: z
+      .string()
+      .trim()
+      .min(1, "Please enter your email address")
+      .email("Enter a valid email address, like name@example.com"),
+    password: z
+      .string()
+      .min(1, "Please create a password")
+      .min(8, "Use at least 8 characters")
+      .regex(/[A-Za-z]/, "Include at least one letter")
+      .regex(/\d/, "Include at least one number"),
+    confirmPassword: z.string().min(1, "Please confirm your password"),
     acceptTerms: z.boolean().refine((accepted) => accepted, {
       message: "You must agree to the Terms of Service and Privacy Policy to create an account",
     }),
@@ -68,7 +86,7 @@ export function RegisterPage() {
     control,
     handleSubmit,
     formState: { errors },
-  } = useForm<RegisterForm>({ resolver: zodResolver(registerSchema), defaultValues: { acceptTerms: false } });
+  } = useForm<RegisterForm>({ resolver: zodResolver(registerSchema), defaultValues: { acceptTerms: false }, mode: "onTouched" });
 
   if (!isLoading && user) {
     return justRegisteredRef.current ? (
@@ -158,10 +176,12 @@ export function RegisterPage() {
                     autoComplete="organization"
                     placeholder="Organization or account name"
                     className="h-12 rounded-full px-5"
+                    aria-invalid={errors.organizationName ? true : undefined}
+                    aria-describedby={errors.organizationName ? "organizationName-error" : undefined}
                     {...register("organizationName")}
                   />
                   {errors.organizationName && (
-                    <p className="px-2 text-sm text-destructive">{errors.organizationName.message}</p>
+                    <p id="organizationName-error" role="alert" className="px-2 text-sm text-destructive">{errors.organizationName.message}</p>
                   )}
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -173,9 +193,11 @@ export function RegisterPage() {
                     autoComplete="name"
                     placeholder="Your full name"
                     className="h-12 rounded-full px-5"
+                    aria-invalid={errors.name ? true : undefined}
+                    aria-describedby={errors.name ? "name-error" : undefined}
                     {...register("name")}
                   />
-                  {errors.name && <p className="px-2 text-sm text-destructive">{errors.name.message}</p>}
+                  {errors.name && <p id="name-error" role="alert" className="px-2 text-sm text-destructive">{errors.name.message}</p>}
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="email" className="sr-only">
@@ -187,9 +209,11 @@ export function RegisterPage() {
                     autoComplete="email"
                     placeholder="Enter your email"
                     className="h-12 rounded-full px-5"
+                    aria-invalid={errors.email ? true : undefined}
+                    aria-describedby={errors.email ? "email-error" : undefined}
                     {...register("email")}
                   />
-                  {errors.email && <p className="px-2 text-sm text-destructive">{errors.email.message}</p>}
+                  {errors.email && <p id="email-error" role="alert" className="px-2 text-sm text-destructive">{errors.email.message}</p>}
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="password" className="sr-only">
@@ -202,7 +226,9 @@ export function RegisterPage() {
                       autoComplete="new-password"
                       placeholder="Password"
                       className="h-12 rounded-full px-5 pr-12"
-                      {...register("password")}
+                      aria-invalid={errors.password ? true : undefined}
+                    aria-describedby={errors.password ? "password-error" : undefined}
+                    {...register("password")}
                     />
                     <button
                       type="button"
@@ -213,7 +239,7 @@ export function RegisterPage() {
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  {errors.password && <p className="px-2 text-sm text-destructive">{errors.password.message}</p>}
+                  {errors.password && <p id="password-error" role="alert" className="px-2 text-sm text-destructive">{errors.password.message}</p>}
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="confirmPassword" className="sr-only">
@@ -225,10 +251,12 @@ export function RegisterPage() {
                     autoComplete="new-password"
                     placeholder="Confirm password"
                     className="h-12 rounded-full px-5"
+                    aria-invalid={errors.confirmPassword ? true : undefined}
+                    aria-describedby={errors.confirmPassword ? "confirmPassword-error" : undefined}
                     {...register("confirmPassword")}
                   />
                   {errors.confirmPassword && (
-                    <p className="px-2 text-sm text-destructive">{errors.confirmPassword.message}</p>
+                    <p id="confirmPassword-error" role="alert" className="px-2 text-sm text-destructive">{errors.confirmPassword.message}</p>
                   )}
                 </div>
                 <div className="flex flex-col gap-1.5 px-1 pt-1">

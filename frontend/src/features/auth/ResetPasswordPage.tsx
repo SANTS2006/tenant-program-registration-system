@@ -52,12 +52,27 @@ export function ResetPasswordPage() {
     );
   }
 
-  const tooShort = password.length > 0 && password.length < MIN_LENGTH;
-  const mismatch = confirm.length > 0 && confirm !== password;
+  const [touched, setTouched] = React.useState({ password: false, confirm: false });
+  const passwordProblem = !password
+    ? "Please enter a new password"
+    : password.length < MIN_LENGTH
+      ? `Use at least ${MIN_LENGTH} characters`
+      : !/[A-Za-z]/.test(password)
+        ? "Include at least one letter"
+        : !/\d/.test(password)
+          ? "Include at least one number"
+          : "";
+  const confirmProblem = !confirm ? "Please confirm your new password" : confirm !== password ? "Passwords don't match" : "";
+  const tooShort = touched.password && !!passwordProblem;
+  const mismatch = touched.confirm && !!confirmProblem;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.length < MIN_LENGTH || password !== confirm) return;
+    if (passwordProblem || confirmProblem) {
+      setTouched({ password: true, confirm: true });
+      document.getElementById(passwordProblem ? "password" : "confirm")?.focus();
+      return;
+    }
     setSubmitting(true);
     try {
       await resetPassword(token!, password);
@@ -84,6 +99,9 @@ export function ResetPasswordPage() {
               className="h-12 rounded-full px-5 pr-12"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, password: true }))}
+              aria-invalid={tooShort ? true : undefined}
+              aria-describedby="password-hint"
             />
             <button
               type="button"
@@ -94,8 +112,8 @@ export function ResetPasswordPage() {
               {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
-          <p className={tooShort ? "px-2 text-sm text-destructive" : "px-2 text-xs text-muted-foreground"}>
-            At least {MIN_LENGTH} characters.
+          <p id="password-hint" role={tooShort ? "alert" : undefined} className={tooShort ? "px-2 text-sm text-destructive" : "px-2 text-xs text-muted-foreground"}>
+            {tooShort ? passwordProblem : `At least ${MIN_LENGTH} characters, with a letter and a number.`}
           </p>
         </div>
         <div className="flex flex-col gap-1.5">
@@ -107,15 +125,21 @@ export function ResetPasswordPage() {
             className="h-12 rounded-full px-5"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, confirm: true }))}
+            aria-invalid={mismatch ? true : undefined}
+            aria-describedby={mismatch ? "confirm-error" : undefined}
           />
-          {mismatch && <p className="px-2 text-sm text-destructive">Passwords don&apos;t match</p>}
+          {mismatch && (
+            <p id="confirm-error" role="alert" className="px-2 text-sm text-destructive">
+              {confirmProblem}
+            </p>
+          )}
         </div>
         <Button
           type="submit"
           size="lg"
           className="h-12 rounded-full"
           loading={submitting}
-          disabled={password.length < MIN_LENGTH || password !== confirm}
         >
           {submitting ? "Saving..." : "Save new password"}
         </Button>

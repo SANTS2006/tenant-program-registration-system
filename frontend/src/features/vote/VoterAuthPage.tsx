@@ -37,6 +37,33 @@ export function VoterAuthPage({ mode }: { mode: "login" | "register" }) {
   const [verifyEmail, setVerifyEmail] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [problem, setProblem] = React.useState<string | null>(null);
+  const [touched, setTouched] = React.useState<Record<string, boolean>>({});
+  const [submitted, setSubmitted] = React.useState(false);
+
+  // What is wrong with each field right now; shown once the person has left the field or tried to continue.
+  const trimmedEmail = email.trim();
+  const fieldErrors = {
+    name:
+      mode !== "register"
+        ? ""
+        : !name.trim()
+          ? "Please enter your full name"
+          : name.trim().length < 2
+            ? "Enter your full name (at least 2 letters)"
+            : !/[A-Za-z]/.test(name)
+              ? "Your name should contain letters"
+              : "",
+    email: !trimmedEmail ? "Please enter your email address" : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail) ? "Enter a valid email address, like name@example.com" : "",
+    password: !password
+      ? mode === "register"
+        ? "Please create a password"
+        : "Please enter your password"
+      : mode === "register" && password.length < 8
+        ? "Use at least 8 characters"
+        : "",
+  };
+  const shown = (key: keyof typeof fieldErrors) => ((touched[key] || submitted) && fieldErrors[key]) || "";
+  const touch = (key: string) => () => setTouched((t) => ({ ...t, [key]: true }));
 
   if (isLoading) return <VoteShell><p className="text-sm text-muted-foreground">Loading...</p></VoteShell>;
   if (error || !poll) {
@@ -77,6 +104,12 @@ export function VoterAuthPage({ mode }: { mode: "login" | "register" }) {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+    const firstBad = (["name", "email", "password"] as const).find((key) => fieldErrors[key]);
+    if (firstBad) {
+      setSubmitted(true);
+      document.getElementById(`voter-${firstBad}`)?.focus();
+      return;
+    }
     if (mode === "register") void attempt(() => registerVoter({ pollSlug: slug, name, email, password }));
     else void attempt(() => loginVoter({ pollSlug: slug, email, password }));
   };
@@ -160,7 +193,21 @@ export function VoterAuthPage({ mode }: { mode: "login" | "register" }) {
                 {mode === "register" && (
                   <div className="flex flex-col gap-1.5">
                     <Label htmlFor="voter-name">Full name</Label>
-                    <Input id="voter-name" autoComplete="name" placeholder="Enter your full name" value={name} onChange={(e) => setName(e.target.value)} required />
+                    <Input
+                      id="voter-name"
+                      autoComplete="name"
+                      placeholder="Enter your full name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      onBlur={touch("name")}
+                      aria-invalid={shown("name") ? true : undefined}
+                      aria-describedby={shown("name") ? "voter-name-error" : undefined}
+                    />
+                    {shown("name") && (
+                      <p id="voter-name-error" role="alert" className="text-sm text-destructive">
+                        {shown("name")}
+                      </p>
+                    )}
                   </div>
                 )}
                 <div className="flex flex-col gap-1.5">
@@ -172,8 +219,15 @@ export function VoterAuthPage({ mode }: { mode: "login" | "register" }) {
                     placeholder="Enter your email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    required
+                    onBlur={touch("email")}
+                    aria-invalid={shown("email") ? true : undefined}
+                    aria-describedby={shown("email") ? "voter-email-error" : undefined}
                   />
+                  {shown("email") && (
+                    <p id="voter-email-error" role="alert" className="text-sm text-destructive">
+                      {shown("email")}
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center justify-between gap-2">
@@ -193,9 +247,17 @@ export function VoterAuthPage({ mode }: { mode: "login" | "register" }) {
                     autoComplete={mode === "register" ? "new-password" : "current-password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    required
+                    onBlur={touch("password")}
+                    aria-invalid={shown("password") ? true : undefined}
+                    aria-describedby={shown("password") ? "voter-password-error" : undefined}
                   />
-                  {mode === "register" && <p className="text-xs text-muted-foreground">At least 8 characters.</p>}
+                  {shown("password") ? (
+                    <p id="voter-password-error" role="alert" className="text-sm text-destructive">
+                      {shown("password")}
+                    </p>
+                  ) : (
+                    mode === "register" && <p className="text-xs text-muted-foreground">At least 8 characters.</p>
+                  )}
                 </div>
                 <Button type="submit" loading={busy} className="w-full">
                   {mode === "register" ? "Create account" : "Sign in"}
