@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ApiError } from "@/lib/api";
@@ -141,27 +141,46 @@ function RoleSelect({ userId, name, role }: { userId: string; name: string; role
   );
 }
 
+/** Asks for confirmation in a dialog before taking someone off the team. */
 function RemoveFromTeamButton({ userId, name }: { userId: string; name: string }) {
   const remove = useRemoveTeamMember();
+  const [open, setOpen] = React.useState(false);
+
+  const confirm = async () => {
+    try {
+      await remove.mutateAsync(userId);
+      toast.success(`${name} was removed from your team`);
+      setOpen(false);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Couldn't remove them");
+    }
+  };
+
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      aria-label={`Remove ${name} from your team`}
-      title="Remove from your team (their own space stays)"
-      loading={remove.isPending}
-      onClick={async () => {
-        if (!window.confirm(`Remove ${name} from your team? They lose access to your programs, polls and businesses, but keep their own space.`)) return;
-        try {
-          await remove.mutateAsync(userId);
-          toast.success(`${name} was removed from your team`);
-        } catch (err) {
-          toast.error(err instanceof ApiError ? err.message : "Couldn't remove them");
-        }
-      }}
-    >
-      <UserMinus className="h-4 w-4 text-destructive" />
-    </Button>
+    <Dialog open={open} onOpenChange={(next) => !remove.isPending && setOpen(next)}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" aria-label={`Remove ${name} from your team`} title="Remove from your team (their own space stays)">
+          <UserMinus className="h-4 w-4 text-destructive" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Remove {name} from your team?</DialogTitle>
+          <DialogDescription>
+            They will lose access to all of your programs, voting polls and businesses. Their own space and anything they created in it stays theirs, and you can invite them again later.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={remove.isPending}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={confirm} loading={remove.isPending}>
+            <UserMinus className="h-4 w-4" />
+            Remove from team
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
