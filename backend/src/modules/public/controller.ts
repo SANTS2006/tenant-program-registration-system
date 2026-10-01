@@ -75,6 +75,9 @@ export async function submitPublicRegistrationHandler(request: FastifyRequest, r
   const { slug } = request.params as { slug: string };
   const input = submitRegistrationSchema.parse(request.body);
   const result = await registrationsService.submitRegistration(slug, input);
+  const program = await programsRepo.findProgramById(result.registration.programId);
+  // Orders always get their copy; a program's admin chooses whether registrants do.
+  const offerCopy = !program || program.kind === "order_form" || program.allowSubmissionCopy;
   return sendSuccess(
     reply,
     {
@@ -85,7 +88,7 @@ export async function submitPublicRegistrationHandler(request: FastifyRequest, r
       idCardAvailable: result.idCardAvailable,
       ticketAvailable: result.ticketAvailable,
       // Lets the registrant view and download what they submitted from the success page.
-      receiptToken: signSubmissionToken(result.registration.id),
+      receiptToken: offerCopy ? signSubmissionToken(result.registration.id) : undefined,
     },
     "Registration submitted successfully",
     201,

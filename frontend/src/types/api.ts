@@ -32,6 +32,7 @@ export interface Program {
   ticketEnabled: boolean;
   oneRegistrationPerEmail: boolean;
   notifyOnRegistration: boolean;
+  allowSubmissionCopy: boolean;
   notifyOnVerification: boolean;
   registrationNumberConfig: Partial<RegistrationNumberConfig>;
   createdAt: string;

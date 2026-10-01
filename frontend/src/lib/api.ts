@@ -142,5 +142,6 @@ export async function downloadAuthenticatedFile(path: string, fallbackFilename: 
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+  // Revoking at once can cancel the save in some browsers.
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

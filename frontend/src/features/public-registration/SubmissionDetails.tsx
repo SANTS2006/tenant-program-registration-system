@@ -1,16 +1,54 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ChevronDown, ChevronUp, Eye, FileDown, FileText, ImageDown, Printer } from "lucide-react";
+import { Eye, FileDown, FileText, ImageDown, Printer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { apiFetch, downloadAuthenticatedFile } from "@/lib/api";
-import { printSummary, saveBlob, summaryHtml, summaryImage, type SubmissionSummary } from "./submissionDocument";
+import { printSummary, saveBlob, summaryImage, type SubmissionSummary } from "./submissionDocument";
+
+/** The copy of the answers, laid out like the registration or order details page the team sees. */
+function SubmissionDocument({ data }: { data: SubmissionSummary }) {
+  const isOrder = data.kind === "order_form";
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-start justify-between gap-3">
+        <div className="min-w-0">
+          {data.business && <p className="text-xs font-semibold uppercase tracking-wide text-primary">{data.business.name}</p>}
+          <CardTitle className="break-all">{data.registrationNumber}</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            {isOrder ? "Placed" : "Submitted"} {new Date(data.submittedAt).toLocaleString()}
+            {data.applicantName ? ` · ${data.applicantName}` : ""}
+          </p>
+        </div>
+        <Badge variant="default" className="shrink-0">
+          {data.statusLabel ?? data.status}
+        </Badge>
+      </CardHeader>
+      <CardContent>
+        {data.sections.map((section) => (
+          <div key={section.title} className="mt-6 first:mt-0">
+            <h3 className="mb-3 text-sm font-semibold text-muted-foreground">{section.title}</h3>
+            <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {section.rows.map((row, i) => (
+                <div key={`${row.label}-${i}`}>
+                  <dt className="text-xs uppercase text-muted-foreground">{row.label}</dt>
+                  <dd className="whitespace-pre-line break-words text-sm">{row.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
 
 /**
- * Lets a registrant (or a customer who placed an order) look over, preview, print, and download the
- * answers they just submitted, as a PDF or a picture. Orders also show their number and status.
+ * Lets a registrant (or a customer who placed an order) preview, print, and download the answers
+ * they just submitted, as a PDF or a picture. Orders also show their number and status.
  */
 export function SubmissionDetails({
   token,
@@ -22,17 +60,15 @@ export function SubmissionDetails({
   variant?: "registration" | "order";
 }) {
   const isOrder = variant === "order";
-  const [open, setOpen] = React.useState(false);
   const [previewing, setPreviewing] = React.useState(false);
   const [busy, setBusy] = React.useState<"pdf" | "image" | null>(null);
   const path = `/public/submissions/${encodeURIComponent(token)}`;
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isError, refetch } = useQuery({
     queryKey: ["submission-summary", token],
     queryFn: () => apiFetch<SubmissionSummary>(path),
-    // Orders show their number and status straight away; registrations load when opened.
-    enabled: open || previewing || isOrder,
-    staleTime: isOrder ? 30_000 : Infinity,
+    staleTime: 30_000,
+    retry: 2,
   });
 
   const noun = isOrder ? "Order" : "Registration";
@@ -73,21 +109,17 @@ export function SubmissionDetails({
               {heading}
             </h2>
           </div>
-          {isOrder && data && (
+          {data && (
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <span className="font-mono font-semibold tracking-wide">{data.registrationNumber}</span>
-              <Badge variant="default" aria-label={`Order status: ${data.statusLabel ?? data.status}`}>
+              <Badge variant="default" aria-label={`Status: ${data.statusLabel ?? data.status}`}>
                 {data.statusLabel ?? data.status}
               </Badge>
             </div>
           )}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-controls="submission-body">
-            {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            {open ? "Hide" : "View"}
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setPreviewing(true)} disabled={isOrder && !ready}>
+          <Button variant="outline" size="sm" onClick={() => setPreviewing(true)} disabled={!ready}>
             <Eye className="h-4 w-4" />
             Preview
           </Button>
@@ -104,48 +136,28 @@ export function SubmissionDetails({
             Download image
           </Button>
         </div>
+        {isError && (
+          <p role="alert" className="text-xs text-destructive">
+            We couldn&apos;t load your copy yet.{" "}
+            <button type="button" className="font-medium underline" onClick={() => void refetch()}>
+              Try again
+            </button>
+          </p>
+        )}
       </div>
-
-      {open && (
-        <div id="submission-body" className="border-t border-border/70 p-4">
-          {isLoading && <p className="text-sm text-muted-foreground">Loading your answers...</p>}
-          {error && <p className="text-sm text-destructive">We couldn&apos;t load your answers. Please try again later.</p>}
-          {data && (
-            <div className="flex flex-col gap-5">
-              {data.sections.map((section) => (
-                <div key={section.title} className="flex flex-col gap-2">
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-primary">{section.title}</h3>
-                  <dl className="divide-y divide-border/60 rounded-lg border border-border/60">
-                    {section.rows.map((row, i) => (
-                      <div key={`${row.label}-${i}`} className="grid gap-1 px-3 py-2 text-sm sm:grid-cols-[40%_1fr] sm:gap-3">
-                        <dt className="text-muted-foreground">{row.label}</dt>
-                        <dd className="whitespace-pre-line break-words font-medium">{row.value}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
       <p className="border-t border-border/70 px-4 py-2 text-xs text-muted-foreground">
         This page is private to you. Keep a copy for your records.
       </p>
 
       <Dialog open={previewing} onOpenChange={setPreviewing}>
-        <DialogContent className="max-h-[90vh] max-w-3xl overflow-hidden p-0">
-          <DialogHeader className="px-6 pt-6">
+        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+          <DialogHeader>
             <DialogTitle>Preview</DialogTitle>
-            <DialogDescription>This is how your copy looks when printed or downloaded.</DialogDescription>
+            <DialogDescription>This is your copy, laid out the way the team sees it.</DialogDescription>
           </DialogHeader>
-          {data ? (
-            <iframe title={`${noun} preview`} srcDoc={summaryHtml(data)} className="h-[60vh] w-full border-t border-border/70 bg-white" />
-          ) : (
-            <p className="px-6 pb-6 text-sm text-muted-foreground">{error ? "We couldn't load the preview." : "Loading..."}</p>
-          )}
+          {data && <SubmissionDocument data={data} />}
           {data && (
-            <div className="flex flex-wrap justify-end gap-2 border-t border-border/70 px-6 py-3">
+            <div className="flex flex-wrap justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => printSummary(data)}>
                 <Printer className="h-4 w-4" />
                 Print

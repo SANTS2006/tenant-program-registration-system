@@ -49,6 +49,7 @@ export function updateProgram(
     ticketEnabled?: boolean;
     oneRegistrationPerEmail?: boolean;
     notifyOnRegistration?: boolean;
+    allowSubmissionCopy?: boolean;
     notifyOnVerification?: boolean;
     thumbnailUrl?: string;
     registrationNumberConfig?: RegistrationNumberConfig;

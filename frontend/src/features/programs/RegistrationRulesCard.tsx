@@ -20,6 +20,15 @@ export function RegistrationRulesCard({ program }: { program: Program }) {
     }
   };
 
+  const toggleCopy = async (checked: boolean) => {
+    try {
+      await updateProgram.mutateAsync({ allowSubmissionCopy: checked });
+      toast.success(checked ? "Registrants can now preview, print, and download their registration" : "Registrants will no longer see a copy of their registration");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to update");
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -29,7 +38,20 @@ export function RegistrationRulesCard({ program }: { program: Program }) {
         </CardTitle>
         <CardDescription>Control who can submit the registration form.</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex flex-col gap-3">
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-border/70 p-3">
+          <div>
+            <Label htmlFor="allowCopy" className="font-medium">
+              Let registrants preview, print, and download their registration
+            </Label>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {program.allowSubmissionCopy
+                ? "After registering, people see buttons on the success page to preview, print, and download a copy of what they submitted."
+                : "The success page shows only the confirmation and registration number."}
+            </p>
+          </div>
+          <Switch id="allowCopy" checked={program.allowSubmissionCopy} onCheckedChange={toggleCopy} disabled={updateProgram.isPending} />
+        </div>
         <div className="flex items-start justify-between gap-3 rounded-lg border border-border/70 p-3">
           <div>
             <Label htmlFor="onePerEmail" className="font-medium">

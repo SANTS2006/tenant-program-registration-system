@@ -40,6 +40,8 @@ export const programs = pgTable(
     oneRegistrationPerEmail: boolean("one_registration_per_email").notNull().default(false),
     // Emails the program's team about each new registration and each first ID card/ticket check-in.
     notifyOnRegistration: boolean("notify_on_registration").notNull().default(true),
+    // When on, the success page lets registrants preview, print, and download their own answers.
+    allowSubmissionCopy: boolean("allow_submission_copy").notNull().default(true),
     notifyOnVerification: boolean("notify_on_verification").notNull().default(true),
     // { prefix, includeYear, digits, startAt } -- empty means the default REG-{YEAR}-{000001} format.
     registrationNumberConfig: jsonb("registration_number_config").notNull().default({}),

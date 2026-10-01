@@ -30,6 +30,7 @@ export const updateProgramSchema = z.object({
   ticketEnabled: z.boolean().optional(),
   oneRegistrationPerEmail: z.boolean().optional(),
   notifyOnRegistration: z.boolean().optional(),
+  allowSubmissionCopy: z.boolean().optional(),
   notifyOnVerification: z.boolean().optional(),
   registrationNumberConfig: registrationNumberConfigSchema.optional(),
 });

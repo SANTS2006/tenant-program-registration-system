@@ -42,6 +42,9 @@ export function buildApp() {
       ? { level: "info" }
       : { level: "debug", transport: { target: "pino-pretty", options: { colorize: true } } },
     trustProxy: true,
+    // The private links on success pages carry a signed token of about 200 characters; the default
+    // limit of 100 makes such routes answer 404.
+    routerOptions: { maxParamLength: 1000 },
   });
 
   app.register(helmet, {
