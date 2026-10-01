@@ -226,13 +226,13 @@ export function FormBuilderPage() {
       <Card key={sectionKey ?? "unassigned"}>
         <CardHeader className="flex flex-row items-start justify-between gap-3">
           {section ? (
-            <div className="flex flex-1 flex-col gap-2">
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
               <Input
                 value={section.title}
                 onChange={(e) =>
                   setSections((prev) => prev.map((s) => (s.key === section.key ? { ...s, title: e.target.value } : s)))
                 }
-                className="max-w-sm font-medium"
+                className="w-full font-medium sm:max-w-sm"
               />
               <Textarea
                 value={section.description ?? ""}
@@ -273,12 +273,12 @@ export function FormBuilderPage() {
             </SortableContext>
           </DndContext>
 
-          <div className="flex items-center gap-2 pt-1">
+          <div className="flex flex-wrap items-center gap-2 pt-1">
             <Select
               value={addingType[sectionKey ?? "root"] ?? ""}
               onValueChange={(v) => setAddingType((prev) => ({ ...prev, [sectionKey ?? "root"]: v as FieldType }))}
             >
-              <SelectTrigger className="max-w-xs">
+              <SelectTrigger className="w-full sm:max-w-xs">
                 <SelectValue placeholder="Choose a field type to add" />
               </SelectTrigger>
               <SelectContent>
@@ -321,7 +321,7 @@ export function FormBuilderPage() {
           <Badge variant={data.form.status === "published" ? "success" : "secondary"}>{data.form.status}</Badge>
           <span className="text-sm text-muted-foreground">Version {data.form.version}</span>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => setPreviewOpen(true)}>
             <Eye className="h-4 w-4" />
             Preview
@@ -387,7 +387,7 @@ export function FormBuilderPage() {
           <div className="flex flex-col gap-1.5">
             <Label>Form layout</Label>
             <Select value={layoutMode} onValueChange={(v) => setLayoutMode(v as FormLayoutMode)}>
-              <SelectTrigger className="max-w-xs">
+              <SelectTrigger className="w-full sm:max-w-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -399,11 +399,11 @@ export function FormBuilderPage() {
 
           <div className="flex flex-col gap-3 rounded-lg border border-border/70 p-3">
             <div className="flex items-center justify-between gap-3">
-              <Label htmlFor="requireConsent" className="flex items-center gap-2 font-medium">
+              <Label htmlFor="requireConsent" className="flex min-w-0 items-center gap-2 font-medium">
                 <ShieldCheck className="h-4 w-4 text-primary" />
                 Require consent before starting
               </Label>
-              <Switch id="requireConsent" checked={requireConsent} onCheckedChange={setRequireConsent} />
+              <Switch id="requireConsent" className="shrink-0" checked={requireConsent} onCheckedChange={setRequireConsent} />
             </div>
             {requireConsent && (
               <div className="flex flex-col gap-1.5">
@@ -419,7 +419,7 @@ export function FormBuilderPage() {
           </div>
 
           <div className="flex items-center justify-between gap-3 rounded-lg border border-border/70 p-3">
-            <div>
+            <div className="min-w-0">
               <Label htmlFor="showRegistrationNumber" className="flex items-center gap-2 font-medium">
                 <Hash className="h-4 w-4 text-primary" />
                 Show registration number on the success page
@@ -428,7 +428,7 @@ export function FormBuilderPage() {
                 When off, registrants still get their number by email, but it isn&apos;t displayed after submitting.
               </p>
             </div>
-            <Switch id="showRegistrationNumber" checked={showRegistrationNumber} onCheckedChange={setShowRegistrationNumber} />
+            <Switch id="showRegistrationNumber" className="shrink-0" checked={showRegistrationNumber} onCheckedChange={setShowRegistrationNumber} />
           </div>
         </CardContent>
       </Card>

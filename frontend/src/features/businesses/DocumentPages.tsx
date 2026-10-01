@@ -247,7 +247,7 @@ function DocumentsListPage({ kind }: { kind: DocumentKind }) {
 
       <Card>
         <CardContent className="overflow-x-auto p-0">
-          <table className="w-full text-sm">
+          <table className="w-full whitespace-nowrap text-sm">
             <thead>
               <tr className="border-b border-border/70 text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <th scope="col" className="px-4 py-3 font-medium">Number</th>

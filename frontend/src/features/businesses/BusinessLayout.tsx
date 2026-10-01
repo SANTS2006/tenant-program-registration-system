@@ -70,20 +70,20 @@ export function BusinessLayout() {
   return (
     <div className="flex flex-col gap-6">
       <div
-        className="relative h-40 w-full overflow-hidden rounded-2xl border border-border/70 shadow-glow sm:h-48"
+        className="relative flex min-h-40 w-full flex-col justify-end overflow-hidden rounded-2xl border border-border/70 shadow-glow sm:min-h-48"
         style={{ background: `linear-gradient(135deg, ${business.brandColor}, #0f172a)` }}
       >
         {business.logoUrl ? (
-          <img src={business.logoUrl} alt="" className="h-full w-full object-cover" />
+          <img src={business.logoUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
         ) : (
-          <div className="flex h-full w-full items-start justify-end p-5">
+          <div className="absolute inset-0 flex items-start justify-end p-5">
             <Store className="h-12 w-12 text-white/30" aria-hidden="true" />
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 flex flex-col gap-1 p-4 sm:p-6">
-          <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg sm:text-3xl">{business.name}</h1>
-          <p className="text-sm font-medium text-white drop-shadow">
+        <div className="relative flex min-w-0 flex-col gap-1 p-4 pt-12 sm:p-6">
+          <h1 className="min-w-0 break-words text-2xl font-bold tracking-tight text-white drop-shadow-lg sm:text-3xl">{business.name}</h1>
+          <p className="break-words text-sm font-medium text-white drop-shadow">
             {[business.phone, business.email].filter(Boolean).join(" · ") || "Add contact details on the Overview tab"}
           </p>
         </div>

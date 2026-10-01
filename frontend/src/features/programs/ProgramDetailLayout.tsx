@@ -98,11 +98,11 @@ export function ProgramDetailLayout() {
     <div className="flex flex-col gap-6">
       {/* Hero banner: image container uses `relative` positioning so the name/status
           overlay can be laid on top with `absolute`, anchored to its bottom-left. */}
-      <div className="relative h-40 w-full overflow-hidden rounded-2xl border border-border/70 bg-gradient-brand shadow-glow sm:h-52">
+      <div className="relative flex min-h-40 w-full flex-col justify-end overflow-hidden rounded-2xl border border-border/70 bg-gradient-brand shadow-glow sm:min-h-52">
         {program.thumbnailUrl ? (
-          <img src={program.thumbnailUrl} alt="" className="h-full w-full object-cover" />
+          <img src={program.thumbnailUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-brand">
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-brand">
             <ImageIcon className="h-10 w-10 text-white/40" />
           </div>
         )}
@@ -121,12 +121,12 @@ export function ProgramDetailLayout() {
             />
           </div>
         )}
-        <div className="absolute inset-x-0 bottom-0 flex flex-col gap-2 p-4 sm:p-6">
+        <div className="relative flex min-w-0 flex-col gap-2 p-4 pt-16 sm:p-6 sm:pt-14">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow sm:text-3xl">{program.name}</h1>
+            <h1 className="min-w-0 break-words text-2xl font-bold tracking-tight text-white drop-shadow sm:text-3xl">{program.name}</h1>
             <ProgramStatusBadge status={program.status} />
           </div>
-          <p className="text-sm text-white/80">/{program.slug}</p>
+          <p className="break-all text-sm text-white/80">/{program.slug}</p>
         </div>
       </div>
 

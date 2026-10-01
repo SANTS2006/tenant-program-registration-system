@@ -814,14 +814,14 @@ export function DynamicForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
+    <form onSubmit={handleSubmit} className="flex min-w-0 flex-col gap-6" noValidate>
       {!isSingle && steps.length > 1 && (
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>
               Step {stepIndex + 1} of {steps.length}
             </span>
-            <span>{currentStep.title}</span>
+            <span className="min-w-0 truncate pl-3 text-right">{currentStep.title}</span>
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
             <div
@@ -883,7 +883,7 @@ export function DynamicForm({
         </label>
       )}
 
-      <div className="flex items-center justify-between pt-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
         {!isSingle && stepIndex > 0 ? (
           <Button type="button" variant="outline" onClick={handleBack}>
             <ChevronLeft className="h-4 w-4" />
@@ -897,7 +897,7 @@ export function DynamicForm({
           <span />
         )}
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <Button type="button" variant="ghost" onClick={clearForm} disabled={submitting}>
             <Eraser className="h-4 w-4" />
             Clear form

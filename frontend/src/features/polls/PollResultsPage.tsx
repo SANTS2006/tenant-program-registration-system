@@ -42,7 +42,7 @@ export function PollResultsPage() {
             <p className="text-sm text-muted-foreground">Add positions on the Ballot tab to see results.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full whitespace-nowrap text-sm">
                 <thead>
                   <tr className="border-b border-border/70 text-left text-xs uppercase tracking-wide text-muted-foreground">
                     <th scope="col" className="py-2 pr-3 font-medium">Position</th>

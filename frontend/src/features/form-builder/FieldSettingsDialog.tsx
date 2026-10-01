@@ -47,7 +47,7 @@ export function FieldSettingsDialog({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[85vh] max-w-xl overflow-y-auto">
+      <DialogContent className="max-h-[90vh] w-[calc(100vw-1.5rem)] max-w-xl overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>Field settings &middot; {meta.label}</DialogTitle>
         </DialogHeader>
@@ -81,7 +81,7 @@ export function FieldSettingsDialog({
             <Textarea value={draft.description ?? ""} onChange={(e) => update({ description: e.target.value })} rows={2} />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label>Placeholder</Label>
               <Input value={draft.placeholder ?? ""} onChange={(e) => update({ placeholder: e.target.value })} />
@@ -100,7 +100,7 @@ export function FieldSettingsDialog({
           </div>
 
           {(draft.type === "short_text" || draft.type === "long_text" || draft.type === "address") && (
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div className="flex flex-col gap-1.5">
                 <Label>Min length</Label>
                 <Input
@@ -125,7 +125,7 @@ export function FieldSettingsDialog({
           )}
 
           {(draft.type === "number" || draft.type === "currency" || draft.type === "rating") && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
                 <Label>Minimum</Label>
                 <Input

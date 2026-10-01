@@ -18,7 +18,8 @@ function monthLabel(key: string) {
 function StatusTable({ data, currency, kind, defs }: { data: DocumentAnalytics; currency: string; kind: "invoice" | "receipt" | "quotation"; defs: StatusDef[] }) {
   if (data.count === 0) return <p className="text-sm text-muted-foreground">No {kind}s yet.</p>;
   return (
-    <table className="w-full text-sm">
+    <div className="max-w-full overflow-x-auto">
+    <table className="w-full whitespace-nowrap text-sm">
       <thead>
         <tr className="border-b border-border/70 text-left text-xs uppercase tracking-wide text-muted-foreground">
           <th scope="col" className="py-2 pr-3 font-medium">Status</th>
@@ -38,6 +39,7 @@ function StatusTable({ data, currency, kind, defs }: { data: DocumentAnalytics; 
         ))}
       </tbody>
     </table>
+    </div>
   );
 }
 

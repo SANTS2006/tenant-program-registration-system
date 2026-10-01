@@ -42,21 +42,21 @@ export function PollDetailLayout() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="relative h-36 w-full overflow-hidden rounded-2xl border border-border/70 bg-gradient-brand shadow-glow sm:h-44">
+      <div className="relative flex min-h-36 w-full flex-col justify-end overflow-hidden rounded-2xl border border-border/70 bg-gradient-brand shadow-glow sm:min-h-44">
         {poll.imageUrl ? (
-          <img src={poll.imageUrl} alt="" className="h-full w-full object-cover" />
+          <img src={poll.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
         ) : (
-          <div className="flex h-full w-full items-start justify-end p-5">
+          <div className="absolute inset-0 flex items-start justify-end p-5">
             <Vote className="h-12 w-12 text-white/30" aria-hidden="true" />
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 flex flex-col gap-2 p-4 sm:p-6">
+        <div className="relative flex min-w-0 flex-col gap-2 p-4 pt-12 sm:p-6">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow sm:text-3xl">{poll.name}</h1>
+            <h1 className="min-w-0 break-words text-2xl font-bold tracking-tight text-white drop-shadow sm:text-3xl">{poll.name}</h1>
             <PollStateBadge state={poll.state} />
           </div>
-          <p className="text-sm text-white/80">/vote/{poll.slug}</p>
+          <p className="break-all text-sm text-white/80">/vote/{poll.slug}</p>
         </div>
       </div>
 
