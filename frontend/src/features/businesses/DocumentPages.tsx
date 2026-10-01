@@ -3,7 +3,7 @@ import { ExportButtons } from "@/components/ExportButtons";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, Download, FileDown, ImageDown, ListChecks, Mail, Plus, Save, Search, Settings2, Trash2 } from "lucide-react";
+import { ArrowLeft, Download, FileDown, ImageDown, ListChecks, Mail, Plus, Printer, Save, Search, Settings2, Trash2 } from "lucide-react";
 import { DOCUMENT_WORDING, formatMoney } from "@designs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError } from "@/lib/api";
 import { usePageMeta } from "@/lib/seo";
-import { savePagesAsPng } from "../designs/documentImage";
+import { printPages, savePagesAsPng } from "../designs/documentImage";
 import {
   createDocument,
   deleteDocument,
@@ -55,17 +55,21 @@ export function DocumentStatusBadge({ business, kind, status }: { business: Busi
 // Download and send
 
 export function DocumentActions({ business, doc, onSent }: { business: Business; doc: BusinessDocument; onSent?: (doc: BusinessDocument) => void }) {
-  const [busy, setBusy] = React.useState<"pdf" | "png" | null>(null);
+  const [busy, setBusy] = React.useState<"pdf" | "png" | "print" | null>(null);
   const [sendOpen, setSendOpen] = React.useState(false);
   const [email, setEmail] = React.useState(doc.clientEmail ?? "");
   const [message, setMessage] = React.useState("");
   const [sending, setSending] = React.useState(false);
   React.useEffect(() => setEmail(doc.clientEmail ?? ""), [doc.clientEmail]);
 
-  const download = async (format: "pdf" | "png") => {
+  const download = async (format: "pdf" | "png" | "print") => {
     setBusy(format);
     try {
-      if (format === "pdf") await downloadDocumentPdf(business.id, doc.kind, doc.id, `${doc.number}.pdf`);
+      if (format === "print") {
+        // Printed from the same drawing as the downloads, at the real page size.
+        const { pages } = await getDocumentPages(business.id, doc.kind, doc.id);
+        await printPages(pages);
+      } else if (format === "pdf") await downloadDocumentPdf(business.id, doc.kind, doc.id, `${doc.number}.pdf`);
       else {
         // Each page is saved as its own image when the items run over one page.
         const { pages, fileBase } = await getDocumentPages(business.id, doc.kind, doc.id);
@@ -96,9 +100,13 @@ export function DocumentActions({ business, doc, onSent }: { business: Business;
 
   return (
     <>
+      <Button variant="outline" onClick={() => void download("print")} loading={busy === "print"} disabled={busy !== null}>
+        <Printer className="h-4 w-4" />
+        Print
+      </Button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" loading={busy !== null}>
+          <Button variant="outline" loading={busy === "pdf" || busy === "png"} disabled={busy !== null}>
             <Download className="h-4 w-4" />
             Download
           </Button>

@@ -58,6 +58,9 @@ const QuotationsPage = lazyPage(() => import("@/features/businesses/DocumentPage
 const NewQuotationPage = lazyPage(() => import("@/features/businesses/DocumentPages"), "NewQuotationPage");
 const QuotationDetailPage = lazyPage(() => import("@/features/businesses/DocumentPages"), "QuotationDetailPage");
 const QuotationSettingsPage = lazyPage(() => import("@/features/businesses/DocumentSettingsPage"), "QuotationSettingsPage");
+const CardsListPage = lazyPage(() => import("@/features/businesses/CardPages"), "CardsListPage");
+const NewCardPage = lazyPage(() => import("@/features/businesses/CardPages"), "NewCardPage");
+const CardDetailPage = lazyPage(() => import("@/features/businesses/CardPages"), "CardDetailPage");
 const InvoicesPage = lazyPage(() => import("@/features/businesses/DocumentPages"), "InvoicesPage");
 const ReceiptsPage = lazyPage(() => import("@/features/businesses/DocumentPages"), "ReceiptsPage");
 const NewInvoicePage = lazyPage(() => import("@/features/businesses/DocumentPages"), "NewInvoicePage");
@@ -132,6 +135,9 @@ export function AppRoutes() {
                 <Route path="order-form" element={<BusinessOrderFormPage />} />
                 <Route path="orders" element={<BusinessOrdersPage />} />
                 <Route path="orders/:registrationId" element={<BusinessOrderDetailPage />} />
+                <Route path="cards" element={<CardsListPage />} />
+                <Route path="cards/new" element={<NewCardPage />} />
+                <Route path="cards/:cardId" element={<CardDetailPage />} />
                 <Route path="quotations" element={<QuotationsPage />} />
                 <Route path="quotations/new" element={<NewQuotationPage />} />
                 <Route path="quotations/settings" element={<QuotationSettingsPage />} />

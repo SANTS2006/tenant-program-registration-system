@@ -8,11 +8,15 @@ import { recordAudit } from "../audit/service.js";
 import * as registrationsRepo from "../registrations/repository.js";
 import { createUploadSignature } from "../uploads/service.js";
 import { getBusinessRole, requireBusinessAccess } from "./access.js";
+import * as cards from "./cards.js";
 import * as documents from "./documents.js";
 import {
   createBusinessSchema,
   documentSettingsSchema,
   listBusinessesQuerySchema,
+  listCardsQuerySchema,
+  saveCardSchema,
+  sendCardSchema,
   listDocumentsQuerySchema,
   saveDocumentSchema,
   sendDocumentSchema,
@@ -130,6 +134,53 @@ export async function businessRoutes(app: FastifyInstance) {
   });
 
   // Invoices and receipts. Viewers can create, edit, print, and send them too.
+  // Business cards. These fixed paths win over the generic /:kind routes below.
+  type CardParams = BusinessParams & { cardId: string };
+  app.get<{ Params: BusinessParams }>("/:businessId/cards", viewer, async (request, reply) => {
+    const query = listCardsQuerySchema.parse(request.query);
+    return sendSuccess(reply, await cards.listCards(request.params.businessId, query, query));
+  });
+  app.post<{ Params: BusinessParams }>("/:businessId/cards", viewer, async (request, reply) => {
+    const card = await cards.createCard(request.params.businessId, saveCardSchema.parse(request.body), request.user!.id);
+    await audit(request, "business.card_create", "business_card", card.id);
+    return sendSuccess(reply, card, "Card saved", 201);
+  });
+  app.get<{ Params: CardParams }>("/:businessId/cards/:cardId", viewer, async (request, reply) => {
+    return sendSuccess(reply, await cards.findCard(request.params.businessId, request.params.cardId));
+  });
+  app.put<{ Params: CardParams }>("/:businessId/cards/:cardId", viewer, async (request, reply) => {
+    const card = await cards.updateCard(request.params.businessId, request.params.cardId, saveCardSchema.parse(request.body));
+    await audit(request, "business.card_update", "business_card", card.id);
+    return sendSuccess(reply, card, "Card updated");
+  });
+  app.delete<{ Params: CardParams }>("/:businessId/cards/:cardId", admin, async (request, reply) => {
+    await cards.deleteCard(request.params.businessId, request.params.cardId);
+    await audit(request, "business.card_delete", "business_card", request.params.cardId);
+    return sendSuccess(reply, null, "Card deleted");
+  });
+  app.get<{ Params: CardParams }>("/:businessId/cards/:cardId/pdf", viewer, async (request, reply) => {
+    const { buffer, fileName } = await cards.cardPdf(request.params.businessId, request.params.cardId);
+    return reply
+      .header("Content-Type", "application/pdf")
+      .header("Content-Disposition", attachmentDisposition(fileName))
+      .header("X-Download-Name", encodeURIComponent(fileName))
+      .header("Cache-Control", "no-store")
+      .send(buffer);
+  });
+  app.get<{ Params: CardParams }>("/:businessId/cards/:cardId/pages", viewer, async (request, reply) => {
+    reply.header("Cache-Control", "no-store");
+    return sendSuccess(reply, await cards.cardSvgPages(request.params.businessId, request.params.cardId));
+  });
+  app.post<{ Params: CardParams }>(
+    "/:businessId/cards/:cardId/send",
+    { preHandler: requireBusinessAccess("viewer"), config: { rateLimit: { max: 20, timeWindow: "1 minute" } } },
+    async (request, reply) => {
+      const card = await cards.sendCard(request.params.businessId, request.params.cardId, sendCardSchema.parse(request.body));
+      await audit(request, "business.card_send", "business_card", card.id);
+      return sendSuccess(reply, card, "Card sent");
+    },
+  );
+
   app.get<{ Params: KindParams }>("/:businessId/:kind", viewer, async (request, reply) => {
     const kind = kindOf(request.params.kind);
     const query = listDocumentsQuerySchema.parse(request.query);

@@ -108,3 +108,36 @@ export const businessDocuments = pgTable(
     index("business_documents_business_kind_idx").on(table.businessId, table.kind, table.createdAt),
   ],
 );
+
+/** A business card (front and back) for a person at a business, in one of the card layouts. */
+export const businessCards = pgTable(
+  "business_cards",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id")
+      .notNull()
+      .references(() => businesses.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    jobTitle: text("job_title"),
+    // Shown on the card; defaults to the business's name.
+    company: text("company").notNull(),
+    phone: text("phone"),
+    email: text("email"),
+    website: text("website"),
+    address: text("address"),
+    tagline: text("tagline"),
+    photoUrl: text("photo_url"),
+    template: text("template").notNull().default("split"),
+    primaryColor: text("primary_color").notNull().default("#1d4ed8"),
+    secondaryColor: text("secondary_color").notNull().default("#f59e0b"),
+    // Puts a QR code of the website on the card (layouts that have room for one).
+    showQr: boolean("show_qr").notNull().default(true),
+    lastSentTo: text("last_sent_to"),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (table) => [index("business_cards_business_idx").on(table.businessId, table.createdAt)],
+);

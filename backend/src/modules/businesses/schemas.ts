@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { paginationSchema } from "../../lib/pagination.js";
-import { DOCUMENT_TEMPLATES, STATUS_COLORS, type DocumentTemplate } from "../../shared/designs/index.js";
+import { CARD_TEMPLATES, DOCUMENT_TEMPLATES, STATUS_COLORS, type CardTemplate, type DocumentTemplate } from "../../shared/designs/index.js";
 
 const optionalText = (max: number) =>
   z
@@ -124,3 +124,37 @@ export const listBusinessesQuerySchema = paginationSchema.extend({
 export type CreateBusinessInput = z.infer<typeof createBusinessSchema>;
 export type UpdateBusinessInput = z.infer<typeof updateBusinessSchema>;
 export type SaveDocumentInput = z.infer<typeof saveDocumentSchema>;
+
+const cardText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .nullish()
+    .transform((v) => (v ? v : null));
+
+export const saveCardSchema = z.object({
+  name: z.string().trim().min(1, "Enter the person's name").max(200),
+  jobTitle: cardText(120),
+  company: z.string().trim().min(1, "Enter the company name").max(200),
+  phone: cardText(60),
+  email: z.string().trim().email("Enter a valid email address").max(254).nullish().or(z.literal("")).transform((v) => v || null),
+  website: cardText(200),
+  address: cardText(300),
+  tagline: cardText(120),
+  photoUrl: z.string().url().max(1000).nullish().or(z.literal("")).transform((v) => v || null),
+  template: z.enum(CARD_TEMPLATES.map((t) => t.id) as [CardTemplate, ...CardTemplate[]]),
+  primaryColor: hexColor,
+  secondaryColor: hexColor,
+  showQr: z.boolean(),
+});
+
+export const listCardsQuerySchema = paginationSchema.extend({ search: z.string().trim().min(1).optional() });
+
+export const sendCardSchema = z.object({
+  email: z.string().trim().email("Enter a valid email address").max(254),
+  recipientName: z.string().trim().max(200).optional(),
+  message: z.string().trim().max(2000).optional(),
+});
+
+export type SaveCardInput = z.infer<typeof saveCardSchema>;

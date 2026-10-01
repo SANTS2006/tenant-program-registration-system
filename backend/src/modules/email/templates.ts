@@ -683,6 +683,35 @@ export function businessDocumentEmail(params: {
   };
 }
 
+/** A business card, sent as a PDF attachment. */
+export function businessCardEmail(params: {
+  business: BusinessEmailBrand;
+  recipientName?: string | null;
+  cardName: string;
+  cardTitle?: string | null;
+  message?: string;
+}): { subject: string; html: string } {
+  const strong = (value: string) => `<strong style="color:${BRAND.heading};">${escapeHtml(value)}</strong>`;
+  const body = [
+    paragraph(`Hi ${params.recipientName ? strong(params.recipientName) : "there"},`),
+    params.message
+      ? paragraph(escapeHtml(params.message).replace(/\r?\n/g, "<br />"))
+      : paragraph(`Please find the business card of ${strong(params.cardName)}${params.cardTitle ? `, ${escapeHtml(params.cardTitle)}` : ""} at ${strong(params.business.name)} attached.`),
+    paragraph("The card is attached to this email as a PDF with its front and back."),
+    businessContactLine(params.business),
+  ].join("");
+  return {
+    subject: `${params.cardName} - business card from ${params.business.name}`,
+    html: layout({
+      preheader: `The business card of ${params.cardName}`,
+      eyebrow: "Business card",
+      heading: params.cardName,
+      body,
+      brand: businessBrand(params.business, `You're receiving this card from ${escapeHtml(params.business.name)}.`),
+    }),
+  };
+}
+
 const ORDER_STATUS_TEXT: Record<string, { label: string; line: string }> = {
   submitted: { label: "Received", line: "We've received your order and will confirm it shortly." },
   confirmed: { label: "Confirmed", line: "Your order has been confirmed." },

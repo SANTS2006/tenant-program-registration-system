@@ -148,3 +148,48 @@ export async function uploadBusinessImage(businessId: string, file: File): Promi
   const { secureUrl } = await uploadToCloudinary(file, signature);
   return secureUrl;
 }
+
+// ---------------------------------------------------------------------------
+// Business cards
+
+export interface BusinessCard {
+  id: string;
+  businessId: string;
+  name: string;
+  jobTitle: string | null;
+  company: string;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  address: string | null;
+  tagline: string | null;
+  photoUrl: string | null;
+  template: string;
+  primaryColor: string;
+  secondaryColor: string;
+  showQr: boolean;
+  lastSentTo: string | null;
+  sentAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CardInput = Omit<BusinessCard, "id" | "businessId" | "lastSentTo" | "sentAt" | "createdAt" | "updatedAt">;
+
+export const listCards = (businessId: string, params: { page?: number; pageSize?: number; search?: string }) => {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) if (value !== undefined && value !== "") query.set(key, String(value));
+  const text = query.toString();
+  return apiFetch<PaginatedResult<BusinessCard>>(`/businesses/${businessId}/cards${text ? `?${text}` : ""}`);
+};
+export const getCard = (businessId: string, cardId: string) => apiFetch<BusinessCard>(`/businesses/${businessId}/cards/${cardId}`);
+export const createCard = (businessId: string, input: CardInput) => apiFetch<BusinessCard>(`/businesses/${businessId}/cards`, { method: "POST", body: input });
+export const updateCard = (businessId: string, cardId: string, input: CardInput) =>
+  apiFetch<BusinessCard>(`/businesses/${businessId}/cards/${cardId}`, { method: "PUT", body: input });
+export const deleteCard = (businessId: string, cardId: string) => apiFetch<null>(`/businesses/${businessId}/cards/${cardId}`, { method: "DELETE" });
+export const getCardPages = (businessId: string, cardId: string) =>
+  apiFetch<{ pages: string[]; fileBase: string }>(`/businesses/${businessId}/cards/${cardId}/pages`);
+export const downloadCardPdf = (businessId: string, cardId: string, fallbackName: string) =>
+  downloadAuthenticatedFile(`/businesses/${businessId}/cards/${cardId}/pdf`, fallbackName);
+export const sendCard = (businessId: string, cardId: string, input: { email: string; recipientName?: string; message?: string }) =>
+  apiFetch<BusinessCard>(`/businesses/${businessId}/cards/${cardId}/send`, { method: "POST", body: input });

@@ -29,6 +29,7 @@ const tabs = [
   { to: "quotations", label: "Quotations", end: false },
   { to: "invoices", label: "Invoices", end: false },
   { to: "receipts", label: "Receipts", end: false },
+  { to: "cards", label: "Cards", end: false },
   { to: "analytics", label: "Analytics", end: false },
 ];
 

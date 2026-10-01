@@ -143,3 +143,36 @@ export async function downloadRegistrantDocument(
   if (ticket.sides > 1) return downloadAuthenticatedFile(`${basePath}/ticket`, ticket.fileName);
   return savePng([ticket.svg], ticket.fileName);
 }
+
+/**
+ * Prints SVG pages (an invoice, a business card's two sides...) at their real size, one per sheet,
+ * from an off-screen frame so the rest of the page isn't printed with them.
+ */
+export async function printPages(svgs: string[]) {
+  if (svgs.length === 0) return;
+  const fonts = await embeddedFontCss();
+  const { width, height } = viewBoxSize(svgs[0]!);
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Print</title><style>${fonts}
+@page{size:${width}pt ${height}pt;margin:0}
+html,body{margin:0;padding:0;background:#fff}
+.sheet{width:${width}pt;height:${height}pt;overflow:hidden;page-break-after:always;break-after:page}
+.sheet:last-child{page-break-after:auto;break-after:auto}
+.sheet svg{display:block;width:100%;height:100%}
+</style></head><body>${svgs.map((svg) => `<div class="sheet">${svg}</div>`).join("")}</body></html>`;
+  await new Promise<void>((resolve) => {
+    const frame = document.createElement("iframe");
+    frame.setAttribute("aria-hidden", "true");
+    frame.style.cssText = "position:fixed;left:-10000px;top:0;width:900px;height:1200px;border:0;opacity:0;pointer-events:none";
+    frame.srcdoc = html;
+    frame.onload = () => {
+      // Let the embedded fonts settle before the print dialog takes its snapshot.
+      window.setTimeout(() => {
+        frame.contentWindow?.focus();
+        frame.contentWindow?.print();
+        resolve();
+        window.setTimeout(() => frame.remove(), 60_000);
+      }, 250);
+    };
+    document.body.appendChild(frame);
+  });
+}

@@ -4,6 +4,7 @@ import { date, EXPORT_ROW_LIMIT, exportFormatSchema, MONEY_FORMAT, sendTableExpo
 import { DOCUMENT_WORDING, lineAmount, type BusinessDocumentKind } from "../../shared/designs/index.js";
 import * as registrationsRepo from "../registrations/repository.js";
 import { requireBusinessAccess } from "./access.js";
+import * as cards from "./cards.js";
 import * as documents from "./documents.js";
 import { listDocumentsQuerySchema } from "./schemas.js";
 import * as businessService from "./service.js";
@@ -25,6 +26,31 @@ function kindOf(value: string): BusinessDocumentKind {
 /** CSV/Excel downloads of a business's invoices, receipts, and analysis. */
 export async function businessExportRoutes(app: FastifyInstance) {
   const viewer = { preHandler: requireBusinessAccess("viewer") };
+
+  app.get<{ Params: { businessId: string } }>("/:businessId/cards/export", viewer, async (request, reply) => {
+    const { format } = exportFormatSchema.parse(request.query);
+    const [business, { items }] = await Promise.all([
+      businessService.getBusiness(request.params.businessId),
+      cards.listCards(request.params.businessId, {}, { page: 1, pageSize: EXPORT_ROW_LIMIT }),
+    ]);
+    const sheet: ExportSheet<(typeof items)[number]> = {
+      name: "Business cards",
+      rows: items,
+      columns: [
+        { label: "Name", value: (c) => c.name },
+        { label: "Job title", value: (c) => c.jobTitle },
+        { label: "Company", value: (c) => c.company },
+        { label: "Phone", value: (c) => c.phone },
+        { label: "Email", value: (c) => c.email },
+        { label: "Website", value: (c) => c.website },
+        { label: "Address", value: (c) => c.address },
+        { label: "Layout", value: (c) => c.template },
+        { label: "Last sent to", value: (c) => c.lastSentTo },
+        { label: "Created", value: (c) => date(c.createdAt) },
+      ],
+    };
+    return sendTableExport(reply, format, `${business.name} business cards`, [sheet]);
+  });
 
   app.get<{ Params: { businessId: string; kind: string } }>("/:businessId/:kind/export", viewer, async (request, reply) => {
     const kind = kindOf(request.params.kind);
