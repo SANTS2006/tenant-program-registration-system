@@ -26,6 +26,7 @@ import { getDashboardTrend } from "../analytics/api";
 import { CATEGORICAL_LIGHT } from "../analytics/palette";
 import { DocumentBadge, ResultBadge } from "../verifications/VerificationsPage";
 import { getDashboardInsights, type DashboardInsights } from "./insights";
+import { OwnSpaceCard } from "../access/OwnSpace";
 import { ModuleSections } from "./ModuleSections";
 import type { DashboardOverview } from "@/types/api";
 import { useAuth } from "@/app/AuthContext";
@@ -238,6 +239,8 @@ export function DashboardPage() {
         </div>
         <ExportButtons path="/dashboard/export" fileLabel="Dashboard" />
       </div>
+
+      <OwnSpaceCard />
 
       {isLoading && <p className="text-sm text-muted-foreground">Loading dashboard...</p>}
 

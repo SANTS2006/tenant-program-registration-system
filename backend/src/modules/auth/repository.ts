@@ -181,6 +181,8 @@ export async function createTenantAndAdmin(params: {
   name: string;
   email: string;
   passwordHash: string;
+  /** False for people invited by someone else, who haven't agreed to the terms yet. */
+  termsAccepted?: boolean;
 }) {
   return db.transaction(async (tx) => {
     const [tenant] = await tx
@@ -196,12 +198,25 @@ export async function createTenantAndAdmin(params: {
         passwordHash: params.passwordHash,
         role: "admin",
         tenantId: tenant!.id,
-        termsAcceptedAt: new Date(),
+        termsAcceptedAt: params.termsAccepted === false ? null : new Date(),
       })
       .returning();
 
     await tx.update(tenants).set({ ownerUserId: user!.id }).where(eq(tenants.id, tenant!.id));
 
+    return { user: user!, tenant: tenant! };
+  });
+}
+
+/** Gives an existing person their own account space: they become its admin and keep any access they were given elsewhere. */
+export async function moveUserToNewTenant(userId: string, params: { name: string; slug: string }) {
+  return db.transaction(async (tx) => {
+    const [tenant] = await tx.insert(tenants).values({ name: params.name, slug: params.slug, ownerUserId: userId }).returning();
+    const [user] = await tx
+      .update(users)
+      .set({ tenantId: tenant!.id, role: "admin", updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
     return { user: user!, tenant: tenant! };
   });
 }

@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ClipboardList, Plus, Receipt, Search, ShoppingBag, Store, FileText } from "lucide-react";
 import { useAuth } from "@/app/AuthContext";
+import { SharedBadge } from "../access/OwnSpace";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardInteractive } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -203,7 +204,10 @@ export function BusinessesListPage() {
                 </div>
               </div>
               <CardContent className="flex flex-1 flex-col gap-2 p-4">
-                <h2 className="text-base font-semibold leading-tight">{business.name}</h2>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="min-w-0 break-words text-base font-semibold leading-tight">{business.name}</h2>
+                  <SharedBadge tenantId={business.tenantId} />
+                </div>
                 <p className="truncate text-xs text-muted-foreground">{business.email ?? business.phone ?? "No contact details yet"}</p>
                 <p className="line-clamp-2 flex-1 text-sm text-muted-foreground">{business.description ?? "No description."}</p>
               </CardContent>

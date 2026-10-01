@@ -215,6 +215,49 @@ export function roleLabel(role: string): string {
   return ROLE_LABELS[role] ?? role;
 }
 
+/** Sent when someone is given access to a program, poll, or business (a temporary password only for brand-new accounts). */
+export function resourceAccessEmail(params: {
+  name: string;
+  email: string;
+  inviterName: string;
+  resourceLabel: string;
+  resourceName: string;
+  role: string;
+  temporaryPassword: string | null;
+  url: string;
+}): { subject: string; html: string } {
+  const role = roleLabel(params.role === "admin" ? "program_admin" : "viewer");
+  const strong = (value: string) => `<strong style="color:${BRAND.heading};">${escapeHtml(value)}</strong>`;
+  const body = [
+    paragraph(`Hi ${strong(params.name)},`),
+    paragraph(
+      `${strong(params.inviterName)} has given you ${params.role === "admin" ? "admin" : "viewer"} access to the ${escapeHtml(params.resourceLabel)} ${strong(params.resourceName)}.`,
+    ),
+    detailsTable([
+      { label: params.resourceLabel[0]!.toUpperCase() + params.resourceLabel.slice(1), value: params.resourceName },
+      { label: "Your access", value: params.role === "admin" ? "Admin: can manage it" : "Viewer: can see it" },
+      { label: "Sign-in email", value: params.email },
+      ...(params.temporaryPassword ? [{ label: "Temporary password", value: params.temporaryPassword, mono: true }] : []),
+    ]),
+    paragraph(
+      params.temporaryPassword
+        ? "We also made you a space of your own, where you can create your own programs, voting polls and businesses and invite others. Sign in with the details above, then change your password in Settings."
+        : "It now appears in your account next to anything you've created yourself.",
+    ),
+    button(params.temporaryPassword ? "Sign in" : "Open it", params.url),
+  ].join("");
+  void role;
+  return {
+    subject: `${params.inviterName} gave you access to ${params.resourceName}`,
+    html: layout({
+      preheader: `You now have ${params.role} access to ${params.resourceName}`,
+      eyebrow: "You've been given access",
+      heading: params.resourceName,
+      body,
+    }),
+  };
+}
+
 export function invitationEmail(params: {
   name: string;
   email: string;

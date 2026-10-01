@@ -14,8 +14,9 @@ export async function getPollRole(user: AuthenticatedUser, pollId: string): Prom
   if (user.role === "super_admin") return "admin";
   if (user.role === "admin") {
     const [poll] = await db.select({ tenantId: polls.tenantId }).from(polls).where(eq(polls.id, pollId)).limit(1);
-    return poll && poll.tenantId === user.tenantId ? "admin" : null;
+    if (poll && poll.tenantId === user.tenantId) return "admin";
   }
+  // Anyone given access to the poll, from any account, has the role they were given.
   const [membership] = await db
     .select({ role: pollMembers.roleOnPoll })
     .from(pollMembers)
@@ -33,15 +34,16 @@ export async function assertPollAccess(user: AuthenticatedUser, pollId: string, 
 
 export async function listAccessiblePollIds(user: AuthenticatedUser): Promise<string[] | "all"> {
   if (user.role === "super_admin") return "all";
+  const shared = await db.select({ pollId: pollMembers.pollId }).from(pollMembers).where(eq(pollMembers.userId, user.id));
+  const ids = new Set(shared.map((r) => r.pollId));
   if (user.role === "admin") {
-    const rows = await db
+    const own = await db
       .select({ id: polls.id })
       .from(polls)
       .where(and(eq(polls.tenantId, user.tenantId!), isNull(polls.deletedAt)));
-    return rows.map((r) => r.id);
+    for (const r of own) ids.add(r.id);
   }
-  const rows = await db.select({ pollId: pollMembers.pollId }).from(pollMembers).where(eq(pollMembers.userId, user.id));
-  return rows.map((r) => r.pollId);
+  return [...ids];
 }
 
 /** Route guard: the signed-in user needs at least `minRole` on the poll in :pollId. */

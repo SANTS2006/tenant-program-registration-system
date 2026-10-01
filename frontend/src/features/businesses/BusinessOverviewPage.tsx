@@ -19,6 +19,8 @@ import { programKeys } from "../programs/hooks";
 import { deleteBusiness, getOrderShareInfo, updateBusiness, uploadBusinessImage, type Business } from "./api";
 import { businessKeys } from "./BusinessesListPage";
 import { RegistrationNumberCard } from "../programs/RegistrationNumberCard";
+import { useAuth } from "@/app/AuthContext";
+import { MembersCard } from "../access/MembersCard";
 import { StatusSettingsCard } from "./StatusSettingsCard";
 import { useBusinessOutletContext } from "./BusinessLayout";
 
@@ -332,6 +334,7 @@ function DeleteCard({ business }: { business: Business }) {
 
 export function BusinessOverviewPage() {
   const { business, program } = useBusinessOutletContext();
+  const { user } = useAuth();
   const canEdit = business.myRole === "admin";
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -340,6 +343,7 @@ export function BusinessOverviewPage() {
         <NotificationsCard business={business} canEdit={canEdit} />
         {canEdit && program && <RegistrationNumberCard program={program} />}
         {canEdit && <StatusSettingsCard business={business} />}
+        {canEdit && user && <MembersCard kind="businesses" id={business.id} currentUserId={user.id} />}
       </div>
       <div className="flex flex-col gap-6">
         <DetailsCard business={business} canEdit={canEdit} />

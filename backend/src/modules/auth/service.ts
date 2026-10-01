@@ -96,7 +96,7 @@ async function consumeValidCode(userId: string, purpose: authRepo.VerificationPu
   return active;
 }
 
-async function generateUniqueTenantSlug(name: string): Promise<string> {
+export async function generateUniqueTenantSlug(name: string): Promise<string> {
   const base = slugify(name, { lower: true, strict: true }).slice(0, 180) || "account";
   let candidate = base;
   let suffix = 2;
@@ -309,4 +309,20 @@ export async function changePassword(userId: string, input: ChangePasswordInput)
   const passwordHash = await hashPassword(input.newPassword);
   await authRepo.updateUserPassword(userId, passwordHash);
   await authRepo.revokeAllRefreshTokensForUser(userId);
+}
+
+/**
+ * For someone who was invited to another account as a team member: opens their own space, where
+ * they are the admin and can make their own programs, polls and businesses and invite others. The
+ * access they were given elsewhere stays exactly as it was.
+ */
+export async function createOwnSpace(userId: string): Promise<AuthenticatedUser> {
+  const user = await authRepo.findUserById(userId);
+  if (!user) throw AppError.unauthorized();
+  if (user.role === "super_admin") throw AppError.forbidden();
+  if (user.role === "admin") throw AppError.conflict("You already have your own space");
+  const firstName = user.name.trim().split(/\s+/)[0] || "My";
+  const name = `${firstName}'s space`;
+  const { user: moved } = await authRepo.moveUserToNewTenant(user.id, { name, slug: await generateUniqueTenantSlug(name) });
+  return toAuthenticatedUser(moved);
 }

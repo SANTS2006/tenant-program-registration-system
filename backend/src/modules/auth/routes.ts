@@ -4,6 +4,7 @@ import {
   avatarUploadSignatureHandler,
   changePasswordHandler,
   confirmEmailChangeHandler,
+  createOwnSpaceHandler,
   forgotPasswordHandler,
   loginHandler,
   logoutHandler,
@@ -28,6 +29,7 @@ export async function authRoutes(app: FastifyInstance) {
   app.post("/reset-password", { config: strictAuthRateLimit }, resetPasswordHandler);
   app.get("/me", { preHandler: authenticate }, meHandler);
   app.patch("/me", { preHandler: authenticate }, updateProfileHandler);
+  app.post("/me/own-space", { preHandler: authenticate, config: strictAuthRateLimit }, createOwnSpaceHandler);
   app.post("/me/change-password", { preHandler: authenticate, config: strictAuthRateLimit }, changePasswordHandler);
   app.post("/me/avatar-upload-signature", { preHandler: authenticate }, avatarUploadSignatureHandler);
 

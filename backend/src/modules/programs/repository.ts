@@ -133,10 +133,13 @@ export async function listNotificationRecipients(
     .from(users)
     .where(
       and(
-        eq(users.tenantId, program.tenantId),
         eq(users.status, "active"),
         isNotNull(users.emailVerifiedAt),
-        or(eq(users.role, "admin"), inArray(users.id, members), ...(businessTeam ? [inArray(users.id, businessTeam)] : [])),
+        or(
+          and(eq(users.tenantId, program.tenantId), eq(users.role, "admin")),
+          inArray(users.id, members),
+          ...(businessTeam ? [inArray(users.id, businessTeam)] : []),
+        ),
       ),
     )
     .limit(50);

@@ -8,6 +8,7 @@ import { ProgramStatusBadge } from "@/components/StatusBadge";
 import { useProgramsList } from "./hooks";
 import { ProgramCreateDialog } from "./ProgramCreateDialog";
 import { useAuth } from "@/app/AuthContext";
+import { SharedBadge } from "../access/OwnSpace";
 import { usePageMeta } from "@/lib/seo";
 
 export function ProgramsListPage() {
@@ -82,7 +83,10 @@ export function ProgramsListPage() {
                 )}
               </div>
               <CardContent className="flex flex-1 flex-col gap-3 p-4">
-                <h3 className="text-base font-semibold leading-tight">{program.name}</h3>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="min-w-0 break-words text-base font-semibold leading-tight">{program.name}</h3>
+                  <SharedBadge tenantId={program.tenantId} />
+                </div>
                 <p className="line-clamp-2 flex-1 text-sm text-muted-foreground">
                   {program.shortDescription ?? "No description provided."}
                 </p>

@@ -183,3 +183,10 @@ export async function avatarUploadSignatureHandler(request: FastifyRequest, repl
   const signature = createUploadSignature(`users/${request.user.id}`);
   return sendSuccess(reply, signature);
 }
+
+export async function createOwnSpaceHandler(request: FastifyRequest, reply: FastifyReply) {
+  if (!request.user) throw AppError.unauthorized();
+  const user = await authService.createOwnSpace(request.user.id);
+  await recordAudit({ actorUserId: user.id, action: "account.own_space_created", entityType: "tenant", entityId: user.tenantId, ipAddress: request.ip });
+  return sendSuccess(reply, { user }, "Your own space is ready");
+}

@@ -12,9 +12,9 @@ import type { AuthenticatedUser, ProgramRole } from "../users/types.js";
  * Tenant boundary: the platform super_admin bypasses everything (read-only is
  * enforced globally elsewhere, not here); a tenant "admin" bypasses
  * program_members the same way, but only for programs inside their OWN
- * tenant -- a program in another tenant resolves to "no access", identically
- * to "not a member", so a caller can never tell the difference between "this
- * program doesn't exist" and "this program belongs to someone else".
+ * tenant. Everyone else, in any account, needs a program_members row (or a
+ * business membership for an order form). No row means "no access", identically
+ * to "doesn't exist".
  *
  * A business's order form is a program too: its team gets the role they have on the business.
  */
@@ -29,8 +29,11 @@ export async function getProgramRole(
     .from(programs)
     .where(eq(programs.id, programId))
     .limit(1);
-  if (!program || program.tenantId !== user.tenantId) return null;
-  if (user.role === "admin") return "admin";
+  if (!program) return null;
+  // The owner of the account the program lives in has full access. Anyone else needs to have been
+  // given access to this program, and that works across accounts: a person invited to someone
+  // else's program keeps their own space and can still be a viewer or admin here.
+  if (user.role === "admin" && program.tenantId === user.tenantId) return "admin";
 
   const [membership] = await db
     .select({ roleOnProgram: programMembers.roleOnProgram })
@@ -80,19 +83,19 @@ export async function listAccessibleProgramIds(
     return rows.map((r) => r.id);
   }
 
-  if (user.role === "admin") {
-    const rows = await db
-      .select({ id: programs.id })
-      .from(programs)
-      .where(and(ofKind, eq(programs.tenantId, user.tenantId!)));
-    return rows.map((r) => r.id);
-  }
-
-  const rows = await db
+  const shared = await db
     .select({ programId: programMembers.programId })
     .from(programMembers)
     .innerJoin(programs, eq(programs.id, programMembers.programId))
     .where(and(ofKind, eq(programMembers.userId, user.id)));
+  const ids = new Set(shared.map((r) => r.programId));
 
-  return rows.map((r) => r.programId);
+  if (user.role === "admin") {
+    const own = await db
+      .select({ id: programs.id })
+      .from(programs)
+      .where(and(ofKind, eq(programs.tenantId, user.tenantId!)));
+    for (const r of own) ids.add(r.id);
+  }
+  return [...ids];
 }

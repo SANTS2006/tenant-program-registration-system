@@ -15,6 +15,8 @@ import { ApiError } from "@/lib/api";
 import { ImagePickerField } from "../idcards/IdCardSettingsCard";
 import { closePoll, deletePoll, openPoll, uploadPollImage, type Poll } from "./api";
 import { useInvalidatePolls, usePollResults, usePollShareInfo, useUpdatePoll } from "./hooks";
+import { useAuth } from "@/app/AuthContext";
+import { MembersCard } from "../access/MembersCard";
 import { usePollOutletContext } from "./PollDetailLayout";
 import { VerifiedVotersCard } from "./VerifiedVotersCard";
 
@@ -362,6 +364,7 @@ function DeletePollCard({ poll }: { poll: Poll }) {
 export function PollOverviewPage() {
   const { poll } = usePollOutletContext();
   const canEdit = poll.myRole === "admin";
+  const { user } = useAuth();
   const { data: results } = usePollResults(poll.id);
 
   return (
@@ -380,6 +383,7 @@ export function PollOverviewPage() {
         <div className="flex flex-col gap-6">
           <SettingsCard poll={poll} canEdit={canEdit} />
           <VerifiedVotersCard poll={poll} canEdit={canEdit} />
+          {canEdit && user && <MembersCard kind="polls" id={poll.id} currentUserId={user.id} />}
           {canEdit && <DeletePollCard poll={poll} />}
         </div>
       </div>

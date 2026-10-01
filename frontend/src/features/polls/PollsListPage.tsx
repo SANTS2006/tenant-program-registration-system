@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CalendarClock, ExternalLink, ListOrdered, Plus, Search, Users2, Vote } from "lucide-react";
 import { useAuth } from "@/app/AuthContext";
+import { SharedBadge } from "../access/OwnSpace";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardInteractive } from "@/components/ui/card";
@@ -197,7 +198,10 @@ export function PollsListPage() {
                 </div>
               </div>
               <CardContent className="flex flex-1 flex-col gap-3 p-4">
-                <h2 className="text-base font-semibold leading-tight">{poll.name}</h2>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="min-w-0 break-words text-base font-semibold leading-tight">{poll.name}</h2>
+                  <SharedBadge tenantId={poll.tenantId} />
+                </div>
                 <p className="line-clamp-2 flex-1 text-sm text-muted-foreground">{poll.description ?? "No description."}</p>
                 {poll.closesAt && poll.state === "open" && (
                   <div className="flex items-center gap-1.5 border-t border-border/60 pt-3 text-xs font-medium text-muted-foreground">

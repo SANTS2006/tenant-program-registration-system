@@ -17,6 +17,8 @@ export type ProgramStatus = "draft" | "published" | "closed" | "archived";
 
 export interface Program {
   id: string;
+  /** The account the program belongs to; differs from yours when it was shared with you. */
+  tenantId?: string;
   name: string;
   slug: string;
   description: string | null;

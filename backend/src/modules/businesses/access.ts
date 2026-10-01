@@ -9,8 +9,9 @@ import type { AuthenticatedUser, ProgramRole } from "../users/types.js";
 export async function getBusinessRole(user: AuthenticatedUser, businessId: string): Promise<ProgramRole | null> {
   if (user.role === "super_admin") return "admin";
   const [business] = await db.select({ tenantId: businesses.tenantId }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
-  if (!business || business.tenantId !== user.tenantId) return null;
-  if (user.role === "admin") return "admin";
+  if (!business) return null;
+  if (user.role === "admin" && business.tenantId === user.tenantId) return "admin";
+  // Anyone given access to the business, from any account, has the role they were given.
   const [membership] = await db
     .select({ role: businessMembers.roleOnBusiness })
     .from(businessMembers)
@@ -28,18 +29,19 @@ export async function assertBusinessAccess(user: AuthenticatedUser, businessId: 
 
 export async function listAccessibleBusinessIds(user: AuthenticatedUser): Promise<string[] | "all"> {
   if (user.role === "super_admin") return "all";
-  if (user.role === "admin") {
-    const rows = await db
-      .select({ id: businesses.id })
-      .from(businesses)
-      .where(and(eq(businesses.tenantId, user.tenantId!), isNull(businesses.deletedAt)));
-    return rows.map((r) => r.id);
-  }
-  const rows = await db
+  const shared = await db
     .select({ id: businessMembers.businessId })
     .from(businessMembers)
     .where(eq(businessMembers.userId, user.id));
-  return rows.map((r) => r.id);
+  const ids = new Set(shared.map((r) => r.id));
+  if (user.role === "admin") {
+    const own = await db
+      .select({ id: businesses.id })
+      .from(businesses)
+      .where(and(eq(businesses.tenantId, user.tenantId!), isNull(businesses.deletedAt)));
+    for (const r of own) ids.add(r.id);
+  }
+  return [...ids];
 }
 
 /** Route guard: the signed-in user needs at least `minRole` on the business in :businessId. */

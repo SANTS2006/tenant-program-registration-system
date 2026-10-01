@@ -26,6 +26,8 @@ import { RegistrationRulesCard } from "./RegistrationRulesCard";
 import { NotificationSettingsCard } from "./NotificationSettingsCard";
 import { TicketSettingsCard } from "../tickets/TicketSettingsCard";
 import { DeleteProgramDialog } from "./DeleteProgramDialog";
+import { useAuth } from "@/app/AuthContext";
+import { MembersCard } from "../access/MembersCard";
 import { RegistrationNumberCard } from "./RegistrationNumberCard";
 import type { Program } from "@/types/api";
 
@@ -45,6 +47,7 @@ function toInputDate(value: string | null) {
 
 export function ProgramOverviewPage() {
   const { program } = useProgramOutletContext();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { data: stats } = useProgramStats(program.id);
   const updateProgram = useUpdateProgram(program.id);
@@ -258,6 +261,11 @@ export function ProgramOverviewPage() {
         <div className="lg:col-span-2">
           <RegistrationNumberCard program={program} />
         </div>
+        {canEdit && user && program.kind !== "order_form" && (
+          <div className="lg:col-span-3">
+            <MembersCard kind="programs" id={program.id} currentUserId={user.id} />
+          </div>
+        )}
         <div className="lg:col-span-3">
           <RegistrationRulesCard program={program} />
         </div>

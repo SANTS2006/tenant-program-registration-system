@@ -257,10 +257,9 @@ export async function listPollNotificationRecipients(poll: Pick<PollRow, "id" | 
     .from(users)
     .where(
       and(
-        eq(users.tenantId, poll.tenantId),
         eq(users.status, "active"),
         isNotNull(users.emailVerifiedAt),
-        or(eq(users.role, "admin"), inArray(users.id, members)),
+        or(and(eq(users.tenantId, poll.tenantId), eq(users.role, "admin")), inArray(users.id, members)),
       ),
     )
     .limit(50);
