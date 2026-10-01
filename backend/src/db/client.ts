@@ -6,7 +6,18 @@ import * as schema from "./schema/index.js";
 
 neonConfig.webSocketConstructor = ws;
 
-export const pool = new Pool({ connectionString: env.DATABASE_URL });
+export const pool = new Pool({
+  connectionString: env.DATABASE_URL,
+  max: env.DB_POOL_MAX,
+  // Free idle connections, and fail fast instead of queueing forever when the database is slow.
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 10_000,
+});
+
+// An idle connection that drops must not crash the process.
+pool.on("error", (err) => {
+  console.error("Database pool error", err);
+});
 
 export const db = drizzle(pool, { schema });
 

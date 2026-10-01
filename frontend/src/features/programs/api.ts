@@ -92,6 +92,7 @@ export interface UploadSignature {
   timestamp: number;
   signature: string;
   folder: string;
+  allowedFormats: string;
 }
 
 export function getProgramUploadSignature(programId: string) {
@@ -109,6 +110,8 @@ export async function uploadToCloudinary(file: File, signature: UploadSignature)
   formData.append("timestamp", String(signature.timestamp));
   formData.append("signature", signature.signature);
   formData.append("folder", signature.folder);
+  // Part of what the signature covers: only pictures and documents are accepted.
+  formData.append("allowed_formats", signature.allowedFormats);
 
   const response = await fetch(`https://api.cloudinary.com/v1_1/${signature.cloudName}/auto/upload`, {
     method: "POST",

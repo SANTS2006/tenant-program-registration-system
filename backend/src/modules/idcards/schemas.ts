@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ownImageUrl } from "../../lib/cloudinaryUrl.js";
 import { DEFAULT_ID_CARD_TERMS, DEFAULT_ROLE_OPTIONS, ID_CARD_DESIGN_IDS, idCardDesign } from "../../shared/designs/index.js";
 
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a hex color like #2563eb");
@@ -24,12 +25,12 @@ export const idCardConfigSchema = z.object({
   photoFieldKey: optionalText(100),
   // Where the photo comes from: the registrant's uploaded photo, one event flyer for everyone, or none.
   photoSource: z.enum(["field", "flyer", "none"]).default("field"),
-  flyerUrl: z.string().url().optional(),
+  flyerUrl: ownImageUrl.optional(),
   // Presets for giving each registrant a role on their card from the registration page.
   roleOptions: z.array(z.string().trim().min(1).max(40)).max(30).optional(),
-  logoUrl: z.string().url().optional(),
+  logoUrl: ownImageUrl.optional(),
   // Used by the "custom" template: the organization's own uploaded card design.
-  backgroundImageUrl: z.string().url().optional(),
+  backgroundImageUrl: ownImageUrl.optional(),
   terms: z.string().trim().max(600).optional(),
   contactPhone: optionalText(60),
   contactEmail: optionalText(120),
@@ -53,7 +54,7 @@ export type IdCardConfig = z.input<typeof idCardConfigSchema>;
 /** Admin changes to one registrant's ID card. */
 export const documentOverridesSchema = z.object({
   role: z.string().trim().max(40).nullish(),
-  photoUrl: z.string().url().nullish(),
+  photoUrl: ownImageUrl.nullish(),
 });
 
 export type DocumentOverrides = z.infer<typeof documentOverridesSchema>;

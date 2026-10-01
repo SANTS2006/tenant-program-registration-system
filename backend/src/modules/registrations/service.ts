@@ -1,7 +1,7 @@
 import { AppError } from "../../lib/errors.js";
 import type { PaginationInput } from "../../lib/pagination.js";
 import { buildPaginatedResult } from "../../lib/pagination.js";
-import { sendEmail } from "../email/service.js";
+import { queueEmail } from "../email/outbox.js";
 import { registrationConfirmationEmail } from "../email/templates.js";
 import { resolveStatuses } from "../../shared/designs/index.js";
 import { getBusiness } from "../businesses/service.js";
@@ -49,9 +49,7 @@ export async function submitRegistration(slug: string, input: SubmitRegistration
   const contact = extractApplicantContact(published.fields, cleanedResponses);
 
   if (program.oneRegistrationPerEmail && contact.email && (await registrationsRepo.emailAlreadyRegistered(program.id, contact.email))) {
-    throw AppError.conflict(
-      "Registration failed: this email address has already been used to register for this program. You cannot submit more than one registration.",
-    );
+    throw alreadyRegistered();
   }
 
   const numbering = resolveNumberingConfig(program.registrationNumberConfig);
@@ -72,9 +70,12 @@ export async function submitRegistration(slug: string, input: SubmitRegistration
         applicantPhone: contact.phone,
         responses: cleanedResponses,
         files,
+        enforceUniqueEmail: program.oneRegistrationPerEmail,
       });
     } catch (err) {
       if (!isUniqueViolation(err)) throw err;
+      // The same email slipped in between the check above and now: the database refused it.
+      if (violatedConstraint(err) === "registrations_unique_email_guard_idx") throw alreadyRegistered();
     }
   }
   if (!registration) throw AppError.conflict("Could not allocate a registration number, please try again");
@@ -84,20 +85,18 @@ export async function submitRegistration(slug: string, input: SubmitRegistration
     // Customers get an order confirmation branded with the business instead.
     void notifyCustomer(program, registration, { isNew: true, fields: published.fields, files });
   } else if (contact.email) {
-    try {
-      await sendEmail({
-        to: contact.email,
-        toName: contact.name ?? contact.email,
-        subject: `Registration confirmed - ${program.name}`,
-        html: registrationConfirmationEmail({
-          programName: program.name,
-          registrationNumber,
-          applicantName: contact.name ?? "there",
-        }),
-      });
-    } catch (err) {
-      console.error("Failed to send registration confirmation email", err);
-    }
+    // Queued rather than sent here: the registration is already saved, and a slow or failing mail
+    // provider must neither slow the response nor lose the confirmation.
+    void queueEmail({
+      to: contact.email,
+      toName: contact.name ?? contact.email,
+      subject: `Registration confirmed - ${program.name}`,
+      html: registrationConfirmationEmail({
+        programName: program.name,
+        registrationNumber,
+        applicantName: contact.name ?? "there",
+      }),
+    });
   }
 
   // Sent in the background so the registrant isn't kept waiting on the team's emails.
@@ -113,6 +112,16 @@ export async function submitRegistration(slug: string, input: SubmitRegistration
 }
 
 const MAX_NUMBER_ATTEMPTS = 25;
+
+const alreadyRegistered = () =>
+  AppError.conflict(
+    "Registration failed: this email address has already been used to register for this program. You cannot submit more than one registration.",
+  );
+
+function violatedConstraint(err: unknown): string | undefined {
+  const e = err as { constraint?: string; cause?: { constraint?: string } };
+  return e?.constraint ?? e?.cause?.constraint;
+}
 
 function isUniqueViolation(err: unknown): boolean {
   const code = (err as { code?: string; cause?: { code?: string } })?.code ?? (err as { cause?: { code?: string } })?.cause?.code;

@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import { createLimiter } from "./limiter.js";
 import type { FastifyReply } from "fastify";
 import { z } from "zod";
 import { attachmentDisposition } from "./downloadName.js";
@@ -88,13 +89,16 @@ function safeName(name: string) {
  * Sends one or more tables as a CSV or Excel download named "<base> <yyyy-mm-dd>.csv|xlsx".
  * Every list in the app exports through here, so the two formats always match.
  */
+// Building a workbook takes memory; a few at a time is plenty.
+const excelLimiter = createLimiter(2, 40);
+
 export async function sendTableExport(reply: FastifyReply, format: ExportFormat, baseName: string, sheets: ExportSheet<any>[]) {
   const fileName = `${safeName(baseName)} ${new Date().toISOString().slice(0, 10)}.${format}`;
   reply.header("Cache-Control", "no-store");
   reply.header("Content-Disposition", attachmentDisposition(fileName));
   if (format === "xlsx") {
     reply.header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    return reply.send(await toXlsx(sheets));
+    return reply.send(await excelLimiter(() => toXlsx(sheets)));
   }
   reply.header("Content-Type", "text/csv; charset=utf-8");
   return reply.send(toCsv(sheets));

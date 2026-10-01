@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ownImageUrl } from "../../lib/cloudinaryUrl.js";
 import { paginationSchema } from "../../lib/pagination.js";
 
 const text = (max: number) => z.string().trim().max(max);
@@ -9,7 +10,7 @@ const optionalText = (max: number) =>
     .max(max)
     .nullish()
     .transform((v) => (v ? v : null));
-const imageUrl = z.string().url().max(1000).nullish().transform((v) => v ?? null);
+const imageUrl = ownImageUrl.nullish().transform((v) => v ?? null);
 
 // "example.edu, @school.org" -> "example.edu, school.org"
 const domainList = z

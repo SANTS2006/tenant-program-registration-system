@@ -12,7 +12,7 @@ import { recordAudit } from "../audit/service.js";
 import * as usersRepo from "../users/repository.js";
 import * as authRepo from "../auth/repository.js";
 import { generateUniqueTenantSlug } from "../auth/service.js";
-import { sendEmail } from "../email/service.js";
+import { queueEmail } from "../email/outbox.js";
 import { resourceAccessEmail } from "../email/templates.js";
 import { requireBusinessAccess } from "../businesses/access.js";
 import { requirePollAccess } from "../polls/access.js";
@@ -221,7 +221,7 @@ export async function inviteMember(
     url: `${env.APP_URL.replace(/\/+$/, "")}${password ? "/login" : adapter.path(id)}`,
   });
   // Access is already saved; a mail outage must not undo it.
-  void sendEmail({ to: person.email, toName: person.name, subject: message.subject, html: message.html });
+  void queueEmail({ to: person.email, toName: person.name, subject: message.subject, html: message.html });
   return listAccess(kind, id);
 }
 

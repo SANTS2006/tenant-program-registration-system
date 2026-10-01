@@ -3,6 +3,7 @@ import { AppError } from "../../lib/errors.js";
 import type { PaginationInput } from "../../lib/pagination.js";
 import { buildPaginatedResult } from "../../lib/pagination.js";
 import { hashPassword } from "../../lib/password.js";
+import { queueEmail } from "../email/outbox.js";
 import { sendEmail } from "../email/service.js";
 import { invitationEmail, teamAddedEmail } from "../email/templates.js";
 import * as authRepo from "../auth/repository.js";
@@ -35,7 +36,7 @@ export async function createUser(tenantId: string, input: CreateUserInput, invit
       role: input.role,
       loginUrl: `${env.APP_URL}/login`,
     });
-    void sendEmail({ to: existing.email, toName: existing.name, subject: message.subject, html: message.html });
+    void queueEmail({ to: existing.email, toName: existing.name, subject: message.subject, html: message.html });
     return teamMember(tenantId, existing.id);
   }
 

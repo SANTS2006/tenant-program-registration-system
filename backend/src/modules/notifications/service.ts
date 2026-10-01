@@ -3,7 +3,7 @@ import { env } from "../../config/env.js";
 import { db } from "../../db/client.js";
 import { businesses } from "../../db/schema/index.js";
 import { resolveStatuses, statusLabelFor } from "../../shared/designs/index.js";
-import { sendEmail } from "../email/service.js";
+import { queueEmail } from "../email/outbox.js";
 import { documentVerifiedNotificationEmail, newRegistrationNotificationEmail, orderUpdateEmail } from "../email/templates.js";
 import * as programsRepo from "../programs/repository.js";
 import { formatCellValue, withOtherText } from "../registrations/exportService.js";
@@ -58,7 +58,7 @@ async function emailTeam(program: Program, build: () => { subject: string; html:
     const recipients = await programsRepo.listNotificationRecipients(program);
     if (recipients.length === 0) return;
     const { subject, html } = build();
-    await Promise.all(recipients.map((r) => sendEmail({ to: r.email, toName: r.name, subject, html })));
+    await Promise.all(recipients.map((r) => queueEmail({ to: r.email, toName: r.name, subject, html })));
   } catch (err) {
     console.error(`Could not send team notification for program ${program.id}:`, err);
   }
@@ -103,7 +103,7 @@ export async function notifyCustomer(
       placedAt: registration.submittedAt,
       answers: answersFor(registration, params.fields, params.files),
     });
-    await sendEmail({
+    await queueEmail({
       to: registration.applicantEmail,
       toName: registration.applicantName ?? registration.applicantEmail,
       subject,

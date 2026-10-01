@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ownImageUrl } from "../../lib/cloudinaryUrl.js";
 import { TICKET_DESIGN_IDS, ticketDesign } from "../../shared/designs/index.js";
 import { optionalText } from "../idcards/schemas.js";
 
@@ -29,11 +30,11 @@ export const ticketConfigSchema = z.object({
   showBarcode: z.boolean().default(true),
   showEventDetails: z.boolean().default(true),
   showContact: z.boolean().default(true),
-  logoUrl: z.string().url().optional(),
+  logoUrl: ownImageUrl.optional(),
   // An event photo or flyer for designs with a picture panel.
-  eventImageUrl: z.string().url().optional(),
+  eventImageUrl: ownImageUrl.optional(),
   // An uploaded design sample used by the "custom" template, with the details laid over it.
-  backgroundImageUrl: z.string().url().optional(),
+  backgroundImageUrl: ownImageUrl.optional(),
   textColor: z.enum(["light", "dark"]).default("light"),
   overlayOpacity: z.number().min(0).max(0.8).default(0.35),
   showQrCode: z.boolean().default(true),

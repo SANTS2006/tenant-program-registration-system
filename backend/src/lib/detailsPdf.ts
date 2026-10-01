@@ -1,5 +1,6 @@
 import PDFDocument from "pdfkit";
 import { registerPoppins } from "../modules/idcards/pdf.js";
+import { createLimiter } from "./limiter.js";
 
 export interface DetailsRow {
   label: string;
@@ -36,7 +37,7 @@ const RULE = "#e2e8f0";
  * A clean A4 document of labelled details split into sections, flowing onto as many pages
  * as it needs, with page numbers. Used for registration summaries, orders, and similar.
  */
-export function renderDetailsPdf(input: DetailsPdfInput): Promise<Buffer> {
+function drawDetailsPdf(input: DetailsPdfInput): Promise<Buffer> {
   const accent = input.accentColor ?? "#2563eb";
   const doc = new PDFDocument({ size: "A4", margin: MARGIN, bufferPages: true, info: { Title: `${input.title} ${input.subtitle ?? ""}`.trim() } });
   registerPoppins(doc);
@@ -138,3 +139,7 @@ export function renderDetailsPdf(input: DetailsPdfInput): Promise<Buffer> {
   doc.end();
   return finished;
 }
+
+const detailsLimiter = createLimiter(3, 60);
+
+export const renderDetailsPdf = (input: DetailsPdfInput): Promise<Buffer> => detailsLimiter(() => drawDetailsPdf(input));

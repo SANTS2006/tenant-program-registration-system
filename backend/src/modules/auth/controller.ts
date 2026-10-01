@@ -12,6 +12,7 @@ import {
   registerSchema,
   requestEmailChangeSchema,
   resetPasswordSchema,
+  updateOrganizationSchema,
   updateProfileSchema,
   verificationCodeSchema,
 } from "./schemas.js";
@@ -104,6 +105,25 @@ export async function resetPasswordHandler(request: FastifyRequest, reply: Fasti
 export async function meHandler(request: FastifyRequest, reply: FastifyReply) {
   if (!request.user) throw AppError.unauthorized();
   return sendSuccess(reply, request.user, "Current user");
+}
+
+export async function getOrganizationHandler(request: FastifyRequest, reply: FastifyReply) {
+  if (!request.user) throw AppError.unauthorized();
+  return sendSuccess(reply, await authService.getOrganization(request.user.id));
+}
+
+export async function updateOrganizationHandler(request: FastifyRequest, reply: FastifyReply) {
+  if (!request.user) throw AppError.unauthorized();
+  const { name } = updateOrganizationSchema.parse(request.body);
+  const result = await authService.updateOrganization(request.user.id, name);
+  await recordAudit({
+    actorUserId: request.user.id,
+    action: "organization.rename",
+    entityType: "tenant",
+    entityId: request.user.tenantId ?? undefined,
+    ipAddress: request.ip,
+  });
+  return sendSuccess(reply, result);
 }
 
 export async function updateProfileHandler(request: FastifyRequest, reply: FastifyReply) {

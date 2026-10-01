@@ -7,8 +7,10 @@ import { db } from "../../db/client.js";
 import { voterAccounts, voterEmailCodes } from "../../db/schema/index.js";
 import { AppError } from "../../lib/errors.js";
 import { canonicalEmail } from "../../lib/emailKey.js";
+import { TtlCache } from "../../lib/ttlCache.js";
 import { hashPassword, verifyPassword } from "../../lib/password.js";
 import { generateVerificationCode, hashToken } from "../../lib/tokens.js";
+import { queueEmail } from "../email/outbox.js";
 import { sendEmail } from "../email/service.js";
 import { newVoteNotificationEmail, VERIFICATION_CODE_TTL_MINUTES, voterCodeEmail } from "../email/templates.js";
 import * as pollsRepo from "../polls/repository.js";
@@ -168,15 +170,26 @@ export function pollForVoters(poll: Poll, ballot: Awaited<ReturnType<typeof poll
   };
 }
 
+// Everyone voting reads the ballot, and everyone watching the live results re-reads them every few
+// seconds. Thousands of people asking for the same thing shouldn't each run the same queries, so
+// concurrent requests share one load and a few seconds of age is accepted. Votes themselves are
+// never cached.
+const PUBLIC_POLL_TTL_MS = 3_000;
+const RESULTS_TTL_MS = 2_000;
+const pollCache = new TtlCache<ReturnType<typeof pollForVoters>>(500);
+const resultsCache = new TtlCache<Awaited<ReturnType<typeof buildResults>>>(500);
+
 export async function getPublicPoll(slug: string) {
-  const poll = await findPoll(slug);
-  return pollForVoters(poll, await pollsRepo.getBallot(poll.id));
+  return pollCache.get(slug, PUBLIC_POLL_TTL_MS, async () => {
+    const poll = await findPoll(slug);
+    return pollForVoters(poll, await pollsRepo.getBallot(poll.id));
+  });
 }
 
 export async function getPublicResults(slug: string) {
   const poll = await findPoll(slug);
   if (!poll.showResults) throw AppError.forbidden("Results for this poll aren't public");
-  return buildResults(poll.id);
+  return resultsCache.get(poll.id, RESULTS_TTL_MS, () => buildResults(poll.id));
 }
 
 /** Who is signed in on this browser, and which positions of this poll they've already voted for. */
@@ -385,7 +398,7 @@ async function notifyTeam(poll: Poll, voter: Voter, positionTitle: string, total
       resultsUrl: `${base}/admin/polls/${poll.id}/results`,
       settingsUrl: `${base}/admin/polls/${poll.id}`,
     });
-    await Promise.all(recipients.map((r) => sendEmail({ to: r.email, toName: r.name, subject, html })));
+    await Promise.all(recipients.map((r) => queueEmail({ to: r.email, toName: r.name, subject, html })));
   } catch (err) {
     console.error(`Could not send vote notification for poll ${poll.id}:`, err);
   }

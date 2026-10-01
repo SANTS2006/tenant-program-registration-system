@@ -34,6 +34,8 @@ interface CreateRegistrationInput {
   applicantPhone: string | null;
   responses: Record<string, unknown>;
   files: SubmittedFile[];
+  /** Refuse a second registration with this email in this program (enforced by the database). */
+  enforceUniqueEmail?: boolean;
 }
 
 export async function createRegistration(input: CreateRegistrationInput): Promise<RegistrationRow> {
@@ -48,6 +50,7 @@ export async function createRegistration(input: CreateRegistrationInput): Promis
         applicantEmail: input.applicantEmail,
         applicantPhone: input.applicantPhone,
         responses: input.responses,
+        uniqueEmailGuard: Boolean(input.enforceUniqueEmail && input.applicantEmail),
       })
       .returning();
 

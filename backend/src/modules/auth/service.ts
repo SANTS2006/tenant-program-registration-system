@@ -2,7 +2,8 @@ import slugify from "slugify";
 import { env, isProduction } from "../../config/env.js";
 import { AppError } from "../../lib/errors.js";
 import { signAccessToken } from "../../lib/jwt.js";
-import { hashPassword, verifyPassword } from "../../lib/password.js";
+import { clearLoginFailures, recordLoginFailure, assertLoginAllowed } from "../../lib/loginThrottle.js";
+import { burnPasswordCheck, hashPassword, verifyPassword } from "../../lib/password.js";
 import { addDuration, generateOpaqueToken, generateVerificationCode, hashToken } from "../../lib/tokens.js";
 import { sendEmail } from "../email/service.js";
 import {
@@ -116,21 +117,30 @@ export interface LoginResult {
 }
 
 export async function login(input: LoginInput, context: { userAgent?: string; ipAddress?: string }): Promise<LoginResult> {
+  assertLoginAllowed(input.email);
   const user = await authRepo.findUserByEmail(input.email);
-  if (!user) throw AppError.unauthorized("Invalid email or password");
+  if (!user) {
+    // Same work and same answer as a wrong password, so this can't be used to find registered emails.
+    await burnPasswordCheck(input.password);
+    recordLoginFailure(input.email);
+    throw AppError.unauthorized("Invalid email or password");
+  }
 
   const passwordOk = await verifyPassword(user.passwordHash, input.password);
-  if (!passwordOk) throw AppError.unauthorized("Invalid email or password");
+  if (!passwordOk) {
+    recordLoginFailure(input.email);
+    throw AppError.unauthorized("Invalid email or password");
+  }
+  clearLoginFailures(input.email);
 
   if (user.status !== "active") throw AppError.forbidden("This account has been suspended");
 
-  // Invited teammates (the only way program_admin/viewer accounts are created)
-  // receive their temporary password solely in the invitation email, so signing
-  // in with it proves they control the address -- that's the invite's confirm step.
-  const signedInUser =
-    !user.emailVerifiedAt && (user.role === "program_admin" || user.role === "viewer")
-      ? await authRepo.markEmailVerified(user.id)
-      : user;
+  // Invited people (team members, and anyone given access to a program, poll, or business) receive
+  // their temporary password solely in the invitation email, so signing in with it proves they
+  // control the address -- that's the invite's confirm step. They are the accounts that never
+  // agreed to the terms at sign-up (termsAcceptedAt is empty), plus legacy invited team members.
+  const invited = user.role === "program_admin" || user.role === "viewer" || !user.termsAcceptedAt;
+  const signedInUser = !user.emailVerifiedAt && invited ? await authRepo.markEmailVerified(user.id) : user;
 
   const accessToken = signAccessToken({ sub: user.id, email: user.email, role: user.role, tenantId: user.tenantId });
   const refreshToken = generateOpaqueToken();
@@ -298,6 +308,24 @@ export async function getCurrentUser(userId: string): Promise<AuthenticatedUser>
 export async function updateProfile(userId: string, input: UpdateProfileInput): Promise<AuthenticatedUser> {
   const updated = await authRepo.updateUserProfile(userId, input);
   return toAuthenticatedUser(updated);
+}
+
+export async function getOrganization(userId: string): Promise<{ name: string; canEdit: boolean }> {
+  const user = await authRepo.findUserById(userId);
+  if (!user || !user.tenantId) throw AppError.notFound("Organization not found");
+  const tenant = await authRepo.findTenantById(user.tenantId);
+  if (!tenant) throw AppError.notFound("Organization not found");
+  return { name: tenant.name, canEdit: user.role === "admin" };
+}
+
+/** Only an admin of the organization can rename it. The web address (slug) stays the same so shared links keep working. */
+export async function updateOrganization(userId: string, name: string): Promise<{ name: string; canEdit: boolean }> {
+  const user = await authRepo.findUserById(userId);
+  if (!user || !user.tenantId) throw AppError.notFound("Organization not found");
+  if (user.role !== "admin") throw AppError.forbidden();
+  const tenant = await authRepo.updateTenantName(user.tenantId, name);
+  if (!tenant) throw AppError.notFound("Organization not found");
+  return { name: tenant.name, canEdit: true };
 }
 
 export async function changePassword(userId: string, input: ChangePasswordInput): Promise<void> {

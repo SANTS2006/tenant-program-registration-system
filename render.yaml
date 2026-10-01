@@ -56,3 +56,6 @@ projects:
               # Must be a sender address verified in your Brevo account.
               - key: EMAIL_FROM_ADDRESS
                 sync: false
+              # Max database connections per instance; keep below the Neon plan limit divided by instances.
+              - key: DB_POOL_MAX
+                value: "10"

@@ -15,6 +15,8 @@ export const auditLogs = pgTable(
   },
   (table) => [
     index("audit_logs_actor_idx").on(table.actorUserId),
+    // The audit log page lists newest first.
+    index("audit_logs_created_idx").on(table.createdAt),
     index("audit_logs_entity_idx").on(table.entityType, table.entityId),
   ],
 );

@@ -1,8 +1,10 @@
 import { z } from "zod";
+import { ownImageUrl } from "../../lib/cloudinaryUrl.js";
 
 export const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
+  email: z.string().email().max(254),
+  // A cap keeps someone from making the server hash a megabyte-long "password".
+  password: z.string().min(1).max(128),
 });
 
 export const registerSchema = z.object({
@@ -34,7 +36,11 @@ export const resetPasswordSchema = z.object({
 
 export const updateProfileSchema = z.object({
   name: z.string().min(2).max(200).optional(),
-  avatarUrl: z.string().url().optional(),
+  avatarUrl: ownImageUrl.optional(),
+});
+
+export const updateOrganizationSchema = z.object({
+  name: z.string().trim().min(2, "Organization name is required").max(200),
 });
 
 export const changePasswordSchema = z.object({

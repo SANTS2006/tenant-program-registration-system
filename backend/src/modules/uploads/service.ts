@@ -13,7 +13,13 @@ export interface UploadSignature {
   timestamp: number;
   signature: string;
   folder: string;
+  /** The only file types Cloudinary will accept with this signature. */
+  allowedFormats: string;
 }
+
+// Pictures and the usual documents. Anything else (scripts, web pages, SVG, executables) is refused by
+// Cloudinary itself, because the list is part of what the signature covers.
+export const ALLOWED_UPLOAD_FORMATS = "jpg,jpeg,png,webp,gif,heic,pdf,doc,docx";
 
 /**
  * Generates parameters for a signed, direct-to-Cloudinary upload from the browser.
@@ -25,11 +31,12 @@ export function createUploadSignature(subfolder: string): UploadSignature {
   const timestamp = Math.round(Date.now() / 1000);
 
   const signature = cloudinary.utils.api_sign_request(
-    { timestamp, folder },
+    { timestamp, folder, allowed_formats: ALLOWED_UPLOAD_FORMATS },
     env.CLOUDINARY_API_SECRET,
   );
 
   return {
+    allowedFormats: ALLOWED_UPLOAD_FORMATS,
     cloudName: env.CLOUDINARY_CLOUD_NAME,
     apiKey: env.CLOUDINARY_API_KEY,
     timestamp,

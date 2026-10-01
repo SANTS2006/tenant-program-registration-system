@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ownImageUrl } from "../../lib/cloudinaryUrl.js";
 import { paginationSchema } from "../../lib/pagination.js";
 import { registrationNumberConfigSchema } from "../registrations/numbering.js";
 
@@ -20,7 +21,7 @@ export const updateProgramSchema = z.object({
   name: z.string().min(2).max(200).optional(),
   description: z.string().max(20000).optional(),
   shortDescription: z.string().max(500).optional(),
-  thumbnailUrl: z.string().url().optional(),
+  thumbnailUrl: ownImageUrl.optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
   registrationStartDate: z.coerce.date().optional(),

@@ -3,7 +3,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Camera, KeyRound, MailCheck, ShieldCheck, User as UserIcon } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Building2, Camera, KeyRound, MailCheck, ShieldCheck, User as UserIcon } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +15,7 @@ import { CodeInput } from "@/components/CodeInput";
 import { useAuth } from "@/app/AuthContext";
 import { ApiError } from "@/lib/api";
 import { confirmEmailChange, requestEmailChange } from "../auth/api";
-import { changePassword, updateProfile, uploadAvatar } from "./api";
+import { changePassword, getOrganization, updateOrganization, updateProfile, uploadAvatar } from "./api";
 import { usePageMeta } from "@/lib/seo";
 
 const RESEND_COOLDOWN_SECONDS = 60;
@@ -145,6 +146,52 @@ const profileSchema = z.object({
 });
 type ProfileForm = z.infer<typeof profileSchema>;
 
+function OrganizationSection() {
+  const qc = useQueryClient();
+  const { data: org } = useQuery({ queryKey: ["organization"], queryFn: getOrganization });
+  const [name, setName] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  React.useEffect(() => {
+    if (org) setName(org.name);
+  }, [org]);
+  if (!org) return null;
+
+  const trimmed = name.trim();
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (trimmed.length < 2) return toast.error("Organization name is required");
+    setBusy(true);
+    try {
+      const updated = await updateOrganization(trimmed);
+      qc.setQueryData(["organization"], updated);
+      toast.success("Organization name updated");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to update organization");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-3 border-t border-border/60 pt-5">
+      <form className="flex flex-col gap-3" onSubmit={save}>
+        <Label htmlFor="organizationName" className="flex items-center gap-1.5">
+          <Building2 className="h-3.5 w-3.5 text-primary" />
+          Organization name
+        </Label>
+        <Input id="organizationName" value={name} maxLength={200} disabled={!org.canEdit} onChange={(e) => setName(e.target.value)} />
+        {org.canEdit ? (
+          <Button type="submit" loading={busy} disabled={trimmed === org.name || trimmed.length < 2} className="w-fit">
+            Save organization
+          </Button>
+        ) : (
+          <p className="text-xs text-muted-foreground">Only an admin of the organization can change its name.</p>
+        )}
+      </form>
+    </div>
+  );
+}
+
 const passwordSchema = z
   .object({
     currentPassword: z.string().min(1, "Current password is required"),
@@ -224,7 +271,7 @@ export function SettingsPage() {
               <UserIcon className="h-4 w-4 text-primary" />
               Profile
             </CardTitle>
-            <CardDescription>Update your name, profile picture, and email address.</CardDescription>
+            <CardDescription>Update your name, picture, organization name, and email address.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-5">
             <div className="flex items-center gap-4">
@@ -252,6 +299,8 @@ export function SettingsPage() {
                 Save profile
               </Button>
             </form>
+
+            <OrganizationSection />
 
             <ChangeEmailSection currentEmail={user.email} />
           </CardContent>

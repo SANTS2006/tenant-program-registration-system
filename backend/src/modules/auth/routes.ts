@@ -9,6 +9,8 @@ import {
   loginHandler,
   logoutHandler,
   meHandler,
+  getOrganizationHandler,
+  updateOrganizationHandler,
   refreshHandler,
   registerHandler,
   requestEmailChangeHandler,
@@ -28,6 +30,8 @@ export async function authRoutes(app: FastifyInstance) {
   app.post("/forgot-password", { config: strictAuthRateLimit }, forgotPasswordHandler);
   app.post("/reset-password", { config: strictAuthRateLimit }, resetPasswordHandler);
   app.get("/me", { preHandler: authenticate }, meHandler);
+  app.get("/me/organization", { preHandler: authenticate }, getOrganizationHandler);
+  app.patch("/me/organization", { preHandler: authenticate }, updateOrganizationHandler);
   app.patch("/me", { preHandler: authenticate }, updateProfileHandler);
   app.post("/me/own-space", { preHandler: authenticate, config: strictAuthRateLimit }, createOwnSpaceHandler);
   app.post("/me/change-password", { preHandler: authenticate, config: strictAuthRateLimit }, changePasswordHandler);

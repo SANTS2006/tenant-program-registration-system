@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ownImageUrl } from "../../lib/cloudinaryUrl.js";
 import { paginationSchema } from "../../lib/pagination.js";
 import { CARD_TEMPLATES, DOCUMENT_TEMPLATES, STATUS_COLORS, type CardTemplate, type DocumentTemplate } from "../../shared/designs/index.js";
 
@@ -24,7 +25,7 @@ export const updateBusinessSchema = z
   .object({
     name: z.string().trim().min(2).max(200),
     description: optionalText(2000),
-    logoUrl: z.string().url().max(1000).nullish().transform((v) => v ?? null),
+    logoUrl: ownImageUrl.nullish().transform((v) => v ?? null),
     email: z.string().trim().email().max(254).nullish().or(z.literal("")).transform((v) => v || null),
     phone: optionalText(60),
     address: optionalText(500),
@@ -142,7 +143,7 @@ export const saveCardSchema = z.object({
   website: cardText(200),
   address: cardText(300),
   tagline: cardText(120),
-  photoUrl: z.string().url().max(1000).nullish().or(z.literal("")).transform((v) => v || null),
+  photoUrl: ownImageUrl.nullish().or(z.literal("")).transform((v) => v || null),
   template: z.enum(CARD_TEMPLATES.map((t) => t.id) as [CardTemplate, ...CardTemplate[]]),
   primaryColor: hexColor,
   secondaryColor: hexColor,

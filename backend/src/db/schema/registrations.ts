@@ -7,7 +7,10 @@ import {
   jsonb,
   index,
   unique,
+  uniqueIndex,
+  boolean,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 import { programs } from "./programs";
 import { forms } from "./forms";
@@ -31,6 +34,9 @@ export const registrations = pgTable(
     responses: jsonb("responses").notNull().default({}),
     // Admin changes to this registrant's ID card, such as their role or a different photo.
     documentOverrides: jsonb("document_overrides").notNull().default({}),
+    // True when the program allowed one registration per email at the time: the database itself then
+    // refuses a second one, even if two submissions arrive in the same instant.
+    uniqueEmailGuard: boolean("unique_email_guard").notNull().default(false),
     submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -41,6 +47,11 @@ export const registrations = pgTable(
     index("registrations_program_status_idx").on(table.programId, table.status),
     index("registrations_program_submitted_idx").on(table.programId, table.submittedAt),
     index("registrations_email_idx").on(table.applicantEmail),
+    // The "has this email registered here already?" check lowercases the address.
+    index("registrations_program_email_lower_idx").on(table.programId, sql`lower(${table.applicantEmail})`),
+    uniqueIndex("registrations_unique_email_guard_idx")
+      .on(table.programId, sql`lower(${table.applicantEmail})`)
+      .where(sql`${table.uniqueEmailGuard} = true`),
     index("registrations_phone_idx").on(table.applicantPhone),
   ],
 );

@@ -1,6 +1,6 @@
 import { env } from "../../config/env.js";
 
-interface SendEmailInput {
+export interface SendEmailInput {
   to: string;
   toName?: string;
   subject: string;
@@ -14,27 +14,25 @@ interface SendEmailInput {
 }
 
 const BREVO_ENDPOINT = "https://api.brevo.com/v3/smtp/email";
+const SEND_TIMEOUT_MS = 10_000;
 
-/**
- * Sends a transactional email via Brevo. If BREVO_API_KEY is not configured
- * (local/dev without real credentials), the email is logged instead of sent
- * so the rest of the flow (registration, password reset) still completes.
- *
- * Returns whether the email was handed to Brevo, for callers (like "Send invoice") that need to
- * tell the person when it didn't go.
- */
-export async function sendEmail(input: SendEmailInput): Promise<boolean> {
+export interface DeliveryResult {
+  ok: boolean;
+  /** Worth trying again later: a network problem, a timeout, a rate limit, or a provider error. */
+  retryable: boolean;
+  error?: string;
+}
+
+/** One attempt to hand an email to Brevo, with a timeout. Never throws. */
+export async function deliverEmail(input: SendEmailInput): Promise<DeliveryResult> {
   if (!env.BREVO_API_KEY) {
     console.log(`[email:dev-stub] to=${input.to} subject="${input.subject}"`);
-    return true;
+    return { ok: true, retryable: false };
   }
-
-  // Never throws: callers send email as a side effect of work that has already
-  // been committed (an account created, a code stored), and a mail outage must
-  // not turn that into a failed request the user can't cleanly retry.
   try {
     const response = await fetch(BREVO_ENDPOINT, {
       method: "POST",
+      signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
@@ -49,15 +47,31 @@ export async function sendEmail(input: SendEmailInput): Promise<boolean> {
         ...(input.attachments?.length ? { attachment: input.attachments } : {}),
       }),
     });
-
-    if (!response.ok) {
-      const body = await response.text();
-      console.error(`Brevo email send failed (${response.status}): ${body}`);
-      return false;
-    }
-    return true;
+    if (response.ok) return { ok: true, retryable: false };
+    const body = (await response.text()).slice(0, 300);
+    // 4xx other than 408/429 means the email itself is the problem; trying again won't help.
+    const retryable = response.status >= 500 || response.status === 429 || response.status === 408;
+    return { ok: false, retryable, error: `Brevo ${response.status}: ${body}` };
   } catch (err) {
-    console.error("Brevo email send failed (network error):", err);
-    return false;
+    return { ok: false, retryable: true, error: err instanceof Error ? err.message : String(err) };
   }
+}
+
+/**
+ * Sends a transactional email via Brevo right away, for callers that need to tell the person
+ * whether it went (a sign-in code, "send invoice"). One quick retry covers a blip. If BREVO_API_KEY
+ * is not configured (local/dev), the email is logged instead.
+ *
+ * Never throws: callers send email as a side effect of work that has already been committed, and a
+ * mail outage must not turn that into a failed request the user can't cleanly retry. For
+ * notifications that can wait, use queueEmail instead: it is kept and retried until it goes.
+ */
+export async function sendEmail(input: SendEmailInput): Promise<boolean> {
+  let result = await deliverEmail(input);
+  if (!result.ok && result.retryable) {
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    result = await deliverEmail(input);
+  }
+  if (!result.ok) console.error(`Email send failed: ${result.error}`);
+  return result.ok;
 }

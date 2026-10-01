@@ -33,9 +33,25 @@ export function errorHandler(
   }
 
   if (fastifyErr.statusCode === 429) {
+    request.log.warn({ ip: request.ip, url: request.url.split("?")[0] }, "rate limit hit");
     return reply.status(429).send({
       success: false,
       error: { code: "RATE_LIMITED", message: "Too many requests. Please try again later." },
+    });
+  }
+
+  if (fastifyErr.statusCode === 413) {
+    return reply.status(413).send({
+      success: false,
+      error: { code: "PAYLOAD_TOO_LARGE", message: "The request is too large." },
+    });
+  }
+
+  // Malformed requests (bad JSON, empty body, wrong content type) are the caller's mistake, not a server fault.
+  if (fastifyErr.statusCode && fastifyErr.statusCode >= 400 && fastifyErr.statusCode < 500) {
+    return reply.status(fastifyErr.statusCode).send({
+      success: false,
+      error: { code: "BAD_REQUEST", message: "The request could not be understood." },
     });
   }
 
@@ -45,6 +61,8 @@ export function errorHandler(
     error: {
       code: "INTERNAL_ERROR",
       message: isProduction ? "An unexpected error occurred" : error.message,
+      // Quote this to find the matching log line without exposing any internals.
+      requestId: request.id,
     },
   });
 }

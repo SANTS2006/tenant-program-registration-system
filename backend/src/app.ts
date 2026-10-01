@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,6 +9,7 @@ import rateLimit from "@fastify/rate-limit";
 import fastifyStatic from "@fastify/static";
 import Fastify from "fastify";
 import { env, isProduction } from "./config/env.js";
+import { pool } from "./db/client.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { authenticate } from "./middleware/authenticate.js";
 import { AppError } from "./lib/errors.js";
@@ -40,9 +42,26 @@ const FRONTEND_DIST = path.resolve(path.dirname(fileURLToPath(import.meta.url)),
 export function buildApp() {
   const app = Fastify({
     logger: isProduction
-      ? { level: "info" }
+      ? {
+          level: "info",
+          // Never write credentials or session cookies to the logs.
+          redact: ["req.headers.authorization", "req.headers.cookie", "res.headers['set-cookie']"],
+        }
       : { level: "debug", transport: { target: "pino-pretty", options: { colorize: true } } },
     trustProxy: true,
+    // Render's load balancer closes idle connections after 60s; keeping ours open a little longer
+    // avoids 502s on reused connections.
+    keepAliveTimeout: 65_000,
+    connectionTimeout: 30_000,
+    requestTimeout: 60_000,
+    // JSON bodies are small; file uploads go straight to Cloudinary.
+    bodyLimit: 1_048_576,
+    // Reuse a well-formed id from the load balancer so one request can be followed across systems.
+    requestIdHeader: false,
+    genReqId: (request) => {
+      const incoming = request.headers["x-request-id"];
+      return typeof incoming === "string" && /^[A-Za-z0-9._-]{8,64}$/.test(incoming) ? incoming : randomUUID();
+    },
     // The private links on success pages carry a signed token of about 200 characters; the default
     // limit of 100 makes such routes answer 404.
     routerOptions: { maxParamLength: 1000 },
@@ -84,7 +103,7 @@ export function buildApp() {
       setHeaders: (res, filePath) => {
         // Vite fingerprints everything under assets/, so it can be cached forever;
         // index.html must always be revalidated so new deploys are picked up.
-        res.setHeader(
+        res.header(
           "Cache-Control",
           filePath.includes(`${path.sep}assets${path.sep}`) ? "public, max-age=31536000, immutable" : "no-cache",
         );
@@ -103,7 +122,26 @@ export function buildApp() {
 
   app.setErrorHandler(errorHandler);
 
+  // Every response carries the request id, and a few extra browser protections.
+  app.addHook("onSend", async (request, reply) => {
+    reply.header("x-request-id", request.id);
+    reply.header("permissions-policy", "camera=(self), microphone=(), geolocation=(), payment=()");
+  });
+
+  // Liveness: the process is up (the load balancer restarts it if this stops answering).
   app.get("/health", async () => ({ success: true, data: { status: "ok" } }));
+  // Readiness: it can reach the database. Use this to decide whether to send traffic, not to restart.
+  app.get("/ready", async (_request, reply) => {
+    try {
+      await Promise.race([
+        pool.query("select 1"),
+        new Promise((_resolve, reject) => setTimeout(() => reject(new Error("database timeout")), 3_000)),
+      ]);
+      return { success: true, data: { status: "ready" } };
+    } catch {
+      return reply.status(503).send({ success: false, error: { code: "NOT_READY", message: "Database unavailable" } });
+    }
+  });
   app.register(seoRoutes);
 
   // Every non-public, non-auth route requires a valid access token.

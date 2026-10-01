@@ -3,6 +3,7 @@ import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
 import SVGtoPDF from "svg-to-pdfkit";
 import { isOwnCloudinaryUrl } from "../../lib/cloudinaryUrl.js";
+import { createLimiter } from "../../lib/limiter.js";
 
 /**
  * Fetches one of this app's Cloudinary images as a data URI that both the PDF renderer
@@ -56,7 +57,7 @@ function poppinsFor(_family: string, bold: boolean, italic: boolean): string {
 }
 
 /** Draws each SVG on its own page of the given size in points. */
-export function svgPagesToPdf(svgs: string[], width: number, height: number): Promise<Buffer> {
+function drawSvgPagesToPdf(svgs: string[], width: number, height: number): Promise<Buffer> {
   const doc = new PDFDocument({ size: [width, height], margin: 0, autoFirstPage: false });
   registerPoppins(doc);
   const chunks: Buffer[] = [];
@@ -78,3 +79,9 @@ export function cardDate(value: Date | string | null | undefined): string | unde
   if (!value) return undefined;
   return new Date(value).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
+
+// PDF drawing is CPU and memory heavy; a burst of downloads waits its turn instead of all running at once.
+const pdfLimiter = createLimiter(3, 60);
+
+export const svgPagesToPdf = (svgs: string[], width: number, height: number): Promise<Buffer> =>
+  pdfLimiter(() => drawSvgPagesToPdf(svgs, width, height));

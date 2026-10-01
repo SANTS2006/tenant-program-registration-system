@@ -3,6 +3,8 @@ import { eq } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { businesses } from "../../db/schema/index.js";
 import { AppError } from "../../lib/errors.js";
+import { readIdempotencyKey, withIdempotency } from "../../lib/idempotency.js";
+import { TtlCache } from "../../lib/ttlCache.js";
 import { sendSuccess } from "../../lib/response.js";
 import * as formsService from "../forms/service.js";
 import * as programsRepo from "../programs/repository.js";
@@ -53,19 +55,30 @@ async function toPublicProgram(program: programsRepo.ProgramRow) {
   };
 }
 
+// A published program page and its form are read by everyone who opens the link and change rarely,
+// so a few seconds of caching (one database load shared by concurrent visitors) takes the load off.
+const PUBLIC_READ_TTL_MS = 5_000;
+const publicProgramCache = new TtlCache<Awaited<ReturnType<typeof toPublicProgram>> | null>(1000);
+const publicFormCache = new TtlCache<Awaited<ReturnType<typeof formsService.getPublishedFormWithContent>> | null>(1000);
+
 export async function getPublicProgramHandler(request: FastifyRequest, reply: FastifyReply) {
   const { slug } = request.params as { slug: string };
-  const program = await programsRepo.findProgramBySlug(slug);
-  if (!program || program.status !== "published") throw AppError.notFound("Program not found");
-  return sendSuccess(reply, await toPublicProgram(program));
+  const data = await publicProgramCache.get(slug, PUBLIC_READ_TTL_MS, async () => {
+    const program = await programsRepo.findProgramBySlug(slug);
+    if (!program || program.status !== "published") return null;
+    return toPublicProgram(program);
+  });
+  if (!data) throw AppError.notFound("Program not found");
+  return sendSuccess(reply, data);
 }
 
 export async function getPublicFormHandler(request: FastifyRequest, reply: FastifyReply) {
   const { slug } = request.params as { slug: string };
-  const program = await programsRepo.findProgramBySlug(slug);
-  if (!program || program.status !== "published") throw AppError.notFound("Program not found");
-
-  const published = await formsService.getPublishedFormWithContent(program.id);
+  const published = await publicFormCache.get(slug, PUBLIC_READ_TTL_MS, async () => {
+    const program = await programsRepo.findProgramBySlug(slug);
+    if (!program || program.status !== "published") return null;
+    return formsService.getPublishedFormWithContent(program.id);
+  });
   if (!published) throw AppError.notFound("This program does not have a published registration form");
 
   return sendSuccess(reply, published);
@@ -74,13 +87,15 @@ export async function getPublicFormHandler(request: FastifyRequest, reply: Fasti
 export async function submitPublicRegistrationHandler(request: FastifyRequest, reply: FastifyReply) {
   const { slug } = request.params as { slug: string };
   const input = submitRegistrationSchema.parse(request.body);
-  const result = await registrationsService.submitRegistration(slug, input);
-  const program = await programsRepo.findProgramById(result.registration.programId);
-  // Orders always get their copy; a program's admin chooses whether registrants do.
-  const offerCopy = !program || program.kind === "order_form" || program.allowSubmissionCopy;
-  return sendSuccess(
-    reply,
-    {
+  // A browser tags each submission attempt with a key, so a double click or a retry after a dropped
+  // connection returns the first result instead of creating a second registration.
+  const key = readIdempotencyKey(request.headers["idempotency-key"]);
+  const { value, replay } = await withIdempotency(`registration:${slug}`, key, async () => {
+    const result = await registrationsService.submitRegistration(slug, input);
+    const program = await programsRepo.findProgramById(result.registration.programId);
+    // Orders always get their copy; a program's admin chooses whether registrants do.
+    const offerCopy = !program || program.kind === "order_form" || program.allowSubmissionCopy;
+    return {
       registrationNumber: result.registration.registrationNumber,
       status: result.registration.status,
       confirmationMessage: result.confirmationMessage,
@@ -89,10 +104,10 @@ export async function submitPublicRegistrationHandler(request: FastifyRequest, r
       ticketAvailable: result.ticketAvailable,
       // Lets the registrant view and download what they submitted from the success page.
       receiptToken: offerCopy ? signSubmissionToken(result.registration.id) : undefined,
-    },
-    "Registration submitted successfully",
-    201,
-  );
+    };
+  });
+  if (replay) reply.header("idempotent-replay", "true");
+  return sendSuccess(reply, value, "Registration submitted successfully", replay ? 200 : 201);
 }
 
 export async function getSubmissionSummaryHandler(request: FastifyRequest, reply: FastifyReply) {

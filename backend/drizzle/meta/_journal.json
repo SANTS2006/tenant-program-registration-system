@@ -134,6 +134,13 @@
       "when": 1790856557136,
       "tag": "0018_hard_captain_universe",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1790857641773,
+      "tag": "0019_luxuriant_hellcat",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, index, integer, unique } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, index, integer, unique, uniqueIndex } from "drizzle-orm/pg-core";
 import { emailVerificationPurposeEnum, userRoleEnum, userStatusEnum } from "./enums";
 import { tenants } from "./tenants";
 
@@ -39,7 +39,8 @@ export const refreshTokens = pgTable(
     ipAddress: text("ip_address"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("refresh_tokens_user_id_idx").on(table.userId)],
+  // Every refresh looks the token up by its hash.
+  (table) => [index("refresh_tokens_user_id_idx").on(table.userId), uniqueIndex("refresh_tokens_token_hash_idx").on(table.tokenHash)],
 );
 
 // One-time codes emailed to prove ownership of an address. `email` is the
@@ -75,7 +76,7 @@ export const passwordResetTokens = pgTable(
     usedAt: timestamp("used_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("password_reset_tokens_user_id_idx").on(table.userId)],
+  (table) => [index("password_reset_tokens_user_id_idx").on(table.userId), uniqueIndex("password_reset_tokens_token_hash_idx").on(table.tokenHash)],
 );
 
 /**

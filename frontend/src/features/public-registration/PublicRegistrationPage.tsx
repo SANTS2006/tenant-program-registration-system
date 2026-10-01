@@ -13,6 +13,10 @@ export function PublicRegistrationPage({ variant = "registration" }: { variant?:
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = React.useState(false);
+  // One key per visit to the form: pressing Submit twice, or the browser retrying, cannot register twice.
+  const submissionKey = React.useRef(
+    typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}-key`,
+  );
   const [errors, setErrors] = React.useState<string[]>([]);
 
   const { data: program } = useQuery({
@@ -59,7 +63,7 @@ export function PublicRegistrationPage({ variant = "registration" }: { variant?:
     setSubmitting(true);
     setErrors([]);
     try {
-      const result = await submitRegistration(slug!, responses, files, consentAccepted);
+      const result = await submitRegistration(slug!, responses, files, consentAccepted, submissionKey.current);
       clearSavedDraft(draftKey);
       navigate(isOrder ? `/order/${slug}/confirmation` : `/programs/${slug}/confirmation`, { state: result });
     } catch (err) {

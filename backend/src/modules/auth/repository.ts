@@ -14,6 +14,16 @@ export async function findUserById(id: string) {
   return user ?? null;
 }
 
+export async function findTenantById(id: string) {
+  const [tenant] = await db.select().from(tenants).where(eq(tenants.id, id)).limit(1);
+  return tenant ?? null;
+}
+
+export async function updateTenantName(id: string, name: string) {
+  const [row] = await db.update(tenants).set({ name, updatedAt: new Date() }).where(eq(tenants.id, id)).returning();
+  return row ?? null;
+}
+
 export async function touchLastLogin(userId: string) {
   await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, userId));
 }

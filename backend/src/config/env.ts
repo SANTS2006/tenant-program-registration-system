@@ -34,6 +34,10 @@ const envSchema = z.object({
   // OAuth client ID from Google Cloud Console; the "Sign in with Google" button only shows when set.
   GOOGLE_CLIENT_ID: z.string().optional().default(""),
 
+  // Most connections one server instance keeps to the database. Keep (instances x this) below the
+  // database's connection limit.
+  DB_POOL_MAX: z.coerce.number().int().positive().max(100).default(10),
+
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
   RATE_LIMIT_WINDOW: z.string().default("1 minute"),
 });
