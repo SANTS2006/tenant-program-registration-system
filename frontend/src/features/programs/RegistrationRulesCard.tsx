@@ -5,11 +5,36 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { ApiError } from "@/lib/api";
 import type { Program } from "@/types/api";
+import { useIdCardConfig, useUpdateIdCardConfig } from "../idcards/hooks";
+import { useTicketConfig, useUpdateTicketConfig } from "../tickets/hooks";
 import { useUpdateProgram } from "./hooks";
 
 /** Rules for who can register, such as one registration per email address. */
 export function RegistrationRulesCard({ program }: { program: Program }) {
   const updateProgram = useUpdateProgram(program.id);
+  const idCard = useIdCardConfig(program.id);
+  const updateIdCard = useUpdateIdCardConfig(program.id);
+  const ticket = useTicketConfig(program.id);
+  const updateTicket = useUpdateTicketConfig(program.id);
+
+  const toggleIdCard = async (checked: boolean) => {
+    if (!idCard.data) return;
+    try {
+      await updateIdCard.mutateAsync({ ...idCard.data.config, showOnConfirmation: checked });
+      toast.success(checked ? "The ID card now shows on the success page" : "The ID card no longer shows on the success page");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to update");
+    }
+  };
+  const toggleTicket = async (checked: boolean) => {
+    if (!ticket.data) return;
+    try {
+      await updateTicket.mutateAsync({ ...ticket.data.config, showOnConfirmation: checked });
+      toast.success(checked ? "The ticket now shows on the success page" : "The ticket no longer shows on the success page");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to update");
+    }
+  };
 
   const toggleOnePerEmail = async (checked: boolean) => {
     try {
@@ -51,6 +76,46 @@ export function RegistrationRulesCard({ program }: { program: Program }) {
             </p>
           </div>
           <Switch id="allowCopy" checked={program.allowSubmissionCopy} onCheckedChange={toggleCopy} disabled={updateProgram.isPending} />
+        </div>
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-border/70 p-3">
+          <div>
+            <Label htmlFor="showIdCardOnSuccess" className="font-medium">
+              Show the ID card on the success page
+            </Label>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {!program.idCardEnabled
+                ? "Turn on ID cards for this program first (see ID cards below)."
+                : idCard.data?.config.showOnConfirmation !== false
+                  ? "After registering, people see their ID card with a download button."
+                  : "People do not see their ID card after registering. Your team can still download it."}
+            </p>
+          </div>
+          <Switch
+            id="showIdCardOnSuccess"
+            checked={program.idCardEnabled && idCard.data?.config.showOnConfirmation !== false}
+            onCheckedChange={toggleIdCard}
+            disabled={!program.idCardEnabled || !idCard.data || updateIdCard.isPending}
+          />
+        </div>
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-border/70 p-3">
+          <div>
+            <Label htmlFor="showTicketOnSuccess" className="font-medium">
+              Show the ticket on the success page
+            </Label>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {!program.ticketEnabled
+                ? "Turn on tickets for this program first (see Tickets below)."
+                : ticket.data?.config.showOnConfirmation !== false
+                  ? "After registering, people see their ticket with a download button."
+                  : "People do not see their ticket after registering. Your team can still download it."}
+            </p>
+          </div>
+          <Switch
+            id="showTicketOnSuccess"
+            checked={program.ticketEnabled && ticket.data?.config.showOnConfirmation !== false}
+            onCheckedChange={toggleTicket}
+            disabled={!program.ticketEnabled || !ticket.data || updateTicket.isPending}
+          />
         </div>
         <div className="flex items-start justify-between gap-3 rounded-lg border border-border/70 p-3">
           <div>
