@@ -48,6 +48,11 @@ export const updatePollSchema = z
   })
   .partial();
 
+export const verifiedVotersSchema = z.object({
+  enabled: z.boolean(),
+  emails: z.array(z.string().trim().toLowerCase().email("Enter valid email addresses").max(254)).max(5000, "Add at most 5,000 emails at a time"),
+});
+
 export const listPollsQuerySchema = paginationSchema.extend({
   search: z.string().trim().min(1).optional(),
   status: z.enum(["draft", "open", "closed"]).optional(),

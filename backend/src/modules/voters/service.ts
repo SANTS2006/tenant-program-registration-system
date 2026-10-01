@@ -6,6 +6,7 @@ import { env, isProduction } from "../../config/env.js";
 import { db } from "../../db/client.js";
 import { voterAccounts, voterEmailCodes } from "../../db/schema/index.js";
 import { AppError } from "../../lib/errors.js";
+import { canonicalEmail } from "../../lib/emailKey.js";
 import { hashPassword, verifyPassword } from "../../lib/password.js";
 import { generateVerificationCode, hashToken } from "../../lib/tokens.js";
 import { sendEmail } from "../email/service.js";
@@ -56,20 +57,7 @@ async function currentVoter(request: FastifyRequest): Promise<Voter | null> {
 
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
-/**
- * The one address behind an email, so "a.b+vote2@gmail.com" and "ab@gmail.com" count as the same
- * person. One vote per email is tied to this, not to the raw address.
- */
-export function canonicalEmail(email: string): string {
-  const [rawLocal = "", rawDomain = ""] = normalizeEmail(email).split("@");
-  let local = rawLocal.split("+")[0]!;
-  let domain = rawDomain;
-  if (domain === "gmail.com" || domain === "googlemail.com") {
-    domain = "gmail.com";
-    local = local.replace(/./g, "");
-  }
-  return `${local}@${domain}`;
-}
+export { canonicalEmail };
 
 const ballotKeyFor = (positionId: string, email: string) => `${positionId}:e:${canonicalEmail(email)}`;
 
@@ -100,6 +88,18 @@ function assertEmailAllowed(poll: Poll, email: string) {
       { reason: "domain_not_allowed", domains: allowedDomains(poll) },
     );
   }
+}
+
+/** A poll limited to verified voters only lets in emails its admin pre-registered. */
+async function assertVerifiedVoter(poll: Poll, email: string, action: "create an account" | "sign in" | "vote") {
+  if (!poll.verifiedVotersOnly) return;
+  if (await pollsRepo.isVerifiedVoter(poll.id, canonicalEmail(email))) return;
+  throw new AppError(
+    "FORBIDDEN",
+    `You cannot ${action} because you are not verified by the system as an eligible voter for this poll.`,
+    403,
+    { reason: "not_verified" },
+  );
 }
 
 async function findVoterByEmail(email: string) {
@@ -155,6 +155,7 @@ export function pollForVoters(poll: Poll, ballot: Awaited<ReturnType<typeof poll
     closesAt: poll.closesAt,
     onePerEmail: poll.onePerEmail,
     allowedDomains: allowedDomains(poll),
+    verifiedVotersOnly: poll.verifiedVotersOnly,
     showResults: poll.showResults,
     googleClientId: env.GOOGLE_CLIENT_ID || null,
     positions: ballot.map((p) => ({
@@ -183,12 +184,14 @@ export async function session(request: FastifyRequest, slug: string) {
   const poll = await findPoll(slug);
   const voter = await currentVoter(request);
   if (!voter) return { voter: null, votedPositionIds: [] as string[], emailAllowed: true };
-  // Signing in to a new poll with an existing account makes you one of its voters.
-  await pollsRepo.addPollVoter(poll.id, voter.id);
+  const verified = !poll.verifiedVotersOnly || (await pollsRepo.isVerifiedVoter(poll.id, canonicalEmail(voter.email)));
+  // Signing in to a new poll with an existing account makes you one of its voters (if it lets you in).
+  if (verified && emailAllowed(poll, voter.email)) await pollsRepo.addPollVoter(poll.id, voter.id);
   return {
     voter: publicVoter(voter),
     votedPositionIds: await votedPositions(poll, voter, (await pollsRepo.getBallot(poll.id)).map((p) => p.id)),
-    emailAllowed: emailAllowed(poll, voter.email),
+    emailAllowed: emailAllowed(poll, voter.email) && verified,
+    notVerified: !verified,
   };
 }
 
@@ -199,6 +202,8 @@ export async function register(input: { pollSlug: string; name: string; email: s
   const poll = await findPoll(input.pollSlug);
   const email = normalizeEmail(input.email);
   assertEmailAllowed(poll, email);
+  // Checked before anything is created, so an unverified email never gets an account.
+  await assertVerifiedVoter(poll, email, "create an account");
 
   let voter: Voter | null | undefined = await findVoterByEmail(email);
   if (voter?.emailVerifiedAt) {
@@ -230,6 +235,7 @@ export async function login(reply: FastifyReply, input: { pollSlug: string; emai
     );
   }
   assertEmailAllowed(poll, email);
+  await assertVerifiedVoter(poll, email, "sign in");
   if (!voter.emailVerifiedAt) {
     await sendCode(voter, poll);
     return { status: "verify" as const, email };
@@ -262,6 +268,7 @@ export async function verifyEmail(reply: FastifyReply, input: { pollSlug: string
   await consumeCode(voter, input.code);
   const [verified] = await db.update(voterAccounts).set({ emailVerifiedAt: new Date() }).where(eq(voterAccounts.id, voter.id)).returning();
   assertEmailAllowed(poll, verified!.email);
+  await assertVerifiedVoter(poll, verified!.email, "sign in");
   return startSession(reply, verified!, poll);
 }
 
@@ -277,7 +284,7 @@ export async function resendCode(input: { pollSlug: string; email: string }) {
 export async function forgotPassword(input: { pollSlug: string; email: string }) {
   const poll = await findPoll(input.pollSlug);
   const voter = await findVoterByEmail(input.email);
-  if (voter?.emailVerifiedAt) await sendCode(voter, poll, "reset");
+  if (voter?.emailVerifiedAt && (!poll.verifiedVotersOnly || (await pollsRepo.isVerifiedVoter(poll.id, canonicalEmail(voter.email))))) await sendCode(voter, poll, "reset");
   return { status: "reset_sent" as const, email: normalizeEmail(input.email) };
 }
 
@@ -294,6 +301,7 @@ export async function googleSignIn(reply: FastifyReply, input: { pollSlug: strin
   const poll = await findPoll(input.pollSlug);
   const { googleId, email, name } = input.profile;
   assertEmailAllowed(poll, email);
+  await assertVerifiedVoter(poll, email, "create an account");
 
   const [byGoogle] = await db.select().from(voterAccounts).where(eq(voterAccounts.googleId, googleId)).limit(1);
   let voter: Voter | null | undefined = byGoogle ?? (await findVoterByEmail(email));
@@ -325,6 +333,7 @@ export async function castVote(
   if (state === "closed") throw new AppError("CONFLICT", "Voting has closed for this poll.", 409, { reason: "closed" });
   if (state === "draft") throw new AppError("CONFLICT", "Voting hasn't opened yet for this poll.", 409, { reason: "not_open" });
   assertEmailAllowed(poll, voter.email);
+  await assertVerifiedVoter(poll, voter.email, "vote");
 
   const [position, candidate] = await Promise.all([
     pollsRepo.findPosition(poll.id, input.positionId),

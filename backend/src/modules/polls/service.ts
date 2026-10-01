@@ -1,6 +1,7 @@
 import QRCode from "qrcode";
 import slugify from "slugify";
 import { env } from "../../config/env.js";
+import { canonicalEmail } from "../../lib/emailKey.js";
 import { AppError } from "../../lib/errors.js";
 import { buildPaginatedResult, type PaginationInput } from "../../lib/pagination.js";
 import type { AuthenticatedUser } from "../users/types.js";
@@ -82,6 +83,34 @@ export async function updatePoll(pollId: string, input: UpdatePollInput) {
   const domains = input.allowedEmailDomains !== undefined ? input.allowedEmailDomains : poll.allowedEmailDomains;
   if (restrict && !domains) throw AppError.validation("Enter the email domain voters must use, e.g. example.edu");
   return pollsRepo.updatePollRow(pollId, input);
+}
+
+/** The poll's verified-voter setting and list, with who has signed up and voted. */
+export async function getVerifiedVoters(pollId: string) {
+  const poll = await getPoll(pollId);
+  const { rows, signedUpEmails, votedEmails } = await pollsRepo.listVerifiedVoters(pollId);
+  const signedUp = new Set(signedUpEmails.map(canonicalEmail));
+  const voted = new Set(votedEmails.map(canonicalEmail));
+  return {
+    enabled: poll.verifiedVotersOnly,
+    voters: rows.map((r) => ({ email: r.email, signedUp: signedUp.has(r.emailKey), voted: voted.has(r.emailKey) })),
+  };
+}
+
+/** Saves the setting and makes the verified list exactly the emails given. */
+export async function saveVerifiedVoters(pollId: string, input: { enabled: boolean; emails: string[] }) {
+  await getPoll(pollId);
+  const unique = new Map<string, { email: string; emailKey: string }>();
+  for (const email of input.emails) {
+    const emailKey = canonicalEmail(email);
+    if (!unique.has(emailKey)) unique.set(emailKey, { email, emailKey });
+  }
+  if (input.enabled && unique.size === 0) {
+    throw AppError.validation("Add at least one email before turning on verified voters, or nobody could vote");
+  }
+  await pollsRepo.replaceVerifiedVoters(pollId, [...unique.values()]);
+  await pollsRepo.updatePollRow(pollId, { verifiedVotersOnly: input.enabled });
+  return getVerifiedVoters(pollId);
 }
 
 export async function openPoll(pollId: string) {

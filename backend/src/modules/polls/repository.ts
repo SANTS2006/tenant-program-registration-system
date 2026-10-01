@@ -1,6 +1,6 @@
 import { and, asc, count, countDistinct, desc, eq, ilike, inArray, isNotNull, isNull, notInArray, or, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { pollCandidates, pollMembers, pollPositions, polls, pollVoters, pollVotes, users, voterAccounts } from "../../db/schema/index.js";
+import { pollCandidates, pollMembers, pollPositions, polls, pollVerifiedVoters, pollVoters, pollVotes, users, voterAccounts } from "../../db/schema/index.js";
 import { toOffsetLimit, type PaginationInput } from "../../lib/pagination.js";
 import type { SaveBallotInput } from "./schemas.js";
 
@@ -264,4 +264,48 @@ export async function listPollNotificationRecipients(poll: Pick<PollRow, "id" | 
       ),
     )
     .limit(50);
+}
+
+// ---------------------------------------------------------------------------
+// Verified voters: emails an admin has pre-registered as eligible to vote
+
+export async function isVerifiedVoter(pollId: string, emailKey: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: pollVerifiedVoters.id })
+    .from(pollVerifiedVoters)
+    .where(and(eq(pollVerifiedVoters.pollId, pollId), eq(pollVerifiedVoters.emailKey, emailKey)))
+    .limit(1);
+  return rows.length > 0;
+}
+
+export async function listVerifiedVoters(pollId: string) {
+  const [rows, signedUp, voted] = await Promise.all([
+    db.select().from(pollVerifiedVoters).where(eq(pollVerifiedVoters.pollId, pollId)).orderBy(asc(pollVerifiedVoters.createdAt), asc(pollVerifiedVoters.email)),
+    db
+      .select({ email: voterAccounts.email })
+      .from(pollVoters)
+      .innerJoin(voterAccounts, eq(voterAccounts.id, pollVoters.voterId))
+      .where(eq(pollVoters.pollId, pollId)),
+    db
+      .selectDistinct({ email: voterAccounts.email })
+      .from(pollVotes)
+      .innerJoin(voterAccounts, eq(voterAccounts.id, pollVotes.voterId))
+      .where(eq(pollVotes.pollId, pollId)),
+  ]);
+  return { rows, signedUpEmails: signedUp.map((r) => r.email), votedEmails: voted.map((r) => r.email) };
+}
+
+/** Makes the verified list exactly these emails: new ones are added, ones left out are removed. */
+export async function replaceVerifiedVoters(pollId: string, entries: { email: string; emailKey: string }[]) {
+  await db.transaction(async (tx) => {
+    const keys = entries.map((e) => e.emailKey);
+    if (keys.length === 0) await tx.delete(pollVerifiedVoters).where(eq(pollVerifiedVoters.pollId, pollId));
+    else await tx.delete(pollVerifiedVoters).where(and(eq(pollVerifiedVoters.pollId, pollId), notInArray(pollVerifiedVoters.emailKey, keys)));
+    for (let i = 0; i < entries.length; i += 500) {
+      await tx
+        .insert(pollVerifiedVoters)
+        .values(entries.slice(i, i + 500).map((e) => ({ pollId, email: e.email, emailKey: e.emailKey })))
+        .onConflictDoNothing();
+    }
+  });
 }

@@ -20,6 +20,7 @@ type Outcome =
   | { kind: "done"; exited: boolean }
   | { kind: "already_voted"; message: string }
   | { kind: "domain"; message: string }
+  | { kind: "not_verified"; message: string }
   | { kind: "closed" }
   | { kind: "failed"; positionId: string };
 
@@ -212,6 +213,26 @@ function VoteFlow() {
   if (!session?.voter) {
     return <Navigate to={`/vote/${slug}/login?next=${encodeURIComponent(location.pathname)}`} replace />;
   }
+  if (session.notVerified || outcome?.kind === "not_verified") {
+    return (
+      <VoteShell poll={poll}>
+        <VoteMessage
+          tone="error"
+          title="You're not a verified voter"
+          message={
+            outcome?.kind === "not_verified"
+              ? outcome.message
+              : `You cannot vote because you are not verified by the system as an eligible voter for this poll. The email you signed in with is ${session.voter.email}.`
+          }
+        >
+          <Button variant="outline" onClick={signOut}>
+            <LogOut className="h-4 w-4" />
+            Sign in with a different email
+          </Button>
+        </VoteMessage>
+      </VoteShell>
+    );
+  }
   if (!session.emailAllowed || outcome?.kind === "domain") {
     return (
       <VoteShell poll={poll}>
@@ -354,6 +375,7 @@ function VoteFlow() {
       const message = err instanceof ApiError ? err.message : "Your vote couldn't be recorded. Please try again.";
       if (reason === "already_voted") setOutcome({ kind: "already_voted", message });
       else if (reason === "domain_not_allowed") setOutcome({ kind: "domain", message });
+      else if (reason === "not_verified") setOutcome({ kind: "not_verified", message });
       else if (reason === "closed") setOutcome({ kind: "closed" });
       else if (!(err instanceof ApiError) || err.statusCode >= 500) setOutcome({ kind: "failed", positionId: position.id });
       else toast.error(message);

@@ -26,6 +26,8 @@ export interface VotePoll {
   closesAt: string | null;
   onePerEmail: boolean;
   allowedDomains: string[];
+  /** Only emails the admin pre-registered can create an account and vote. */
+  verifiedVotersOnly?: boolean;
   showResults: boolean;
   googleClientId: string | null;
   positions: VotePosition[];
@@ -41,6 +43,8 @@ export interface VoterSession {
   voter: Voter | null;
   votedPositionIds: string[];
   emailAllowed: boolean;
+  /** The poll only accepts verified voters and this email isn't one. */
+  notVerified?: boolean;
 }
 
 export type AuthResult = { status: "signed_in"; voter: Voter } | { status: "verify"; email: string };

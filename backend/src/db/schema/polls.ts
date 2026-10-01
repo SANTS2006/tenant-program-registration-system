@@ -28,6 +28,8 @@ export const polls = pgTable(
     // Voters see live results on the voting pages.
     showResults: boolean("show_results").notNull().default(true),
     notifyOnVote: boolean("notify_on_vote").notNull().default(true),
+    // Only emails the admin has pre-registered as verified voters can create an account and vote.
+    verifiedVotersOnly: boolean("verified_voters_only").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
@@ -123,6 +125,23 @@ export const voterEmailCodes = pgTable(
 );
 
 /** The voters of a poll: everyone who has signed in to it. */
+/** Emails an admin has pre-registered as eligible to vote in a poll. */
+export const pollVerifiedVoters = pgTable(
+  "poll_verified_voters",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    pollId: uuid("poll_id")
+      .notNull()
+      .references(() => polls.id, { onDelete: "cascade" }),
+    // As the admin entered it.
+    email: text("email").notNull(),
+    // The address behind it (no +tags, no Gmail dots), so an alias can't slip past the list.
+    emailKey: text("email_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [unique("poll_verified_voters_poll_key_unique").on(table.pollId, table.emailKey), index("poll_verified_voters_poll_id_idx").on(table.pollId)],
+);
+
 export const pollVoters = pgTable(
   "poll_voters",
   {

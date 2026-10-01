@@ -5,7 +5,7 @@ import { sendSuccess } from "../../lib/response.js";
 import { recordAudit } from "../audit/service.js";
 import { createUploadSignature } from "../uploads/service.js";
 import { getPollRole, requirePollAccess } from "./access.js";
-import { createPollSchema, listPollsQuerySchema, listVotersQuerySchema, saveBallotSchema, updatePollSchema } from "./schemas.js";
+import { createPollSchema, listPollsQuerySchema, listVotersQuerySchema, saveBallotSchema, updatePollSchema, verifiedVotersSchema } from "./schemas.js";
 import * as pollsService from "./service.js";
 import * as pollsRepo from "./repository.js";
 import { pollExportRoutes } from "./exports.js";
@@ -86,6 +86,17 @@ export async function pollRoutes(app: FastifyInstance) {
   app.get<{ Params: PollParams }>("/:pollId/voters", viewer, async (request, reply) => {
     const query = listVotersQuerySchema.parse(request.query);
     return sendSuccess(reply, await pollsService.listVoters(request.params.pollId, query.search, query));
+  });
+
+  app.get<{ Params: PollParams }>("/:pollId/verified-voters", viewer, async (request, reply) => {
+    reply.header("Cache-Control", "no-store");
+    return sendSuccess(reply, await pollsService.getVerifiedVoters(request.params.pollId));
+  });
+
+  app.put<{ Params: PollParams }>("/:pollId/verified-voters", admin, async (request, reply) => {
+    const result = await pollsService.saveVerifiedVoters(request.params.pollId, verifiedVotersSchema.parse(request.body));
+    await audit(request, "poll.verified_voters_update", request.params.pollId);
+    return sendSuccess(reply, result, "Verified voters saved");
   });
 
   app.get<{ Params: PollParams }>("/:pollId/share", viewer, async (request, reply) => {

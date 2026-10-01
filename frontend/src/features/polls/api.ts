@@ -20,6 +20,8 @@ export interface Poll {
   allowedEmailDomains: string | null;
   showResults: boolean;
   notifyOnVote: boolean;
+  /** Only emails on the pre-registered list can create an account and vote. */
+  verifiedVotersOnly: boolean;
   createdAt: string;
   updatedAt: string;
   myRole?: "admin" | "viewer" | null;
@@ -114,6 +116,13 @@ export const saveBallot = (pollId: string, positions: BallotPosition[]) =>
 export const getPollResults = (pollId: string) => apiFetch<PollResults>(`/polls/${pollId}/results`);
 export const listPollVoters = (pollId: string, params: { page?: number; pageSize?: number; search?: string }) =>
   apiFetch<Paginated<PollVoter>>(`/polls/${pollId}/voters${query({ ...params })}`);
+export interface VerifiedVoters {
+  enabled: boolean;
+  voters: { email: string; signedUp: boolean; voted: boolean }[];
+}
+export const getVerifiedVoters = (pollId: string) => apiFetch<VerifiedVoters>(`/polls/${pollId}/verified-voters`);
+export const saveVerifiedVoters = (pollId: string, input: { enabled: boolean; emails: string[] }) =>
+  apiFetch<VerifiedVoters>(`/polls/${pollId}/verified-voters`, { method: "PUT", body: input });
 export const getPollShareInfo = (pollId: string) => apiFetch<PollShareInfo>(`/polls/${pollId}/share`);
 
 export async function uploadPollImage(pollId: string, file: File): Promise<string> {

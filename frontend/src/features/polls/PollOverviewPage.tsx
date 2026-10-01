@@ -16,6 +16,7 @@ import { ImagePickerField } from "../idcards/IdCardSettingsCard";
 import { closePoll, deletePoll, openPoll, uploadPollImage, type Poll } from "./api";
 import { useInvalidatePolls, usePollResults, usePollShareInfo, useUpdatePoll } from "./hooks";
 import { usePollOutletContext } from "./PollDetailLayout";
+import { VerifiedVotersCard } from "./VerifiedVotersCard";
 
 /** "2026-10-01T18:00" in the viewer's own time zone, for a datetime-local input. */
 function toLocalInput(iso: string | null) {
@@ -378,6 +379,7 @@ export function PollOverviewPage() {
         </div>
         <div className="flex flex-col gap-6">
           <SettingsCard poll={poll} canEdit={canEdit} />
+          <VerifiedVotersCard poll={poll} canEdit={canEdit} />
           {canEdit && <DeletePollCard poll={poll} />}
         </div>
       </div>

@@ -2,7 +2,7 @@ import * as React from "react";
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { AtSign, MailCheck } from "lucide-react";
+import { AtSign, BadgeCheck, MailCheck } from "lucide-react";
 import { CodeInput } from "@/components/CodeInput";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -88,6 +88,12 @@ export function VoterAuthPage({ mode }: { mode: "login" | "register" }) {
         <p className="text-xs font-semibold uppercase tracking-wide text-primary">{mode === "login" ? "Sign in to vote" : "Create a voter account"}</p>
         <h1 className="mt-1 text-2xl font-bold tracking-tight">{poll.name}</h1>
       </div>
+      {poll.verifiedVotersOnly && (
+        <p className="flex items-center gap-2 rounded-full border border-primary/25 bg-gradient-brand-soft px-3 py-1 text-xs font-medium text-primary">
+          <BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" />
+          Only verified voters can create an account
+        </p>
+      )}
       {domains.length > 0 && (
         <p className="flex items-center gap-2 rounded-full border border-primary/25 bg-gradient-brand-soft px-3 py-1 text-xs font-medium text-primary">
           <AtSign className="h-3.5 w-3.5" aria-hidden="true" />
