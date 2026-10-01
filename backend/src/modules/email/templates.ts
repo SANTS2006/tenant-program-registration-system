@@ -258,6 +258,22 @@ export function resourceAccessEmail(params: {
   };
 }
 
+/** Sent to someone who already has an account when they are added to a team. */
+export function teamAddedEmail(params: { name: string; inviterName: string; organizationName: string; role: string; loginUrl: string }): { subject: string; html: string } {
+  const role = roleLabel(params.role);
+  const strong = (value: string) => `<strong style="color:${BRAND.heading};">${escapeHtml(value)}</strong>`;
+  const body = [
+    paragraph(`Hi ${strong(params.name)},`),
+    paragraph(`${strong(params.inviterName)} has added you to the team at ${strong(params.organizationName)} as a ${strong(role)}.`),
+    paragraph("Whatever they share with you will show up in your account next to everything you've created yourself."),
+    button("Sign in", params.loginUrl),
+  ].join("");
+  return {
+    subject: `You've been added to ${params.organizationName}`,
+    html: layout({ preheader: `You're now on the team at ${params.organizationName}`, eyebrow: "You've been added to a team", heading: params.organizationName, body }),
+  };
+}
+
 export function invitationEmail(params: {
   name: string;
   email: string;

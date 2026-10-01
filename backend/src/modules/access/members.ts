@@ -9,6 +9,7 @@ import { hashPassword } from "../../lib/password.js";
 import { sendSuccess } from "../../lib/response.js";
 import { generateVerificationCode } from "../../lib/tokens.js";
 import { recordAudit } from "../audit/service.js";
+import * as usersRepo from "../users/repository.js";
 import * as authRepo from "../auth/repository.js";
 import { generateUniqueTenantSlug } from "../auth/service.js";
 import { sendEmail } from "../email/service.js";
@@ -206,6 +207,8 @@ export async function inviteMember(
   }
 
   await adapter.upsert(person.id, id, input.role);
+  // They also appear under Users, with the role they were invited into (people already inside the account already do).
+  if (person.tenantId !== resource.tenantId) await usersRepo.ensureTeamLink(resource.tenantId, person.id, input.role === "admin" ? "program_admin" : "viewer");
 
   const message = resourceAccessEmail({
     name: person.name,

@@ -9,19 +9,19 @@ import * as usersService from "./service.js";
 
 const grantSchema = z.object({ pollId: z.string().uuid(), roleOnPoll: z.enum(["admin", "viewer"]) });
 
-function listForUser(userId: string) {
+function listForUser(userId: string, tenantId: string) {
   return db
     .select({ pollId: pollMembers.pollId, roleOnPoll: pollMembers.roleOnPoll, pollName: polls.name, pollSlug: polls.slug })
     .from(pollMembers)
     .innerJoin(polls, eq(polls.id, pollMembers.pollId))
-    .where(and(eq(pollMembers.userId, userId), isNull(polls.deletedAt)));
+    .where(and(eq(pollMembers.userId, userId), eq(polls.tenantId, tenantId), isNull(polls.deletedAt)));
 }
 
 /** A tenant admin gives teammates admin or viewer access to individual polls. */
 export async function pollAccessRoutes(app: FastifyInstance) {
   app.get<{ Params: { userId: string } }>("/:userId/polls", async (request, reply) => {
     await usersService.getUser(request.user!.tenantId!, request.params.userId);
-    return sendSuccess(reply, await listForUser(request.params.userId));
+    return sendSuccess(reply, await listForUser(request.params.userId, request.user!.tenantId!));
   });
 
   app.post<{ Params: { userId: string } }>("/:userId/polls", async (request, reply) => {
@@ -38,7 +38,7 @@ export async function pollAccessRoutes(app: FastifyInstance) {
       .insert(pollMembers)
       .values({ userId: request.params.userId, pollId: input.pollId, roleOnPoll: input.roleOnPoll })
       .onConflictDoUpdate({ target: [pollMembers.userId, pollMembers.pollId], set: { roleOnPoll: input.roleOnPoll } });
-    return sendSuccess(reply, await listForUser(request.params.userId), "Poll access granted");
+    return sendSuccess(reply, await listForUser(request.params.userId, request.user!.tenantId!), "Poll access granted");
   });
 
   app.delete<{ Params: { userId: string; pollId: string } }>("/:userId/polls/:pollId", async (request, reply) => {

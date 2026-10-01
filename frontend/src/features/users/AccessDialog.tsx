@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/app/AuthContext";
 import { apiFetch, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { listPrograms } from "../programs/api";
@@ -19,7 +20,7 @@ interface AccessKind {
   label: string;
   singular: string;
   /** Items this user can be given access to. */
-  options: () => Promise<{ id: string; name: string }[]>;
+  options: () => Promise<{ id: string; name: string; tenantId?: string }[]>;
   /** Normalises the membership rows the API returns. */
   toRows: (raw: Record<string, string>[]) => { id: string; name: string; role: Role }[];
   body: (id: string, role: Role) => Record<string, string>;
@@ -31,7 +32,7 @@ export const ACCESS_KINDS: AccessKind[] = [
     key: "programs",
     label: "Programs",
     singular: "program",
-    options: async () => (await listPrograms({ page: 1, pageSize: 100 })).items.map((p) => ({ id: p.id, name: p.name })),
+    options: async () => (await listPrograms({ page: 1, pageSize: 100 })).items.map((p) => ({ id: p.id, name: p.name, tenantId: p.tenantId })),
     toRows: (raw) => raw.map((r) => ({ id: r.programId!, name: r.programName!, role: r.roleOnProgram as Role })),
     body: (id, role) => ({ programId: id, roleOnProgram: role }),
   },
@@ -39,7 +40,7 @@ export const ACCESS_KINDS: AccessKind[] = [
     key: "polls",
     label: "Voting polls",
     singular: "poll",
-    options: async () => (await listPolls({ page: 1, pageSize: 100 })).items.map((p) => ({ id: p.id, name: p.name })),
+    options: async () => (await listPolls({ page: 1, pageSize: 100 })).items.map((p) => ({ id: p.id, name: p.name, tenantId: p.tenantId })),
     toRows: (raw) => raw.map((r) => ({ id: r.pollId!, name: r.pollName!, role: r.roleOnPoll as Role })),
     body: (id, role) => ({ pollId: id, roleOnPoll: role }),
   },
@@ -47,7 +48,7 @@ export const ACCESS_KINDS: AccessKind[] = [
     key: "businesses",
     label: "Businesses",
     singular: "business",
-    options: async () => (await listBusinesses({ page: 1, pageSize: 100 })).items.map((b) => ({ id: b.id, name: b.name })),
+    options: async () => (await listBusinesses({ page: 1, pageSize: 100 })).items.map((b) => ({ id: b.id, name: b.name, tenantId: b.tenantId })),
     toRows: (raw) => raw.map((r) => ({ id: r.businessId!, name: r.businessName!, role: r.roleOnBusiness as Role })),
     body: (id, role) => ({ businessId: id, roleOnBusiness: role }),
   },
@@ -63,7 +64,10 @@ function AccessTab({ userId, kind }: { userId: string; kind: AccessKind }) {
     queryKey,
     queryFn: async () => kind.toRows(await apiFetch<Record<string, string>[]>(`/users/${userId}/${kind.key}`)),
   });
-  const { data: options } = useQuery({ queryKey: ["access-options", kind.key], queryFn: kind.options });
+  const { user: me } = useAuth();
+  const { data: allOptions } = useQuery({ queryKey: ["access-options", kind.key], queryFn: kind.options });
+  // Only things in your own account can be shared from here (shared-with-you items belong to someone else).
+  const options = allOptions?.filter((o) => !o.tenantId || o.tenantId === me?.tenantId);
 
   const onError = (err: unknown) => toast.error(err instanceof ApiError ? err.message : "Something went wrong");
   const grant = useMutation({

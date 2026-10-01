@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, index, integer } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, index, integer, unique } from "drizzle-orm/pg-core";
 import { emailVerificationPurposeEnum, userRoleEnum, userStatusEnum } from "./enums";
 import { tenants } from "./tenants";
 
@@ -76,4 +76,26 @@ export const passwordResetTokens = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("password_reset_tokens_user_id_idx").on(table.userId)],
+);
+
+/**
+ * People on an account's team who have a space of their own (so their account isn't inside this
+ * one). It's what lists them under Users with the role they were invited into; what they can
+ * actually open is still decided by their access to each program, poll, or business.
+ */
+export const tenantMembers = pgTable(
+  "tenant_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // "program_admin" or "viewer", as on the Users page.
+    role: text("role").notNull().default("viewer"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [unique("tenant_members_tenant_user_unique").on(table.tenantId, table.userId), index("tenant_members_user_id_idx").on(table.userId)],
 );

@@ -14,6 +14,7 @@ import {
 } from "../email/templates.js";
 import type { AuthenticatedUser } from "../users/types.js";
 import * as authRepo from "./repository.js";
+import * as usersRepo from "../users/repository.js";
 import type {
   ChangePasswordInput,
   ForgotPasswordInput,
@@ -323,6 +324,12 @@ export async function createOwnSpace(userId: string): Promise<AuthenticatedUser>
   if (user.role === "admin") throw AppError.conflict("You already have your own space");
   const firstName = user.name.trim().split(/\s+/)[0] || "My";
   const name = `${firstName}'s space`;
+  const previousTenantId = user.tenantId;
+  const previousRole = user.role;
   const { user: moved } = await authRepo.moveUserToNewTenant(user.id, { name, slug: await generateUniqueTenantSlug(name) });
+  // They stay on the team they were invited to, under the same role, so its admin still sees them.
+  if (previousTenantId && (previousRole === "program_admin" || previousRole === "viewer")) {
+    await usersRepo.ensureTeamLink(previousTenantId, user.id, previousRole);
+  }
   return toAuthenticatedUser(moved);
 }

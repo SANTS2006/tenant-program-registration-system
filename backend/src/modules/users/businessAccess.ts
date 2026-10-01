@@ -9,7 +9,7 @@ import * as usersService from "./service.js";
 
 const grantSchema = z.object({ businessId: z.string().uuid(), roleOnBusiness: z.enum(["admin", "viewer"]) });
 
-function listForUser(userId: string) {
+function listForUser(userId: string, tenantId: string) {
   return db
     .select({
       businessId: businessMembers.businessId,
@@ -18,14 +18,14 @@ function listForUser(userId: string) {
     })
     .from(businessMembers)
     .innerJoin(businesses, eq(businesses.id, businessMembers.businessId))
-    .where(and(eq(businessMembers.userId, userId), isNull(businesses.deletedAt)));
+    .where(and(eq(businessMembers.userId, userId), eq(businesses.tenantId, tenantId), isNull(businesses.deletedAt)));
 }
 
 /** A tenant admin gives teammates admin or viewer access to individual businesses. */
 export async function businessAccessRoutes(app: FastifyInstance) {
   app.get<{ Params: { userId: string } }>("/:userId/businesses", async (request, reply) => {
     await usersService.getUser(request.user!.tenantId!, request.params.userId);
-    return sendSuccess(reply, await listForUser(request.params.userId));
+    return sendSuccess(reply, await listForUser(request.params.userId, request.user!.tenantId!));
   });
 
   app.post<{ Params: { userId: string } }>("/:userId/businesses", async (request, reply) => {
@@ -42,7 +42,7 @@ export async function businessAccessRoutes(app: FastifyInstance) {
       .insert(businessMembers)
       .values({ userId: request.params.userId, businessId: input.businessId, roleOnBusiness: input.roleOnBusiness })
       .onConflictDoUpdate({ target: [businessMembers.userId, businessMembers.businessId], set: { roleOnBusiness: input.roleOnBusiness } });
-    return sendSuccess(reply, await listForUser(request.params.userId), "Business access granted");
+    return sendSuccess(reply, await listForUser(request.params.userId, request.user!.tenantId!), "Business access granted");
   });
 
   app.delete<{ Params: { userId: string; businessId: string } }>("/:userId/businesses/:businessId", async (request, reply) => {

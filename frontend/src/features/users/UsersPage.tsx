@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Eye, EyeOff, Plus } from "lucide-react";
+import { Eye, EyeOff, Plus, Rocket, UserMinus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ApiError } from "@/lib/api";
-import { useCreateUser, useUsersList } from "./hooks";
+import { useCreateUser, useRemoveTeamMember, useUpdateUser, useUsersList } from "./hooks";
 import { ManageAccessDialog } from "./AccessDialog";
 import type { UserRole } from "@/types/api";
 import { usePageMeta } from "@/lib/seo";
@@ -58,7 +58,7 @@ function CreateUserDialog() {
         <DialogHeader>
           <DialogTitle>Invite teammate</DialogTitle>
           <p className="text-sm text-muted-foreground">
-            They&apos;ll receive an email with their role, this temporary password, and a link to sign in.
+            They&apos;ll receive an email with their role, this temporary password, and a link to sign in. They get a space of their own too, where they can create their own programs, polls and businesses, and they stay on your team under this role. If they already have an account, they are just added to your team.
           </p>
         </DialogHeader>
         <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)} noValidate>
@@ -114,6 +114,57 @@ function CreateUserDialog() {
   );
 }
 
+/** Changes the role someone was invited into; for people with their own space it applies to everything of yours they can open. */
+function RoleSelect({ userId, name, role }: { userId: string; name: string; role: UserRole }) {
+  const update = useUpdateUser();
+  return (
+    <Select
+      value={role}
+      onValueChange={async (next) => {
+        try {
+          await update.mutateAsync({ userId, input: { role: next as UserRole } });
+          toast.success(`${name} is now a ${next === "viewer" ? "viewer" : "program admin"}`);
+        } catch (err) {
+          toast.error(err instanceof ApiError ? err.message : "Couldn't change the role");
+        }
+      }}
+      disabled={update.isPending}
+    >
+      <SelectTrigger className="h-8 w-36" aria-label={`Role of ${name}`}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="viewer">Viewer</SelectItem>
+        <SelectItem value="program_admin">Program admin</SelectItem>
+      </SelectContent>
+    </Select>
+  );
+}
+
+function RemoveFromTeamButton({ userId, name }: { userId: string; name: string }) {
+  const remove = useRemoveTeamMember();
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      aria-label={`Remove ${name} from your team`}
+      title="Remove from your team (their own space stays)"
+      loading={remove.isPending}
+      onClick={async () => {
+        if (!window.confirm(`Remove ${name} from your team? They lose access to your programs, polls and businesses, but keep their own space.`)) return;
+        try {
+          await remove.mutateAsync(userId);
+          toast.success(`${name} was removed from your team`);
+        } catch (err) {
+          toast.error(err instanceof ApiError ? err.message : "Couldn't remove them");
+        }
+      }}
+    >
+      <UserMinus className="h-4 w-4 text-destructive" />
+    </Button>
+  );
+}
+
 export function UsersPage() {
   usePageMeta({ title: "Users" });
   const [search, setSearch] = React.useState("");
@@ -157,12 +208,29 @@ export function UsersPage() {
               <TableRow key={user.id}>
                 <TableCell>{user.name}</TableCell>
                 <TableCell>{user.email}</TableCell>
-                <TableCell className="capitalize">{user.role.replace("_", " ")}</TableCell>
                 <TableCell>
-                  <Badge variant={user.status === "active" ? "success" : "secondary"}>{user.status}</Badge>
+                  {user.role === "admin" ? (
+                    <span className="capitalize">Admin</span>
+                  ) : (
+                    <RoleSelect userId={user.id} name={user.name} role={user.role} />
+                  )}
                 </TableCell>
                 <TableCell>
-                  {user.role !== "admin" && <ManageAccessDialog userId={user.id} userName={user.name} />}
+                  <div className="flex items-center gap-2">
+                    <Badge variant={user.status === "active" ? "success" : "secondary"}>{user.status}</Badge>
+                    {user.ownSpace && (
+                      <Badge variant="outline" className="gap-1" title="Has a space of their own, with their own programs, polls and businesses">
+                        <Rocket className="h-3 w-3" aria-hidden="true" />
+                        Own space
+                      </Badge>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    {user.role !== "admin" && <ManageAccessDialog userId={user.id} userName={user.name} />}
+                    {user.ownSpace && <RemoveFromTeamButton userId={user.id} name={user.name} />}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

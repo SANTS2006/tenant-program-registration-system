@@ -7,6 +7,8 @@ export interface AdminUser {
   email: string;
   role: UserRole;
   status: UserStatus;
+  /** Has an account space of their own and is on your team by invitation. */
+  ownSpace?: boolean;
   createdAt: string;
   lastLoginAt: string | null;
 }
@@ -44,4 +46,8 @@ export function addMembership(userId: string, programId: string, roleOnProgram: 
 
 export function removeMembership(userId: string, programId: string) {
   return apiFetch<null>(`/users/${userId}/programs/${programId}`, { method: "DELETE" });
+}
+
+export function removeTeamMember(userId: string) {
+  return apiFetch<null>(`/users/${userId}`, { method: "DELETE" });
 }

@@ -11,6 +11,7 @@ import {
   listMembershipsHandler,
   listUsersHandler,
   removeMembershipHandler,
+  removeTeamMemberHandler,
   updateUserHandler,
 } from "./controller.js";
 import { pollAccessRoutes } from "./pollAccess.js";
@@ -43,6 +44,7 @@ export async function userRoutes(app: FastifyInstance) {
   app.post("/", createUserHandler);
   app.get("/:userId", getUserHandler);
   app.patch("/:userId", updateUserHandler);
+  app.delete("/:userId", removeTeamMemberHandler);
   app.get("/:userId/programs", listMembershipsHandler);
   app.post("/:userId/programs", addMembershipHandler);
   app.delete("/:userId/programs/:programId", removeMembershipHandler);

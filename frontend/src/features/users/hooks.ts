@@ -47,3 +47,11 @@ export function useRemoveMembership(userId: string) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users", userId, "memberships"] }),
   });
 }
+
+export function useRemoveTeamMember() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => usersApi.removeTeamMember(userId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
+  });
+}

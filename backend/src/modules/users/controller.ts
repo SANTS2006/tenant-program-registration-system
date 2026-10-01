@@ -71,3 +71,11 @@ export async function removeMembershipHandler(request: FastifyRequest, reply: Fa
   await usersService.removeMembership(request.user.tenantId, userId, programId);
   return sendSuccess(reply, null, "Program access revoked");
 }
+
+export async function removeTeamMemberHandler(request: FastifyRequest, reply: FastifyReply) {
+  if (!request.user?.tenantId) throw AppError.unauthorized();
+  const { userId } = request.params as { userId: string };
+  await usersService.removeTeamMember(request.user.tenantId, userId);
+  await recordAudit({ actorUserId: request.user.id, action: "user.remove_from_team", entityType: "user", entityId: userId, ipAddress: request.ip });
+  return sendSuccess(reply, null, "Removed from your team");
+}
