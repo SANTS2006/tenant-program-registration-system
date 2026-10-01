@@ -22,14 +22,16 @@ import {
   USE_CASES,
 } from "./sections";
 import { HeroDashboard, RegistrationToast, ShareCardMock } from "./visuals";
-import { DesignCarousel, HeroIdCard, HeroTicket } from "./lazyShowcase";
+import { DesignCarousel, DocumentStack3D, HeroIdCard, HeroTicket } from "./lazyShowcase";
+import { ModuleCube, ModuleList } from "./moduleCube";
 import { usePageMeta } from "@/lib/seo";
 
 const NAV = [
   { href: "#features", label: "Features" },
   { href: "#how-it-works", label: "How it works" },
+  { href: "#modules", label: "Modules" },
+  { href: "#paperwork", label: "Documents" },
   { href: "#voting", label: "Voting" },
-  { href: "#businesses", label: "Businesses" },
   { href: "#designs", label: "Designs" },
   { href: "#faq", label: "FAQ" },
   { href: "/contact", label: "Contact" },
@@ -354,6 +356,26 @@ export function LandingPage() {
         <Hero />
         <CapabilityStrip />
 
+        <Section id="modules" className="overflow-hidden">
+          <SectionHeading
+            eyebrow="One workspace"
+            title={
+              <>
+                Six modules, <span className="gradient-text">one login</span>
+              </>
+            }
+            description="Registrations, voting polls, orders, invoices, receipts and quotations, and business cards share one account, one team and one set of exports."
+          />
+          <div className="grid items-center gap-12 lg:grid-cols-[auto_1fr] lg:gap-20">
+            <Reveal variant="zoom" className="flex justify-center py-10 lg:px-10">
+              <ModuleCube />
+            </Reveal>
+            <Reveal delay={120}>
+              <ModuleList />
+            </Reveal>
+          </div>
+        </Section>
+
         <Section id="features">
           <SectionHeading
             eyebrow="Features"
@@ -365,6 +387,21 @@ export function LandingPage() {
             description="One platform for the whole journey: registrations, voting polls, orders, invoices, and receipts, from building the form to exporting the final list."
           />
           <FeaturesGrid />
+        </Section>
+
+        <Section id="paperwork" className="overflow-hidden">
+          <SectionHeading
+            eyebrow="Invoices, quotations and receipts"
+            title={
+              <>
+                Paperwork that looks <span className="gradient-text">professionally designed</span>
+              </>
+            }
+            description="Fourteen layouts in your colours: flowing waves, bold headers, landscape cash-book receipts and till slips with barcodes. Every one prints, downloads and emails as a PDF."
+          />
+          <Reveal variant="zoom">
+            <DocumentStack3D />
+          </Reveal>
         </Section>
 
         <Section id="how-it-works" className="bg-card/40">

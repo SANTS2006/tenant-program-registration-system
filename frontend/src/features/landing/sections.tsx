@@ -25,6 +25,10 @@ import {
   Share2,
   ShieldCheck,
   Smartphone,
+  BadgeCheck,
+  CalendarClock,
+  ClipboardList,
+  Printer,
   ShoppingBag,
   Receipt,
   Vote,
@@ -41,8 +45,8 @@ import {
 import { cn } from "@/lib/utils";
 import { Reveal, Tilt } from "./motion";
 import { AnalyticsMock, FormBuilderMock, VerificationsMock } from "./visuals";
-import { BusinessMock, PollsMock } from "./moduleVisuals";
-import { DocumentsShowcase } from "./lazyShowcase";
+import { BusinessMock, PollsMock, SmartFormMock, SuccessCopyMock, VerifiedVotersMock } from "./moduleVisuals";
+import { DocumentsShowcase, FlipCard3D } from "./lazyShowcase";
 
 export function SectionHeading({
   eyebrow,
@@ -77,8 +81,8 @@ export function SectionHeading({
 export const CAPABILITIES = [
   { value: "23", label: "question types, from text to file uploads" },
   { value: "50+", label: "ready-made ID card and ticket designs" },
-  { value: "Live", label: "voting polls with results as votes come in" },
-  { value: "PDF", label: "invoices and receipts, emailed to your clients" },
+  { value: "14", label: "invoice, quotation and receipt layouts" },
+  { value: "8", label: "two-sided business card designs" },
 ];
 
 const FEATURES: { icon: LucideIcon; title: string; description: string }[] = [
@@ -191,6 +195,36 @@ const FEATURES: { icon: LucideIcon; title: string; description: string }[] = [
     icon: Receipt,
     title: "Receipts",
     description: "Issue receipts for payments received, edit them any time (they show as Updated), and save them as a PDF or a picture.",
+  },
+  {
+    icon: ClipboardList,
+    title: "Quotations",
+    description: "Send a quotation, then mark it accepted, declined or expired. Same layouts, tax and email-to-client as invoices.",
+  },
+  {
+    icon: LayoutTemplate,
+    title: "14 document layouts",
+    description: "Nine A4 styles, landscape cash-book receipts and narrow till slips with barcodes, all in your own colours.",
+  },
+  {
+    icon: IdCard,
+    title: "Business cards",
+    description: "Eight two-sided designs with your logo, a photo and a QR code. Print them, save a PDF or email one to a client.",
+  },
+  {
+    icon: BadgeCheck,
+    title: "Verified voters",
+    description: "Paste the emails of eligible voters. Everyone else is refused at sign-up, sign-in and voting, with no way round it.",
+  },
+  {
+    icon: CalendarClock,
+    title: "Smarter form rules",
+    description: "Earliest and latest dates, minimum ages, fields that fill themselves in, and extra boxes that appear only when needed.",
+  },
+  {
+    icon: Printer,
+    title: "Print, preview and download",
+    description: "Customers keep a copy of their order or registration as a PDF or a picture, and can print or preview it first.",
   },
   {
     icon: Palette,
@@ -433,6 +467,72 @@ export function Spotlights() {
         }
         reverse
       />
+      <Spotlight
+        id="cards"
+        eyebrow="Business cards"
+        title="Cards that make a first impression, front and back"
+        description="Pick one of eight designs, add the person, their photo and a QR code of your website, and the card is ready to print or to email to a client."
+        points={[
+          "Eight two-sided designs: Executive gold, Ring, Diagonal, Portrait and more",
+          "Change both colours and see the front and back live",
+          "Print it, save a PDF or pictures, or email the PDF to any address you type in",
+          "A card for every team member, searchable and exportable",
+        ]}
+        visual={<FlipCard3D />}
+      />
+      <Spotlight
+        id="verified-voters"
+        eyebrow="Verified voting"
+        title="Only the people you list can vote"
+        description="Switch on verified voters and paste the eligible emails. The system checks the list before it creates an account, signs anyone in or records a vote."
+        points={[
+          "Unlisted emails are told they are not verified as eligible voters, and no account is created",
+          "Works for password sign-up, Google sign-in and the forgot-password code",
+          "Shows how many listed voters have signed up and voted",
+          "Aliases such as name+1@gmail.com can't slip past the list",
+        ]}
+        visual={
+          <Tilt max={6} innerClassName="rounded-2xl">
+            <VerifiedVotersMock />
+          </Tilt>
+        }
+        reverse
+      />
+      <Spotlight
+        id="smart-forms"
+        eyebrow="Smarter forms"
+        title="Forms that check, fill and ask for more by themselves"
+        description="Set date limits and age ranges, copy an answer into another question, cap how many options can be ticked, and show an extra box only when an answer needs one."
+        points={[
+          "Earliest and latest dates, or a minimum and maximum age for dates of birth",
+          "A field that fills itself from an earlier answer until the person edits it",
+          "“Choose up to 2” limits and follow-up boxes for text or files",
+          "Answers are saved in the browser, so a refresh never loses them",
+        ]}
+        visual={
+          <Tilt max={6} innerClassName="rounded-2xl">
+            <SmartFormMock />
+          </Tilt>
+        }
+      />
+      <Spotlight
+        id="success-page"
+        eyebrow="After they submit"
+        title="A success page people can keep, print and trust"
+        description="Customers and registrants see their number and status, review their answers and keep a copy. You choose whether ID cards, tickets and copies are shown."
+        points={[
+          "Preview, print, download as PDF or save as a picture",
+          "A review step before an order is placed",
+          "Switches for the ID card, the ticket and the copy, right on the program overview",
+          "Order status in your own words, updated by email",
+        ]}
+        visual={
+          <Tilt max={6} innerClassName="rounded-2xl">
+            <SuccessCopyMock />
+          </Tilt>
+        }
+        reverse
+      />
     </div>
   );
 }
@@ -584,6 +684,18 @@ const FAQS = [
   {
     q: "What can a business do on the platform?",
     a: "Each business gets an order page, order tracking with your own statuses, and branded invoices and receipts. Customers are emailed a confirmation and updates, and invoices and receipts can be emailed as PDFs or downloaded as pictures.",
+  },
+  {
+    q: "Which invoice, quotation and receipt layouts are there?",
+    a: "Fourteen: nine A4 styles (Classic, Modern, Minimal, Wave, Corner, Bold, Soft, Stripe and Diagonal), three landscape cash-book receipts and two narrow till slips with a barcode. Pick one, choose your colours, and every document prints, downloads and emails as a PDF.",
+  },
+  {
+    q: "Can I make business cards?",
+    a: "Yes. Choose from eight two-sided designs, add the person, a photo and a QR code of your website, then print the card, save it as a PDF or pictures, or email the PDF to any address.",
+  },
+  {
+    q: "Can I limit a poll to people I have approved?",
+    a: "Yes. Turn on verified voters and paste their emails. Anyone who is not on the list cannot create an account, sign in or vote.",
   },
   {
     q: "Can I get my data out?",

@@ -101,3 +101,125 @@ export function BusinessMock() {
     </BrowserFrame>
   );
 }
+
+/** A form with the newer builder rules: an age limit, an auto-filled field, a follow-up box, a selection limit. */
+export function SmartFormMock() {
+  return (
+    <BrowserFrame>
+      <div className="flex flex-col gap-3 p-4 sm:p-5" aria-hidden="true">
+        <div>
+          <p className="text-[11px] font-semibold">Date of birth *</p>
+          <div className="mt-1 rounded-lg border border-destructive px-3 py-2 text-xs">03 / 04 / 2012</div>
+          <p className="mt-1 text-[10px] font-medium text-destructive">You must be at least 18 years old</p>
+        </div>
+        <div>
+          <p className="flex items-center gap-2 text-[11px] font-semibold">
+            Name on the certificate
+            <span className="rounded-full bg-gradient-brand-soft px-2 py-0.5 text-[9px] font-semibold text-primary">Filled from Full name</span>
+          </p>
+          <div className="mt-1 rounded-lg border border-border/70 bg-background/60 px-3 py-2 text-xs">Aminata Kamara</div>
+        </div>
+        <div>
+          <p className="text-[11px] font-semibold">Do you have a design in mind? *</p>
+          <div className="mt-1 flex gap-4 text-xs">
+            <span className="flex items-center gap-1.5">
+              <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 border-primary">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+              </span>
+              Yes
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-3.5 w-3.5 rounded-full border border-border" />
+              No
+            </span>
+          </div>
+          <div className="mt-2 rounded-lg border border-border/70 bg-muted/30 p-2.5">
+            <p className="text-[10px] font-semibold">Describe or upload your design</p>
+            <div className="mt-1 h-9 rounded-md border border-border/70 bg-background/60" />
+            <div className="mt-1.5 rounded-md border border-dashed border-border px-2 py-1.5 text-center text-[10px] text-muted-foreground">Or upload a file</div>
+          </div>
+        </div>
+        <div>
+          <p className="text-[11px] font-semibold">Skills <span className="font-normal text-muted-foreground">· choose up to 2 (2 selected)</span></p>
+          <div className="mt-1 flex flex-col gap-1 text-xs">
+            {[
+              ["Public speaking", true],
+              ["Leadership", true],
+              ["Writing", false],
+            ].map(([label, on]) => (
+              <span key={String(label)} className={cn("flex items-center gap-2", !on && "opacity-45")}>
+                <span className={cn("flex h-3.5 w-3.5 items-center justify-center rounded border", on ? "border-primary bg-primary text-[8px] text-white" : "border-border")}>{on ? "✓" : ""}</span>
+                {String(label)}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-lg bg-gradient-brand px-3 py-2 text-center text-[11px] font-semibold text-white">Review your answers</div>
+      </div>
+    </BrowserFrame>
+  );
+}
+
+/** The verified-voters panel and the refusal an unlisted email gets. */
+export function VerifiedVotersMock() {
+  return (
+    <BrowserFrame>
+      <div className="flex flex-col gap-3 p-4 sm:p-5" aria-hidden="true">
+        <div className="flex items-center justify-between rounded-xl border border-border/70 p-3">
+          <div>
+            <p className="text-xs font-semibold">Only verified voters can vote</p>
+            <p className="text-[10px] text-muted-foreground">Anyone not on the list is refused</p>
+          </div>
+          <span className="flex h-5 w-9 items-center rounded-full bg-primary p-0.5">
+            <span className="ml-auto h-4 w-4 rounded-full bg-white" />
+          </span>
+        </div>
+        <div className="rounded-xl border border-border/70 bg-background/60 p-3 font-mono text-[10px] leading-relaxed text-muted-foreground">
+          mariama@school.edu
+          <br />
+          ibrahim@school.edu
+          <br />
+          fatmata@school.edu
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold">
+          <span className="rounded-full bg-secondary px-2.5 py-1">3 emails</span>
+          <span className="rounded-full border border-border/70 px-2.5 py-1">2 signed up</span>
+          <span className="rounded-full border border-border/70 px-2.5 py-1">1 voted</span>
+          <span className="ml-auto rounded-lg bg-gradient-brand px-3 py-1.5 text-white">Save verified voters</span>
+        </div>
+        <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-[11px] text-destructive">
+          <p className="font-semibold">You can&apos;t create an account</p>
+          <p className="mt-0.5 text-[10px]">You cannot create an account because you are not verified by the system as an eligible voter for this poll.</p>
+        </div>
+      </div>
+    </BrowserFrame>
+  );
+}
+
+/** What a customer sees after placing an order: the number, the status, and ways to keep a copy. */
+export function SuccessCopyMock() {
+  return (
+    <BrowserFrame>
+      <div className="flex flex-col items-center gap-3 p-5 text-center" aria-hidden="true">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-success text-lg text-white shadow-glow">✓</span>
+        <p className="text-sm font-bold">Order placed!</p>
+        <div className="rounded-xl border border-border/70 bg-gradient-brand-soft px-5 py-2">
+          <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Order number</p>
+          <p className="gradient-text text-sm font-bold tracking-wide">ORD-2026-00018</p>
+        </div>
+        <span className="rounded-full bg-gradient-brand px-3 py-0.5 text-[10px] font-semibold text-white">Preparing your order</span>
+        <div className="flex flex-wrap justify-center gap-1.5 text-[10px] font-semibold">
+          {["Preview", "Print", "Download PDF", "Download image"].map((b, i) => (
+            <span key={b} className={cn("rounded-lg border px-2.5 py-1.5", i === 2 ? "border-transparent bg-gradient-brand text-white" : "border-border/70")}>
+              {b}
+            </span>
+          ))}
+        </div>
+        <div className="grid w-full grid-cols-2 gap-2 pt-1">
+          <div className="rounded-lg bg-gradient-to-br from-blue-600 to-sky-500 p-3 text-[10px] font-semibold text-white">ID card</div>
+          <div className="rounded-lg bg-gradient-to-br from-violet-600 to-fuchsia-500 p-3 text-[10px] font-semibold text-white">Ticket</div>
+        </div>
+      </div>
+    </BrowserFrame>
+  );
+}

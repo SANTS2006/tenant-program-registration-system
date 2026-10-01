@@ -44,3 +44,24 @@ export function DesignCarousel() {
     </React.Suspense>
   );
 }
+
+// The document and card showcases draw real samples with the design library, so they load lazily too.
+const loadDocs = () => import("./documentShowcase3d");
+const DocumentStack3DLazy = React.lazy(() => loadDocs().then((m) => ({ default: m.DocumentStack3D })));
+const FlipCard3DLazy = React.lazy(() => loadDocs().then((m) => ({ default: m.FlipCard3D })));
+
+export function DocumentStack3D() {
+  return (
+    <React.Suspense fallback={<div className="mx-auto h-[480px] w-full max-w-5xl" aria-busy="true" />}>
+      <DocumentStack3DLazy />
+    </React.Suspense>
+  );
+}
+
+export function FlipCard3D() {
+  return (
+    <React.Suspense fallback={<div className="mx-auto aspect-[504/288] w-full max-w-md" aria-busy="true" />}>
+      <FlipCard3DLazy />
+    </React.Suspense>
+  );
+}
