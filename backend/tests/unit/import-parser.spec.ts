@@ -86,3 +86,33 @@ describe("turning cell text into answers", () => {
     expect(convertCell(field("t", "short_text", "T"), "   ")).toBeUndefined();
   });
 });
+
+describe("the blank import template", () => {
+  const fields = [
+    { ...field("full_name", "short_text", "Full name"), required: true, orderIndex: 0 },
+    { ...field("region", "single_choice", "Region", { options: ["North", "South"] }), orderIndex: 1 },
+    { ...field("photo", "image_upload", "Photo"), orderIndex: 2 },
+  ] as unknown as FieldRow[];
+
+  it("has one column per question, without uploads, plus the number column", async () => {
+    const { buildImportTemplate } = await import("../../src/modules/registrations/importTemplate.js");
+    const csv = await buildImportTemplate(fields, "csv", false);
+    expect(csv.buffer.toString("utf8").replace("\uFEFF", "").trim()).toBe("Full name,Region,Registration number");
+    const orders = await buildImportTemplate(fields, "csv", true);
+    expect(orders.buffer.toString("utf8")).toContain("Order number");
+  });
+
+  it("can be filled in and imported straight back, matching its own columns", async () => {
+    const { buildImportTemplate } = await import("../../src/modules/registrations/importTemplate.js");
+    const template = await buildImportTemplate(fields, "xlsx", false);
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(template.buffer as unknown as ArrayBuffer);
+    expect(wb.getWorksheet("Guide")).toBeTruthy();
+    wb.getWorksheet("Import")!.addRow(["Ama Kamara", "North"]);
+    const filled = Buffer.from(await wb.xlsx.writeBuffer());
+    const table = await parseImportFile("filled.xlsx", filled);
+    expect(table.headers).toEqual(["Full name", "Region", "Registration number"]);
+    expect(table.rows[0]!.slice(0, 2)).toEqual(["Ama Kamara", "North"]);
+    expect(suggestMapping(table.headers, fields.slice(0, 2))).toEqual({ "0": "full_name", "1": "region", "2": "__registration_number" });
+  });
+});

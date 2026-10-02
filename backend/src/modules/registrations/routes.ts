@@ -8,6 +8,7 @@ import {
   editRegistrationAnswersHandler,
   getRegistrationHandler,
   importRegistrationsHandler,
+  importTemplateHandler,
   previewRegistrationImportHandler,
   listRegistrationsHandler,
   updateRegistrationStatusHandler,
@@ -46,6 +47,7 @@ export async function registrationRoutes(app: FastifyInstance) {
   );
   // Bulk import from an Excel sheet or Word table. The document travels as base64 text, so these routes allow a bigger body.
   const importRoute = { bodyLimit: 8 * 1024 * 1024, config: { rateLimit: { max: 20, timeWindow: "1 minute" } } };
+  app.get("/:programId/registrations/import/template", { preHandler: requireProgramAccess("admin") }, importTemplateHandler);
   app.post(
     "/:programId/registrations/import/preview",
     { preHandler: requireProgramAccess("admin"), ...importRoute },

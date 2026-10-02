@@ -7,7 +7,7 @@ import { sendSuccess } from "../../lib/response.js";
 import { recordAudit } from "../audit/service.js";
 import * as programsRepo from "../programs/repository.js";
 import { z } from "zod";
-import { previewImport, runImport } from "./importService.js";
+import { importTemplateFor, previewImport, runImport } from "./importService.js";
 import { generateCsvExport, generateXlsxExport } from "./exportService.js";
 import { submissionPdfForAdmin } from "./summary.js";
 import * as registrationsService from "./service.js";
@@ -164,4 +164,14 @@ export async function editRegistrationAnswersHandler(request: FastifyRequest, re
     ipAddress: request.ip,
   });
   return sendSuccess(reply, registration, "Registration updated");
+}
+
+export async function importTemplateHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { programId } = request.params as { programId: string };
+  const { format } = z.object({ format: z.enum(["xlsx", "csv"]).default("xlsx") }).parse(request.query);
+  const { program, template } = await importTemplateFor(programId, format);
+  const base = program.name.replace(/[\/:*?"<>|]+/g, " ").trim() || "Registrations";
+  reply.header("Content-Type", template.contentType);
+  reply.header("Content-Disposition", attachmentDisposition(`${base} import template.${template.extension}`));
+  return reply.send(template.buffer);
 }

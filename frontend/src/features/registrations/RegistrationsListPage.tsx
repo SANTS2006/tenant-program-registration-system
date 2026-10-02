@@ -122,7 +122,7 @@ export function RegistrationsListPage() {
         <span className="text-sm text-muted-foreground">{data?.total ?? 0} total</span>
         <div className="ml-auto flex flex-wrap gap-2">
           <RefreshButton />
-          {program.myRole === "admin" && program.kind !== "order_form" && <ImportRegistrationsDialog programId={program.id} termLabel="registrations" />}
+          {program.myRole === "admin" && <ImportRegistrationsDialog programId={program.id} termLabel={terms.plural} />}
           <Button
             variant="outline"
             size="sm"

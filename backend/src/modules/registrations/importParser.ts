@@ -103,7 +103,8 @@ export async function parseImportFile(filename: string, buffer: Buffer): Promise
     if (name.endsWith(".xlsx")) {
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(buffer as unknown as ArrayBuffer);
-      raw = await parseSheet(workbook.worksheets.find((s) => s.rowCount > 1) ?? workbook.worksheets[0]);
+      // A sheet named "Import" (as in the downloadable template) wins; otherwise the first sheet with data.
+      raw = await parseSheet(workbook.getWorksheet("Import") ?? workbook.worksheets.find((s) => s.rowCount > 1) ?? workbook.worksheets[0]);
     } else if (name.endsWith(".csv")) {
       const workbook = new ExcelJS.Workbook();
       const sheet = await workbook.csv.read(Readable.from(buffer));

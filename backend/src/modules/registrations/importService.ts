@@ -4,6 +4,7 @@ import type { FieldRow } from "../forms/repository.js";
 import * as programsRepo from "../programs/repository.js";
 import * as registrationsRepo from "./repository.js";
 import { convertCell, importableFields, parseImportFile, suggestMapping, MAX_IMPORT_ROWS, REGISTRATION_NUMBER_KEY } from "./importParser.js";
+import { buildImportTemplate } from "./importTemplate.js";
 import { createRegistrationWithNumber } from "./service.js";
 import { extractApplicantContact, missingRequiredAnswers, validateAndNormalizeResponses } from "./validation.js";
 
@@ -20,7 +21,7 @@ async function loadProgramForm(programId: string) {
 
 /** Reads the uploaded document and shows what is in it, with a first guess at which column answers which question. */
 export async function previewImport(programId: string, filename: string, content: Buffer) {
-  const { published } = await loadProgramForm(programId);
+  const { program, published } = await loadProgramForm(programId);
   const table = await parseImportFile(filename, content);
   const fields = importableFields(published.fields);
   return {
@@ -35,9 +36,15 @@ export async function previewImport(programId: string, filename: string, content
         .sort((a, b) => a.orderIndex - b.orderIndex)
         .map((f) => ({ fieldKey: f.fieldKey, label: f.label, type: f.type, required: f.required })),
       // Not a question: it finds the registration a row should update.
-      { fieldKey: REGISTRATION_NUMBER_KEY, label: "Registration number (finds existing)", type: "registration_number", required: false },
+      { fieldKey: REGISTRATION_NUMBER_KEY, label: `${program.kind === "order_form" ? "Order" : "Registration"} number (finds existing)`, type: "registration_number", required: false },
     ],
   };
+}
+
+/** A blank sheet for the program's current form, ready to fill in and import. */
+export async function importTemplateFor(programId: string, format: "xlsx" | "csv") {
+  const { program, published } = await loadProgramForm(programId);
+  return { program, template: await buildImportTemplate(published.fields, format, program.kind === "order_form") };
 }
 
 export interface ImportRowIssue {

@@ -1,11 +1,12 @@
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { AlertTriangle, CheckCircle2, FileUp, Loader2, Upload } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Download, FileUp, Loader2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ApiError } from "@/lib/api";
+import { downloadAuthenticatedFile } from "@/lib/api";
 import { importRegistrations, previewRegistrationImport, type ExistingRows, type ImportPreview, type ImportResult } from "./api";
 
 const NONE = "__skip";
@@ -54,6 +55,18 @@ export function ImportRegistrationsDialog({ programId, termLabel }: { programId:
   const [check, setCheck] = React.useState<ImportResult | null>(null);
   const [result, setResult] = React.useState<ImportResult | null>(null);
   const [existing, setExisting] = React.useState<ExistingRows>("skip");
+  const [downloading, setDownloading] = React.useState<"xlsx" | "csv" | null>(null);
+
+  const downloadTemplate = async (format: "xlsx" | "csv") => {
+    setDownloading(format);
+    try {
+      await downloadAuthenticatedFile(`/programs/${programId}/registrations/import/template?format=${format}`, `import-template.${format}`);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "The template could not be downloaded");
+    } finally {
+      setDownloading(null);
+    }
+  };
 
   const reset = () => {
     setBusy(null);
@@ -163,6 +176,18 @@ export function ImportRegistrationsDialog({ programId, termLabel }: { programId:
             </DialogFooter>
           </div>
         ) : !preview ? (
+          <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 p-3 text-sm">
+            <span className="mr-auto text-muted-foreground">Not sure how to lay out the file? Start from a blank template for this form.</span>
+            <Button variant="outline" size="sm" onClick={() => downloadTemplate("xlsx")} loading={downloading === "xlsx"} disabled={downloading !== null}>
+              <Download className="h-4 w-4" />
+              Excel template
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => downloadTemplate("csv")} loading={downloading === "csv"} disabled={downloading !== null}>
+              <Download className="h-4 w-4" />
+              CSV template
+            </Button>
+          </div>
           <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-input px-6 py-10 text-center text-sm text-muted-foreground hover:bg-muted/40">
             {busy === "reading" ? <Loader2 className="h-6 w-6 animate-spin text-primary" /> : <FileUp className="h-6 w-6 text-primary" />}
             <span className="font-medium text-foreground">{busy === "reading" ? "Reading the document..." : "Choose a document to import"}</span>
@@ -178,6 +203,7 @@ export function ImportRegistrationsDialog({ programId, termLabel }: { programId:
               }}
             />
           </label>
+          </div>
         ) : (
           <div className="flex flex-col gap-4">
             <p className="text-sm text-muted-foreground">
