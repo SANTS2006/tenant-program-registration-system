@@ -29,6 +29,16 @@ export function otherTextKey(fieldKey: string): string {
   return `${fieldKey}__other`;
 }
 
+/** Multiple choice: each ticked option can ask for its own extra answer, kept together under this key as option -> answer. */
+export function followTextKey(fieldKey: string): string {
+  return `${fieldKey}__follow`;
+}
+
+/** The key one option's extra answer (or uploaded file) is sent under. */
+export function optionFollowKey(fieldKey: string, option: string): string {
+  return `${fieldKey}__fu__${option}`;
+}
+
 export interface FollowUp {
   mode: "text" | "short_text" | "number" | "email" | "phone" | "date" | "dropdown" | "file" | "text_or_file";
   label?: string;
@@ -60,6 +70,30 @@ function followUpFormatError(followUp: FollowUp, text: string): string | null {
 
 const FOLLOW_UP_TEXT_MAX_LENGTH = 2000;
 const SINGLE_VALUE_FOLLOW_UP_TYPES = new Set(["single_choice", "dropdown", "yes_no", "gender", "country"]);
+
+/** Checks one extra answer and returns what to keep (the text and any file names together). */
+function checkFollowUp(
+  followUp: FollowUp,
+  label: string,
+  text: string,
+  uploadedAll: SubmittedFile[],
+  errors: string[],
+): string | null {
+  const asksText = followUpAsksText(followUp.mode);
+  const asksFile = followUpAsksFile(followUp.mode);
+  const uploaded = asksFile ? uploadedAll : [];
+  const prompt = followUp.label?.trim() || "more details";
+  if (text.length > FOLLOW_UP_TEXT_MAX_LENGTH) errors.push(`${label}: ${prompt} must be at most ${FOLLOW_UP_TEXT_MAX_LENGTH} characters`);
+  if (followUp.required) {
+    const missing = asksText && asksFile ? !text && uploaded.length === 0 : asksText ? !text : uploaded.length === 0;
+    if (missing) errors.push(`${label}: please provide ${prompt}`);
+  }
+  const formatProblem = asksText ? followUpFormatError(followUp, text) : null;
+  if (formatProblem) errors.push(`${label}: ${prompt} ${formatProblem}`);
+  // The description and any uploaded file names are kept together, so every export and email shows both.
+  const parts = [asksText ? text : "", ...uploaded.map((f) => `[file: ${f.filename}]`)].filter(Boolean);
+  return parts.length ? parts.join(" ") : null;
+}
 
 /** What a chosen option asks for on top of the choice itself (e.g. "Yes" -> describe your design). */
 function followUpFor(field: FieldRow, value: unknown): FollowUp | null {
@@ -322,21 +356,21 @@ export function validateAndNormalizeResponses(
     if (followUp) {
       const key = otherTextKey(field.fieldKey);
       const text = String(rawResponses[key] ?? "").trim();
-      const asksText = followUpAsksText(followUp.mode);
-      const asksFile = followUpAsksFile(followUp.mode);
-      const uploaded = asksFile ? (filesByField.get(key) ?? []) : [];
-      const prompt = followUp.label?.trim() || "more details";
-      if (text.length > FOLLOW_UP_TEXT_MAX_LENGTH) errors.push(`${field.label}: ${prompt} must be at most ${FOLLOW_UP_TEXT_MAX_LENGTH} characters`);
-      if (followUp.required) {
-        const missing = asksText && asksFile ? !text && uploaded.length === 0 : asksText ? !text : uploaded.length === 0;
-        if (missing) errors.push(`${field.label}: please provide ${prompt}`);
-      }
-      const formatProblem = asksText ? followUpFormatError(followUp, text) : null;
-      if (formatProblem) errors.push(`${field.label}: ${prompt} ${formatProblem}`);
-      // The description and any uploaded file names are kept together, so every export and email shows both.
-      const parts = [asksText ? text : "", ...uploaded.map((f) => `[file: ${f.filename}]`)].filter(Boolean);
-      cleaned[key] = parts.length ? parts.join(" ") : null;
+      cleaned[key] = checkFollowUp(followUp, field.label, text, filesByField.get(key) ?? [], errors);
       continue;
+    }
+
+    if (field.type === "multiple_choice" && Array.isArray(value)) {
+      const configured = ((field.config as Record<string, unknown>)?.followUps ?? {}) as Record<string, FollowUp>;
+      const answers: Record<string, string> = {};
+      for (const option of value.map(String)) {
+        const asks = configured[option];
+        if (!asks) continue;
+        const key = optionFollowKey(field.fieldKey, option);
+        const kept = checkFollowUp(asks, `${field.label} (${option})`, String(rawResponses[key] ?? "").trim(), filesByField.get(key) ?? [], errors);
+        if (kept) answers[option] = kept;
+      }
+      cleaned[followTextKey(field.fieldKey)] = Object.keys(answers).length ? answers : null;
     }
 
     const chosen = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];

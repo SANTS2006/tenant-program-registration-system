@@ -219,7 +219,7 @@ export function AutoFillEditor({ draft, otherFields, updateConfig }: { draft: Ed
   );
 }
 
-const FOLLOW_UP_TYPES = new Set(["single_choice", "dropdown", "yes_no", "gender", "country"]);
+const FOLLOW_UP_TYPES = new Set(["single_choice", "dropdown", "yes_no", "gender", "country", "multiple_choice"]);
 
 const FOLLOW_UP_MODES: { value: FollowUp["mode"]; label: string }[] = [
   { value: "short_text", label: "Short text (one line)" },
@@ -276,6 +276,7 @@ export function FollowUpEditor({ draft, updateConfig }: { draft: EditableField; 
       <p className="text-sm font-medium">Ask for more details</p>
       <p className="-mt-2 text-xs text-muted-foreground">
         Turn this on for an option to show an extra input when it is chosen, and decide what kind of input it is. Options left off show nothing extra.
+        {draft.type === "multiple_choice" ? " On a multiple choice question, every ticked option shows its own input." : ""}
       </p>
       {choices.map((option) => {
         const followUp = followUps[option];

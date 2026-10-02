@@ -95,3 +95,31 @@ describe("a chosen option can ask for more, in the kind of input the admin picke
     expect(check(fields, { district: "B", chiefdom: "B1" }).ok).toBe(true);
   });
 });
+
+describe("multiple choice options that ask for more", () => {
+  const fields = [
+    field({
+      fieldKey: "skills",
+      type: "multiple_choice",
+      config: {
+        options: ["Cooking", "Driving", "Other"],
+        followUps: {
+          Cooking: { mode: "short_text", label: "Years of experience", required: true },
+          Driving: { mode: "number", label: "Licence number" },
+        },
+      },
+    }),
+  ];
+  it("keeps each ticked option's own answer", () => {
+    const r = check(fields, { skills: ["Cooking", "Driving"], skills__fu__Cooking: "5", skills__fu__Driving: "42" });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value.skills__follow).toEqual({ Cooking: "5", Driving: "42" });
+  });
+  it("requires the answer only for options that are ticked", () => {
+    expect(check(fields, { skills: ["Driving"] }).ok).toBe(true);
+    expect(check(fields, { skills: ["Cooking"] }).ok).toBe(false);
+  });
+  it("checks the kind of input per option", () => {
+    expect(check(fields, { skills: ["Driving"], skills__fu__Driving: "abc" }).ok).toBe(false);
+  });
+});

@@ -8,7 +8,7 @@ import { documentVerifiedNotificationEmail, newRegistrationNotificationEmail, or
 import * as programsRepo from "../programs/repository.js";
 import { formatCellValue, withOtherText } from "../registrations/exportService.js";
 import type * as registrationsRepo from "../registrations/repository.js";
-import { otherTextKey } from "../registrations/validation.js";
+import { followTextKey, otherTextKey } from "../registrations/validation.js";
 
 const MAX_ANSWER_LENGTH = 300;
 const MAX_ANSWERS = 40;
@@ -44,7 +44,7 @@ export function answersFor(registration: Registration, fields: Field[], files: U
           .filter((f) => f.fieldKey === field.fieldKey)
           .map((f) => f.filename || "file")
           .join(", ")
-      : formatCellValue(withOtherText(responses[field.fieldKey], responses[otherTextKey(field.fieldKey)]));
+      : formatCellValue(withOtherText(responses[field.fieldKey], responses[otherTextKey(field.fieldKey)], responses[followTextKey(field.fieldKey)]));
     if (!value) continue;
     answers.push({ label: field.label, value: value.length > MAX_ANSWER_LENGTH ? `${value.slice(0, MAX_ANSWER_LENGTH)}...` : value });
     if (answers.length >= MAX_ANSWERS) break;

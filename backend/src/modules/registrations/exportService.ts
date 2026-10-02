@@ -3,7 +3,7 @@ import ExcelJS from "exceljs";
 import * as formsRepo from "../forms/repository.js";
 import type { RegistrationFilters, RegistrationRow } from "./repository.js";
 import { listRegistrationsForExport } from "./repository.js";
-import { isOtherOption, otherTextKey } from "./validation.js";
+import { followTextKey, isOtherOption, otherTextKey } from "./validation.js";
 
 export type ExportFormat = "csv" | "xlsx";
 
@@ -35,7 +35,15 @@ export function formatCellValue(value: unknown): string {
 }
 
 /** Shows a chosen "Other" option together with what the registrant typed, e.g. "Other: Freetown". */
-export function withOtherText(value: unknown, otherText: unknown): unknown {
+export function withOtherText(value: unknown, otherText: unknown, followText?: unknown): unknown {
+  // Multiple choice: show each option's extra answer next to it.
+  if (Array.isArray(value) && followText && typeof followText === "object") {
+    const extra = followText as Record<string, unknown>;
+    return withOtherText(
+      value.map((option) => (typeof option === "string" && typeof extra[option] === "string" ? `${option}: ${extra[option]}` : option)),
+      otherText,
+    );
+  }
   if (typeof otherText !== "string" || !otherText) return value;
   const expand = (option: unknown) => (typeof option === "string" && isOtherOption(option) ? `${option}: ${otherText}` : option);
   if (Array.isArray(value)) return value.map(expand);
@@ -78,7 +86,7 @@ async function buildRows(programId: string, filters: RegistrationFilters) {
       applicantPhone: registration.applicantPhone ?? "",
     };
     for (const field of fieldColumns) {
-      row[field.key] = formatCellValue(withOtherText(responses[field.key], responses[otherTextKey(field.key)]));
+      row[field.key] = formatCellValue(withOtherText(responses[field.key], responses[otherTextKey(field.key)], responses[followTextKey(field.key)]));
     }
     return row;
   });

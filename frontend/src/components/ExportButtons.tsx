@@ -2,6 +2,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import { FileSpreadsheet, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { RefreshButton } from "@/components/RefreshButton";
 import { ApiError, downloadAuthenticatedFile } from "@/lib/api";
 
 /**
@@ -36,6 +37,7 @@ export function ExportButtons({
 
   return (
     <div className="flex flex-wrap gap-2">
+      <RefreshButton size={size} />
       <Button variant="outline" size={size} loading={busy === "csv"} disabled={busy !== null} onClick={() => download("csv")}>
         <FileText className="h-4 w-4" />
         Export CSV

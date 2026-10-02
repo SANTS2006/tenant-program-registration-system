@@ -120,6 +120,18 @@ export function otherTextKey(fieldKey: string) {
   return `${fieldKey}__other`;
 }
 
+/** Multiple choice: the key one ticked option's extra answer (or file) is kept under. */
+export function optionFollowKey(fieldKey: string, option: string) {
+  return `${fieldKey}__fu__${option}`;
+}
+
+/** The extra inputs the ticked options of a multiple choice question ask for. */
+function followUpsForMulti(field: FormField, value: unknown): { option: string; followUp: FollowUp }[] {
+  if (field.type !== "multiple_choice" || !Array.isArray(value)) return [];
+  const configured = field.config.followUps ?? {};
+  return value.map(String).flatMap((option) => (configured[option] ? [{ option, followUp: configured[option]! }] : []));
+}
+
 /** What the chosen option asks for on top of the choice itself, if the admin turned that on. */
 function followUpFor(field: FormField, value: unknown): FollowUp | null {
   if (!["single_choice", "dropdown", "yes_no", "gender", "country"].includes(field.type)) return null;
@@ -367,9 +379,8 @@ export function DynamicForm({
     }
   };
 
-  const handleFollowUpFile = async (field: FormField, file: File | undefined) => {
+  const handleFollowUpFile = async (key: string, file: File | undefined) => {
     if (!file || !onUploadFile) return;
-    const key = otherTextKey(field.fieldKey);
     setUploadingKey(key);
     try {
       const uploaded = await onUploadFile(file, key);
@@ -414,6 +425,22 @@ export function DynamicForm({
     }
     for (const field of fieldsToCheck) {
       if (!isVisible(field, responses)) continue;
+      for (const { option, followUp } of followUpsForMulti(field, responses[field.fieldKey])) {
+        const key = optionFollowKey(field.fieldKey, option);
+        const text = String(responses[key] ?? "").trim();
+        const asksText = followUpAsksText(followUp.mode);
+        const asksFile = followUpAsksFile(followUp.mode);
+        const hasFile = !!uploadedFiles[key];
+        if (followUp.required) {
+          const ok = asksText && asksFile ? !!text || hasFile : asksText ? !!text : hasFile;
+          if (!ok) missing.push(`${field.label} (${option}): please provide ${followUp.label?.trim() || "more details"}`);
+        }
+        const problem = asksText ? followUpFormatProblem(followUp, text) : null;
+        if (problem) missing.push(`${field.label} (${option}): ${followUp.label?.trim() || "your answer"} ${problem}`);
+      }
+    }
+    for (const field of fieldsToCheck) {
+      if (!isVisible(field, responses)) continue;
       const pickedOther = chosenOptions(responses[field.fieldKey]).some(isOtherOption);
       if (pickedOther && isEmpty(String(responses[otherTextKey(field.fieldKey)] ?? "").trim())) {
         missing.push(`Please specify your answer for ${field.label}`);
@@ -454,6 +481,12 @@ export function DynamicForm({
     // Files from a follow-up box the person has since switched away from are not sent.
     const files = Object.entries(uploadedFiles)
       .filter(([key]) => {
+        const at = key.indexOf("__fu__");
+        if (at > 0) {
+          const owner = fields.find((f) => f.fieldKey === key.slice(0, at));
+          const asked = owner && isVisible(owner, responses) ? followUpsForMulti(owner, responses[owner.fieldKey]).find((x) => x.option === key.slice(at + 6)) : undefined;
+          return asked !== undefined && followUpAsksFile(asked.followUp.mode);
+        }
         if (!key.endsWith("__other")) return true;
         const owner = fields.find((f) => otherTextKey(f.fieldKey) === key);
         const mode = owner && isVisible(owner, responses) ? followUpFor(owner, responses[owner.fieldKey])?.mode : undefined;
@@ -487,8 +520,7 @@ export function DynamicForm({
   };
 
   /** Free-text box that appears right under a choice field when an "Other" option is picked. */
-  const renderFollowUp = (field: FormField, followUp: FollowUp) => {
-    const key = otherTextKey(field.fieldKey);
+  const renderFollowUp = (field: FormField, followUp: FollowUp, key = otherTextKey(field.fieldKey), heading?: string) => {
     const asksText = followUpAsksText(followUp.mode);
     const asksFile = followUpAsksFile(followUp.mode);
     const prompt = followUp.label?.trim() || (asksFile && !asksText ? "Upload a file" : "Tell us more");
@@ -500,6 +532,7 @@ export function DynamicForm({
     return (
       <div className="mt-1 flex flex-col gap-2 rounded-lg border border-border/70 bg-muted/30 p-3">
         <Label htmlFor={key} className="text-sm">
+          {heading ? `${heading}: ` : ""}
           {prompt}
           {followUp.required && <span className="text-destructive"> *</span>}
         </Label>
@@ -526,7 +559,7 @@ export function DynamicForm({
           <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-input bg-background px-4 py-4 text-sm text-muted-foreground hover:bg-muted">
             {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
             {isUploading ? "Uploading..." : uploaded ? uploaded.filename : asksText ? "Or upload a file" : "Click to upload a file"}
-            <input type="file" className="sr-only" onChange={(e) => handleFollowUpFile(field, e.target.files?.[0])} />
+            <input type="file" className="sr-only" onChange={(e) => handleFollowUpFile(key, e.target.files?.[0])} />
           </label>
         )}
       </div>
@@ -536,19 +569,26 @@ export function DynamicForm({
   const renderOtherInput = (field: FormField, value: unknown) => {
     const followUp = followUpFor(field, value);
     if (followUp) return renderFollowUp(field, followUp);
-    if (!chosenOptions(value).some(isOtherOption)) return null;
+    const multi = followUpsForMulti(field, value);
+    const multiBoxes = multi.map(({ option, followUp: asks }) => (
+      <React.Fragment key={option}>{renderFollowUp(field, asks, optionFollowKey(field.fieldKey, option), option)}</React.Fragment>
+    ));
+    if (!chosenOptions(value).some(isOtherOption)) return multi.length > 0 ? <>{multiBoxes}</> : null;
     const key = otherTextKey(field.fieldKey);
     return (
-      <Input
-        id={key}
-        aria-label={`${field.label}: please specify`}
-        placeholder="Please specify"
-        autoFocus
-        maxLength={500}
-        value={(responses[key] as string) ?? ""}
-        onChange={(e) => setResponses((r) => ({ ...r, [key]: e.target.value }))}
-        className="mt-1"
-      />
+      <>
+        {multiBoxes}
+        <Input
+          id={key}
+          aria-label={`${field.label}: please specify`}
+          placeholder="Please specify"
+          autoFocus
+          maxLength={500}
+          value={(responses[key] as string) ?? ""}
+          onChange={(e) => setResponses((r) => ({ ...r, [key]: e.target.value }))}
+          className="mt-1"
+        />
+      </>
     );
   };
 
@@ -788,9 +828,15 @@ export function DynamicForm({
     const extra = String(responses[otherTextKey(field.fieldKey)] ?? "").trim();
     const followUpFile = uploadedFiles[otherTextKey(field.fieldKey)]?.filename;
     if (isEmpty(value)) return "";
-    const pieces = (Array.isArray(value) ? value.map(String) : [typeof value === "boolean" ? (value ? "Yes" : "No") : String(value)]).map((v) =>
-      isOtherOption(v) && extra ? `${v}: ${extra}` : v,
-    );
+    const pieces = (Array.isArray(value) ? value.map(String) : [typeof value === "boolean" ? (value ? "Yes" : "No") : String(value)]).map((v) => {
+      if (isOtherOption(v) && extra) return `${v}: ${extra}`;
+      if (Array.isArray(value) && field.config.followUps?.[v]) {
+        const key = optionFollowKey(field.fieldKey, v);
+        const more = [String(responses[key] ?? "").trim(), uploadedFiles[key] ? `[file: ${uploadedFiles[key]!.filename}]` : ""].filter(Boolean).join(" ");
+        return more ? `${v}: ${more}` : v;
+      }
+      return v;
+    });
     let text = pieces.join(", ");
     if (!Array.isArray(value) && extra && !isOtherOption(String(value))) text += `: ${extra}`;
     if (followUpFile) text += ` [file: ${followUpFile}]`;

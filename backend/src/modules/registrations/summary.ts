@@ -12,7 +12,7 @@ import { fetchImageDataUri, LOGO_TRANSFORM } from "../idcards/pdf.js";
 import * as programsRepo from "../programs/repository.js";
 import { formatCellValue, withOtherText } from "./exportService.js";
 import * as registrationsRepo from "./repository.js";
-import { otherTextKey } from "./validation.js";
+import { followTextKey, otherTextKey } from "./validation.js";
 
 // A separate key from sign-in tokens, so neither kind of token can stand in for the other.
 const SUBMISSION_KEY = `${env.JWT_SECRET}:submission-receipt`;
@@ -72,7 +72,7 @@ async function summarize(program: programsRepo.ProgramRow, registration: registr
         .join(", ");
     }
     if (field.type === "consent") return responses[field.fieldKey] === true ? "Agreed" : "";
-    return formatCellValue(withOtherText(responses[field.fieldKey], responses[otherTextKey(field.fieldKey)]));
+    return formatCellValue(withOtherText(responses[field.fieldKey], responses[otherTextKey(field.fieldKey)], responses[followTextKey(field.fieldKey)]));
   };
 
   const rowsFor = (list: formsRepo.FieldRow[]) =>

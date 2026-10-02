@@ -1,4 +1,5 @@
 import * as React from "react";
+import { RefreshButton } from "@/components/RefreshButton";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -147,6 +148,7 @@ export function BusinessesListPage() {
         {user?.role !== "viewer" && <CreateBusinessDialog />}
       </div>
 
+      <div className="flex flex-wrap items-center gap-3">
       <div className="relative max-w-sm">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
         <Input
@@ -159,6 +161,8 @@ export function BusinessesListPage() {
             setPage(1);
           }}
         />
+      </div>
+        <RefreshButton />
       </div>
 
       {isLoading && <p className="text-sm text-muted-foreground">Loading businesses...</p>}

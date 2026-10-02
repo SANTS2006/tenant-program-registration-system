@@ -17,8 +17,16 @@ import { downloadRegistrationFile } from "./api";
 import { useRegistration, useUpdateRegistrationStatus } from "./hooks";
 import type { RegistrationFile, RegistrationStatus } from "@/types/api";
 
-function formatValue(value: unknown, otherText?: unknown): string {
+function formatValue(value: unknown, otherText?: unknown, followText?: unknown): string {
   if (value === null || value === undefined || value === "") return "—";
+  // Multiple choice: each ticked option shows its own extra answer.
+  if (Array.isArray(value) && followText && typeof followText === "object") {
+    const extra = followText as Record<string, unknown>;
+    return formatValue(
+      value.map((option) => (typeof option === "string" && typeof extra[option] === "string" ? `${option}: ${extra[option]}` : option)),
+      otherText,
+    );
+  }
   // A chosen "Other" option is shown together with what the registrant typed.
   const expand = (option: unknown) =>
     typeof option === "string" && isOtherOption(option) && typeof otherText === "string" && otherText
@@ -239,13 +247,13 @@ function ResponseGroup({
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       {fields.map((field) => {
         const fileMatches = files.filter((f) => f.fieldKey === field.fieldKey);
-        const followUpFiles = files.filter((f) => f.fieldKey === otherTextKey(field.fieldKey));
+        const followUpFiles = files.filter((f) => f.fieldKey === otherTextKey(field.fieldKey) || f.fieldKey.startsWith(`${field.fieldKey}__fu__`));
         return (
           <div key={field.fieldKey}>
             <dt className="text-xs uppercase text-muted-foreground">{field.label}</dt>
             {followUpFiles.length > 0 && (
               <dd className="mt-1 flex flex-col gap-2">
-                <span className="text-sm">{formatValue(responses[field.fieldKey], responses[otherTextKey(field.fieldKey)])}</span>
+                <span className="text-sm">{formatValue(responses[field.fieldKey], responses[otherTextKey(field.fieldKey)], responses[`${field.fieldKey}__follow`])}</span>
                 {followUpFiles.map((f) => (
                   <FileRow key={f.id} file={f} onDownload={onDownload} />
                 ))}
@@ -258,7 +266,7 @@ function ResponseGroup({
                 ))}
               </dd>
             ) : (
-              <dd className="text-sm">{formatValue(responses[field.fieldKey], responses[otherTextKey(field.fieldKey)])}</dd>
+              <dd className="text-sm">{formatValue(responses[field.fieldKey], responses[otherTextKey(field.fieldKey)], responses[`${field.fieldKey}__follow`])}</dd>
             )}
           </div>
         );
