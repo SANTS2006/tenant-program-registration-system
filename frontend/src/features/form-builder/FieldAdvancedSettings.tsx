@@ -431,8 +431,8 @@ const OPERATORS: { value: ConditionalRule["operator"]; label: string; needsValue
   { value: "equals", label: "is", needsValue: true },
   { value: "not_equals", label: "is not", needsValue: true },
   { value: "contains", label: "includes", needsValue: true },
-  { value: "is_not_empty", label: "has been answered", needsValue: false },
-  { value: "is_empty", label: "has not been answered", needsValue: false },
+  { value: "is_not_empty", label: "is filled in", needsValue: false },
+  { value: "is_empty", label: "is left empty", needsValue: false },
 ];
 
 /** The answers a person can give to a question, when it has a fixed list. */
@@ -499,12 +499,24 @@ export function ConditionalLogicEditor({
               </Button>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Select value={rule.operator} onValueChange={(op) => setRule(index, { operator: op as ConditionalRule["operator"] })}>
-                <SelectTrigger aria-label="Condition" className="sm:w-48">
+              <Select
+                value={operator.needsValue ? "answer" : "filled"}
+                onValueChange={(kind) => setRule(index, kind === "answer" ? { operator: "equals", value: "" } : { operator: "is_not_empty", value: undefined })}
+              >
+                <SelectTrigger aria-label="What to check" className="sm:w-44">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {OPERATORS.map((o) => (
+                  <SelectItem value="answer">The answer given</SelectItem>
+                  <SelectItem value="filled">Whether it is filled</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={rule.operator} onValueChange={(op) => setRule(index, { operator: op as ConditionalRule["operator"] })}>
+                <SelectTrigger aria-label="Condition" className="sm:w-44">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {OPERATORS.filter((o) => o.needsValue === operator.needsValue).map((o) => (
                     <SelectItem key={o.value} value={o.value}>
                       {o.label}
                     </SelectItem>
