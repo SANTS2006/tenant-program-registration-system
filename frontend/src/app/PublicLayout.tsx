@@ -1,27 +1,11 @@
-import { Link } from "react-router-dom";
 import { LazyOutlet } from "@/components/PageLoading";
-import { BrandLogo } from "@/components/BrandLogo";
-import { LinkButton } from "@/components/ui/link-button";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { SiteHeader } from "@/components/SiteHeader";
 import { PublicFormFooter } from "@/features/legal/SiteFooter";
 
 export function PublicLayout() {
   return (
     <div className="flex min-h-screen flex-col bg-transparent">
-      <header className="sticky top-0 z-30 border-b border-border/70 bg-card/70 backdrop-blur-md">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:py-4">
-          <Link to="/" aria-label="Program Registration home" className="flex items-center gap-2 text-base font-semibold tracking-tight sm:text-lg">
-            <BrandLogo className="h-9" />
-            <span className="gradient-text hidden sm:inline">Program Registration</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <LinkButton to="/login" variant="default" size="sm">
-              Login
-            </LinkButton>
-          </div>
-        </div>
-      </header>
+      <SiteHeader variant="compact" />
       <main id="main-content" tabIndex={-1} className="page-enter focus:outline-none mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:py-8">
         <LazyOutlet />
       </main>

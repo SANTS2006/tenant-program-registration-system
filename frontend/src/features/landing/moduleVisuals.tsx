@@ -1,4 +1,4 @@
-import { FileText, Receipt, ShoppingBag, UserRound } from "lucide-react";
+import { ArrowRight, ChevronDown, Download, FileSpreadsheet, FileText, Receipt, ShoppingBag, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BrowserFrame } from "./visuals";
 
@@ -219,6 +219,110 @@ export function SuccessCopyMock() {
           <div className="rounded-lg bg-gradient-to-br from-blue-600 to-sky-500 p-3 text-[10px] font-semibold text-white">ID card</div>
           <div className="rounded-lg bg-gradient-to-br from-violet-600 to-fuchsia-500 p-3 text-[10px] font-semibold text-white">Ticket</div>
         </div>
+      </div>
+    </BrowserFrame>
+  );
+}
+
+/** The import dialog: matched columns, a row-by-row preview and the actions. */
+export function ImportMock() {
+  const rows: [string, string, string, string][] = [
+    ["New", "Aminata Kamara", "aminata@example.com", "Freetown"],
+    ["Update", "Musa Bangura", "musa@example.com", "Bo"],
+    ["New", "Fatmata Sesay", "fatmata@example.com", "Makeni"],
+    ["Problem", "Ibrahim Koroma", "ibrahim@examp", "Kenema"],
+  ];
+  const tone: Record<string, string> = {
+    New: "bg-emerald-500/15 text-emerald-600",
+    Update: "bg-sky-500/15 text-sky-600",
+    Problem: "bg-destructive/15 text-destructive",
+  };
+  return (
+    <BrowserFrame>
+      <div className="flex flex-col gap-3 p-4 sm:p-5" aria-hidden="true">
+        <div className="flex items-center gap-2">
+          <p className="text-xs font-semibold">Import registrations</p>
+          <span className="ml-auto flex items-center gap-1 rounded-full border border-border/70 px-2 py-0.5 text-[10px] font-medium">
+            <FileSpreadsheet className="h-3 w-3 text-primary" />
+            attendees.xlsx
+          </span>
+        </div>
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-2 gap-y-1 rounded-xl border border-border/70 p-2.5 text-[10px]">
+          {[
+            ["Full Name", "Full name"],
+            ["E-mail", "Email address"],
+            ["Town", "City"],
+          ].map(([from, to]) => (
+            <div key={from} className="contents">
+              <span className="rounded-md bg-muted/60 px-2 py-1 font-medium">{from}</span>
+              <ArrowRight className="h-3 w-3 text-primary" />
+              <span className="rounded-md border border-primary/40 bg-gradient-brand-soft px-2 py-1 font-medium text-primary">{to}</span>
+            </div>
+          ))}
+        </div>
+        <div className="overflow-hidden rounded-xl border border-border/70 text-[10px]">
+          <div className="grid grid-cols-[3.2rem_1fr_1fr_1fr] gap-2 bg-muted/60 px-2.5 py-1.5 font-semibold">
+            <span>Result</span>
+            <span>Name</span>
+            <span>Email</span>
+            <span>City</span>
+          </div>
+          {rows.map(([result, name, email, city]) => (
+            <div key={name} className="grid grid-cols-[3.2rem_1fr_1fr_1fr] items-center gap-2 border-t border-border/50 px-2.5 py-1.5">
+              <span className={cn("w-fit rounded-full px-1.5 py-0.5 text-[9px] font-semibold", tone[result])}>{result}</span>
+              <span className="truncate">{name}</span>
+              <span className={cn("truncate", result === "Problem" && "text-destructive")}>{email}</span>
+              <span className="truncate">{city}</span>
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold">
+          <span className="flex items-center gap-1 rounded-lg border border-border/70 px-2.5 py-1.5">
+            <Download className="h-3 w-3" />
+            Download rows to fix (1)
+          </span>
+          <span className="ml-auto rounded-lg bg-gradient-brand px-3 py-1.5 text-white">Import / update 3</span>
+        </div>
+      </div>
+    </BrowserFrame>
+  );
+}
+
+/** A question's rules: the answer given, or whether another question is filled in. */
+export function RulesMock() {
+  const Select = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <span className={cn("flex items-center justify-between gap-2 rounded-md border border-border/70 bg-background/60 px-2 py-1.5 text-[10px]", className)}>
+      {children}
+      <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" />
+    </span>
+  );
+  return (
+    <BrowserFrame>
+      <div className="flex flex-col gap-3 p-4 sm:p-5" aria-hidden="true">
+        <p className="text-xs font-semibold">Show this question only when…</p>
+        <div className="flex flex-col gap-2 rounded-xl border border-dashed border-border p-3">
+          <Select>Region</Select>
+          <div className="grid grid-cols-2 gap-2">
+            <Select>The answer given</Select>
+            <Select>is</Select>
+          </div>
+          <Select className="border-primary/40 text-primary">North</Select>
+        </div>
+        <div className="flex flex-col gap-2 rounded-xl border border-dashed border-border p-3">
+          <Select>Phone number</Select>
+          <div className="grid grid-cols-2 gap-2">
+            <Select>Whether it is filled</Select>
+            <Select>is filled in</Select>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1.5 text-[10px] font-medium">
+          {["Questions", "Sections", "Required", "Limits", "Defaults", "Choices", "Follow-ups", "“Other” box", "Consent"].map((chip) => (
+            <span key={chip} className="rounded-full bg-gradient-brand-soft px-2.5 py-1 text-primary">
+              {chip}
+            </span>
+          ))}
+        </div>
+        <p className="text-[10px] text-muted-foreground">Rules work in all of these places, and are checked again on the server.</p>
       </div>
     </BrowserFrame>
   );

@@ -40,12 +40,18 @@ import {
   UserCog,
   Users,
   Wand2,
+  Upload,
+  RefreshCw,
+  PieChart,
+  PencilLine,
+  SlidersHorizontal,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Reveal, Tilt } from "./motion";
 import { AnalyticsMock, FormBuilderMock, VerificationsMock } from "./visuals";
-import { BusinessMock, PollsMock, SmartFormMock, SuccessCopyMock, VerifiedVotersMock } from "./moduleVisuals";
+import { BusinessMock, ImportMock, PollsMock, RulesMock, SmartFormMock, SuccessCopyMock, VerifiedVotersMock } from "./moduleVisuals";
 import { DocumentsShowcase, FlipCard3D } from "./lazyShowcase";
 
 export function SectionHeading({
@@ -222,6 +228,41 @@ const FEATURES: { icon: LucideIcon; title: string; description: string }[] = [
     description: "Earliest and latest dates, minimum ages, fields that fill themselves in, and extra boxes that appear only when needed.",
   },
   {
+    icon: SlidersHorizontal,
+    title: "Rules on everything",
+    description: "Show, require, limit or pre-fill almost anything only when another answer matches, or when another question is filled in or left empty.",
+  },
+  {
+    icon: Upload,
+    title: "Import from Excel or Word",
+    description: "Bring registrations or orders in from an .xlsx, .csv or Word table. Match the columns, preview every row, and import the good ones.",
+  },
+  {
+    icon: FileSpreadsheet,
+    title: "Blank import template",
+    description: "Download a ready sheet for your form, with a column per question, dropdowns for fixed answers, and a guide for each column.",
+  },
+  {
+    icon: PencilLine,
+    title: "Edit and update registrations",
+    description: "Update existing registrations from a file, or edit a registration's answers by hand to match your current questions.",
+  },
+  {
+    icon: RefreshCw,
+    title: "Tables that refresh themselves",
+    description: "New registrations, votes, orders and messages appear on their own, and a Refresh button loads the latest data on demand.",
+  },
+  {
+    icon: PieChart,
+    title: "Pie charts and histograms",
+    description: "Switch any question between bars, a pie and a histogram to see how applicants answered.",
+  },
+  {
+    icon: Zap,
+    title: "Built for busy days",
+    description: "Double submissions are blocked, notification emails are queued and retried, and sign-in and uploads are protected against abuse.",
+  },
+  {
     icon: Printer,
     title: "Print, preview and download",
     description: "Customers keep a copy of their order or registration as a PDF or a picture, and can print or preview it first.",
@@ -368,10 +409,12 @@ export function Spotlights() {
         description="Start from a blank form and add exactly the questions you need. Reorder by dragging, group questions into sections, and preview on desktop, tablet, or phone before you publish."
         points={[
           "23 question types: text, email, phone, dates, choices, ratings, currency, file uploads, consent, and more",
-          "Conditional questions and dependent choices, e.g. only the chiefdoms of the selected district",
+          "Conditional questions, sections and choices, e.g. only the chiefdoms of the selected district",
+          "Extra boxes for any option, even several at once on a multiple choice question",
           "Default answers, required fields, length and format rules",
           "“Other (please specify)” answers captured automatically",
-          "Consent statement with an “I have read and agree” checkbox before applicants start",
+          "Your own consent statement and “I have gone through the form” checkbox, shown or hidden as you decide",
+          "Missing required answers are listed just above the submit button",
         ]}
         visual={
           <Tilt max={6} innerClassName="rounded-2xl">
@@ -402,6 +445,8 @@ export function Spotlights() {
         points={[
           "Daily registration trend and status breakdown",
           "Per-question analysis: choices, age groups, number ranges, and common answers",
+          "Switch any question between bars, a pie chart and a histogram",
+          "Tables that refresh on their own, with a Refresh button when you want it now",
           "Most common “Other” answers surfaced automatically",
           "Excel and CSV exports with filters by status, date range, and search",
         ]}
@@ -516,6 +561,43 @@ export function Spotlights() {
         }
       />
       <Spotlight
+        id="form-rules"
+        eyebrow="Form rules"
+        title="Every question can react to the answers before it"
+        description="Hide a question until it matters, make it required only sometimes, or change what it offers. Each rule checks either the answer someone gave or simply whether another question is filled in."
+        points={[
+          "Show or hide questions and whole sections, and skip empty steps automatically",
+          "Require a question, apply its limits, or pre-fill it only when your rules match",
+          "Offer a single choice, a description, the “Other” box or a consent only under conditions",
+          "Add several rules to one question: all of them must match",
+          "The same rules are checked again on the server, so nothing slips through",
+        ]}
+        visual={
+          <Tilt max={6} innerClassName="rounded-2xl">
+            <RulesMock />
+          </Tilt>
+        }
+        reverse
+      />
+      <Spotlight
+        id="import"
+        eyebrow="Import"
+        title="Bring registrations in from a spreadsheet or a Word table"
+        description="Already have a list? Upload it, match each column to a question, and look at every row before anything is saved. Fix what needs fixing and import the rest."
+        points={[
+          "Excel (.xlsx), CSV and Word (.docx) tables, with a blank template made from your form",
+          "Columns are matched for you, and a row-by-row preview shows what will be added, updated or left out",
+          "Update existing registrations by registration number or email, changing only what the file contains",
+          "Rows with missing required answers still come in, and can be completed by editing them",
+          "Download the rows that need attention, fix them, and import again. The same works for orders",
+        ]}
+        visual={
+          <Tilt max={6} innerClassName="rounded-2xl">
+            <ImportMock />
+          </Tilt>
+        }
+      />
+      <Spotlight
         id="success-page"
         eyebrow="After they submit"
         title="A success page people can keep, print and trust"
@@ -608,6 +690,11 @@ const SECURITY: { icon: LucideIcon; title: string; description: string }[] = [
     description: "QR codes on ID cards and tickets link to a live verification page for each registration.",
   },
   {
+    icon: Zap,
+    title: "Safe under load",
+    description: "Duplicate submissions are blocked at the database, emails are queued and retried, and sign-in attempts and uploads are limited.",
+  },
+  {
     icon: Download,
     title: "Your data, exportable",
     description: "Export registrations at any time and download every uploaded file from its registration.",
@@ -696,6 +783,14 @@ const FAQS = [
   {
     q: "Can I limit a poll to people I have approved?",
     a: "Yes. Turn on verified voters and paste their emails. Anyone who is not on the list cannot create an account, sign in or vote.",
+  },
+  {
+    q: "Can I import registrations I already have?",
+    a: "Yes. Upload an Excel sheet, CSV file or Word table, match its columns to your form's questions, and preview every row. Valid rows are imported, rows with problems are listed so you can download, fix and import them again, and a blank template for your form is one click away. Orders can be imported the same way.",
+  },
+  {
+    q: "Can questions appear only when they are needed?",
+    a: "Yes. Show or hide a question or a whole section, require it, limit it, pre-fill it, or offer a single choice only when another answer matches or another question is filled in or left empty. Follow-up boxes, the “Other” box and consent can have rules too.",
   },
   {
     q: "Can I get my data out?",
