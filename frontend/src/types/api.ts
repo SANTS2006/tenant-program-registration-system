@@ -140,6 +140,8 @@ export interface FollowUp {
   required?: boolean;
   /** The choices, when the mode is "dropdown". */
   options?: string[];
+  /** Only ask when these rules match (on top of the option being chosen). */
+  conditions?: ConditionalRule[];
 }
 
 export interface ConditionalRule {

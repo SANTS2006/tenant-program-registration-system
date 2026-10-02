@@ -204,7 +204,7 @@ export function FieldSettingsDialog({
 
           <DateLimitEditor draft={draft} updateConfig={updateConfig} />
           <MaxSelectionsEditor draft={draft} updateConfig={updateConfig} />
-          <FollowUpEditor draft={draft} updateConfig={updateConfig} />
+          <FollowUpEditor draft={draft} otherFields={otherFields} updateConfig={updateConfig} />
 
           <AutoFillEditor draft={draft} otherFields={otherFields} updateConfig={updateConfig} />
 
@@ -224,7 +224,7 @@ export function FieldSettingsDialog({
             </div>
           )}
 
-          <ConditionalLogicEditor draft={draft} otherFields={otherFields} onChange={(conditionalLogic) => update({ conditionalLogic })} />
+          <ConditionalLogicEditor rules={draft.conditionalLogic} ownerKey={draft.fieldKey} otherFields={otherFields} onChange={(conditionalLogic) => update({ conditionalLogic })} />
         </div>
 
         <DialogFooter>

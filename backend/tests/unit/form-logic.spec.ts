@@ -96,6 +96,49 @@ describe("a chosen option can ask for more, in the kind of input the admin picke
   });
 });
 
+describe("an extra input that only applies under conditions", () => {
+  const fields = [
+    field({ fieldKey: "phone_known", type: "yes_no" }),
+    field({
+      fieldKey: "region",
+      type: "single_choice",
+      config: {
+        options: ["North", "South"],
+        followUps: {
+          North: {
+            mode: "short_text",
+            label: "Town",
+            required: true,
+            conditions: [{ fieldKey: "phone_known", operator: "equals", value: "true" }],
+          },
+        },
+      },
+    }),
+  ];
+  it("is not asked, or required, when its conditions do not match", () => {
+    expect(check(fields, { phone_known: false, region: "North" }).ok).toBe(true);
+  });
+  it("is required once its conditions match", () => {
+    expect(check(fields, { phone_known: true, region: "North" }).ok).toBe(false);
+    expect(check(fields, { phone_known: true, region: "North", region__other: "Kono" }).ok).toBe(true);
+  });
+  it("can depend on whether another question is filled in", () => {
+    const filled = [
+      field({ fieldKey: "email", type: "short_text" }),
+      field({
+        fieldKey: "pick",
+        type: "single_choice",
+        config: {
+          options: ["A"],
+          followUps: { A: { mode: "short_text", required: true, conditions: [{ fieldKey: "email", operator: "is_not_empty" }] } },
+        },
+      }),
+    ];
+    expect(check(filled, { pick: "A" }).ok).toBe(true);
+    expect(check(filled, { pick: "A", email: "x" }).ok).toBe(false);
+  });
+});
+
 describe("multiple choice options that ask for more", () => {
   const fields = [
     field({

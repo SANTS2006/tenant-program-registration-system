@@ -26,6 +26,12 @@ export const fieldTypeValues = [
   "consent",
 ] as const;
 
+export const conditionalRuleSchema = z.object({
+  fieldKey: z.string().min(1),
+  operator: z.enum(["equals", "not_equals", "contains", "is_empty", "is_not_empty"]),
+  value: z.union([z.string(), z.number(), z.boolean()]).optional(),
+});
+
 export const fieldConfigSchema = z
   .object({
     minLength: z.number().int().min(0).optional(),
@@ -63,6 +69,7 @@ export const fieldConfigSchema = z
           label: z.string().max(200).optional(),
           required: z.boolean().optional(),
           options: z.array(z.string().trim().min(1).max(200)).max(100).optional(),
+          conditions: z.array(conditionalRuleSchema).max(10).optional(),
         }),
       )
       .optional(),
@@ -70,12 +77,6 @@ export const fieldConfigSchema = z
     maxRating: z.number().int().min(2).max(10).optional(),
   })
   .catchall(z.unknown());
-
-export const conditionalRuleSchema = z.object({
-  fieldKey: z.string().min(1),
-  operator: z.enum(["equals", "not_equals", "contains", "is_empty", "is_not_empty"]),
-  value: z.union([z.string(), z.number(), z.boolean()]).optional(),
-});
 
 export const sectionInputSchema = z.object({
   key: z.string().min(1),

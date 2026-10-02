@@ -258,7 +258,7 @@ export function MaxSelectionsEditor({ draft, updateConfig }: { draft: EditableFi
  * Lets an option ask for more, e.g. "Do you have a design in mind?" -> Yes shows a box to describe
  * or upload the design, No shows nothing.
  */
-export function FollowUpEditor({ draft, updateConfig }: { draft: EditableField; updateConfig: UpdateConfig }) {
+export function FollowUpEditor({ draft, otherFields, updateConfig }: { draft: EditableField; otherFields: EditableField[]; updateConfig: UpdateConfig }) {
   if (!FOLLOW_UP_TYPES.has(draft.type)) return null;
   const choices = draft.type === "yes_no" ? ["Yes", "No"] : (draft.config.options ?? []).filter((o) => o.trim() && !/^other/i.test(o.trim()));
   if (choices.length === 0) return null;
@@ -322,6 +322,14 @@ export function FollowUpEditor({ draft, updateConfig }: { draft: EditableField; 
                   <Checkbox checked={followUp.required === true} onCheckedChange={(checked) => setFollowUp(option, { ...followUp, required: checked === true })} />
                   Required
                 </label>
+                <ConditionalLogicEditor
+                  rules={followUp.conditions}
+                  ownerKey={draft.fieldKey}
+                  otherFields={otherFields}
+                  onChange={(conditions) => setFollowUp(option, { ...followUp, conditions })}
+                  heading="Ask this only when… (optional)"
+                  hint="Show this extra input only when another answer matches, or when another question is filled in or left empty."
+                />
               </div>
             )}
           </div>
@@ -444,18 +452,25 @@ function answerChoices(field: EditableField): { value: string; label: string }[]
 
 /** Show this question only when other answers match. Works for every kind of question. */
 export function ConditionalLogicEditor({
-  draft,
+  rules: current,
+  ownerKey,
   otherFields,
   onChange,
+  heading = "Show this question only when… (optional)",
+  hint = "Hide this question until another answer matches. With more than one rule, all of them must match.",
 }: {
-  draft: EditableField;
+  rules: ConditionalRule[] | undefined;
+  /** The question these rules belong to; it can't be checked against itself. */
+  ownerKey: string;
   otherFields: EditableField[];
   onChange: (rules: ConditionalRule[] | undefined) => void;
+  heading?: string;
+  hint?: string;
 }) {
-  const rules = draft.conditionalLogic ?? [];
+  const rules = current ?? [];
   // A question can't wait on one that already waits on it.
   const sources = otherFields.filter(
-    (f) => f.fieldKey !== draft.fieldKey && !(f.conditionalLogic ?? []).some((r) => r.fieldKey === draft.fieldKey),
+    (f) => f.fieldKey !== ownerKey && !(f.conditionalLogic ?? []).some((r) => r.fieldKey === ownerKey),
   );
   if (sources.length === 0 && rules.length === 0) return null;
 
@@ -468,10 +483,8 @@ export function ConditionalLogicEditor({
 
   return (
     <div className="flex flex-col gap-3 rounded-md border border-dashed border-border p-3">
-      <Label>Show this question only when… (optional)</Label>
-      <p className="-mt-2 text-xs text-muted-foreground">
-        Hide this question until another answer matches. With more than one rule, all of them must match.
-      </p>
+      <Label>{heading}</Label>
+      <p className="-mt-2 text-xs text-muted-foreground">{hint}</p>
       {rules.map((rule, index) => {
         const source = sources.find((f) => f.fieldKey === rule.fieldKey) ?? otherFields.find((f) => f.fieldKey === rule.fieldKey);
         const choices = source ? answerChoices(source) : null;

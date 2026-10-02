@@ -44,6 +44,12 @@ export interface FollowUp {
   label?: string;
   required?: boolean;
   options?: string[];
+  conditions?: ConditionalRule[];
+}
+
+/** An extra input only applies when the admin's rules for it match the answers given. */
+function followUpApplies(followUp: FollowUp, responses: Record<string, unknown>): boolean {
+  return (followUp.conditions ?? []).every((rule) => evaluateRule(rule, responses));
 }
 
 const followUpAsksFile = (mode: FollowUp["mode"]) => mode === "file" || mode === "text_or_file";
@@ -96,11 +102,12 @@ function checkFollowUp(
 }
 
 /** What a chosen option asks for on top of the choice itself (e.g. "Yes" -> describe your design). */
-function followUpFor(field: FieldRow, value: unknown): FollowUp | null {
+function followUpFor(field: FieldRow, value: unknown, responses: Record<string, unknown>): FollowUp | null {
   if (!SINGLE_VALUE_FOLLOW_UP_TYPES.has(field.type)) return null;
   const followUps = ((field.config as Record<string, unknown>)?.followUps ?? {}) as Record<string, FollowUp>;
   const key = typeof value === "boolean" ? (value ? "Yes" : "No") : String(value ?? "");
-  return followUps[key] ?? null;
+  const followUp = followUps[key] ?? null;
+  return followUp && followUpApplies(followUp, responses) ? followUp : null;
 }
 
 interface OptionsDependOn {
@@ -352,7 +359,7 @@ export function validateAndNormalizeResponses(
     const value = validateFieldValue(field, rawResponses[field.fieldKey], errors, rawResponses);
     cleaned[field.fieldKey] = value;
 
-    const followUp = isEmptyValue(value) ? null : followUpFor(field, value);
+    const followUp = isEmptyValue(value) ? null : followUpFor(field, value, rawResponses);
     if (followUp) {
       const key = otherTextKey(field.fieldKey);
       const text = String(rawResponses[key] ?? "").trim();
@@ -365,7 +372,7 @@ export function validateAndNormalizeResponses(
       const answers: Record<string, string> = {};
       for (const option of value.map(String)) {
         const asks = configured[option];
-        if (!asks) continue;
+        if (!asks || !followUpApplies(asks, rawResponses)) continue;
         const key = optionFollowKey(field.fieldKey, option);
         const kept = checkFollowUp(asks, `${field.label} (${option})`, String(rawResponses[key] ?? "").trim(), filesByField.get(key) ?? [], errors);
         if (kept) answers[option] = kept;

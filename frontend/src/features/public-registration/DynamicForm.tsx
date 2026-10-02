@@ -126,17 +126,25 @@ export function optionFollowKey(fieldKey: string, option: string) {
 }
 
 /** The extra inputs the ticked options of a multiple choice question ask for. */
-function followUpsForMulti(field: FormField, value: unknown): { option: string; followUp: FollowUp }[] {
+function followUpsForMulti(field: FormField, value: unknown, responses: Record<string, unknown>): { option: string; followUp: FollowUp }[] {
   if (field.type !== "multiple_choice" || !Array.isArray(value)) return [];
   const configured = field.config.followUps ?? {};
-  return value.map(String).flatMap((option) => (configured[option] ? [{ option, followUp: configured[option]! }] : []));
+  return value
+    .map(String)
+    .flatMap((option) => (configured[option] && followUpApplies(configured[option]!, responses) ? [{ option, followUp: configured[option]! }] : []));
+}
+
+/** An extra input only shows when the admin's rules for it match the answers so far. */
+function followUpApplies(followUp: FollowUp, responses: Record<string, unknown>): boolean {
+  return (followUp.conditions ?? []).every((rule) => evaluateRule(rule, responses));
 }
 
 /** What the chosen option asks for on top of the choice itself, if the admin turned that on. */
-function followUpFor(field: FormField, value: unknown): FollowUp | null {
+function followUpFor(field: FormField, value: unknown, responses: Record<string, unknown>): FollowUp | null {
   if (!["single_choice", "dropdown", "yes_no", "gender", "country"].includes(field.type)) return null;
   const key = typeof value === "boolean" ? (value ? "Yes" : "No") : typeof value === "string" ? value : "";
-  return field.config.followUps?.[key] ?? null;
+  const followUp = field.config.followUps?.[key] ?? null;
+  return followUp && followUpApplies(followUp, responses) ? followUp : null;
 }
 
 /** The choices to show right now -- narrowed by the parent's answer for cascading fields. */
@@ -408,7 +416,7 @@ export function DynamicForm({
     }
     for (const field of fieldsToCheck) {
       if (!isVisible(field, responses)) continue;
-      const followUp = followUpFor(field, responses[field.fieldKey]);
+      const followUp = followUpFor(field, responses[field.fieldKey], responses);
       if (followUp?.required) {
         const key = otherTextKey(field.fieldKey);
         const hasText = !isEmpty(String(responses[key] ?? "").trim());
@@ -425,7 +433,7 @@ export function DynamicForm({
     }
     for (const field of fieldsToCheck) {
       if (!isVisible(field, responses)) continue;
-      for (const { option, followUp } of followUpsForMulti(field, responses[field.fieldKey])) {
+      for (const { option, followUp } of followUpsForMulti(field, responses[field.fieldKey], responses)) {
         const key = optionFollowKey(field.fieldKey, option);
         const text = String(responses[key] ?? "").trim();
         const asksText = followUpAsksText(followUp.mode);
@@ -484,12 +492,12 @@ export function DynamicForm({
         const at = key.indexOf("__fu__");
         if (at > 0) {
           const owner = fields.find((f) => f.fieldKey === key.slice(0, at));
-          const asked = owner && isVisible(owner, responses) ? followUpsForMulti(owner, responses[owner.fieldKey]).find((x) => x.option === key.slice(at + 6)) : undefined;
+          const asked = owner && isVisible(owner, responses) ? followUpsForMulti(owner, responses[owner.fieldKey], responses).find((x) => x.option === key.slice(at + 6)) : undefined;
           return asked !== undefined && followUpAsksFile(asked.followUp.mode);
         }
         if (!key.endsWith("__other")) return true;
         const owner = fields.find((f) => otherTextKey(f.fieldKey) === key);
-        const mode = owner && isVisible(owner, responses) ? followUpFor(owner, responses[owner.fieldKey])?.mode : undefined;
+        const mode = owner && isVisible(owner, responses) ? followUpFor(owner, responses[owner.fieldKey], responses)?.mode : undefined;
         return mode !== undefined && followUpAsksFile(mode);
       })
       .map(([, file]) => file);
@@ -567,9 +575,9 @@ export function DynamicForm({
   };
 
   const renderOtherInput = (field: FormField, value: unknown) => {
-    const followUp = followUpFor(field, value);
+    const followUp = followUpFor(field, value, responses);
     if (followUp) return renderFollowUp(field, followUp);
-    const multi = followUpsForMulti(field, value);
+    const multi = followUpsForMulti(field, value, responses);
     const multiBoxes = multi.map(({ option, followUp: asks }) => (
       <React.Fragment key={option}>{renderFollowUp(field, asks, optionFollowKey(field.fieldKey, option), option)}</React.Fragment>
     ));
