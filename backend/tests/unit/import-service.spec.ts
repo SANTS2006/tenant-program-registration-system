@@ -113,6 +113,23 @@ describe("importing registrations from a document", () => {
     expect(state.created).toHaveLength(0);
   });
 
+  it("a check lists every row with what would happen to it", async () => {
+    const file = csv("Name,Email,City\nMusa B,musa@example.com,\nBad,not-an-email,Bo\n,ama@example.com,Kono\nAma K,ama@example.com,Kono\n");
+    const r = await runImport("p1", "people.csv", file, mapping, true, "update");
+    const byRow = Object.fromEntries(r.rows.map((x) => [x.row, x]));
+    expect(r.rows).toHaveLength(4);
+    expect(byRow[2]!.action).toBe("create");
+    expect(byRow[2]!.incomplete.join(" ")).toMatch(/City/);
+    expect(byRow[3]!.action).toBe("error");
+    expect(byRow[3]!.messages.length).toBeGreaterThan(0);
+    expect(byRow[4]!.action).toBe("update");
+    expect(byRow[4]!.matches).toBe("REG-001");
+    expect(byRow[4]!.values.city).toBe("Kono");
+    // A real import does not carry the preview.
+    const real = await runImport("p1", "people.csv", file, mapping, false, "update");
+    expect(real.rows).toHaveLength(0);
+  });
+
   it("will not update without a way to find the registration", async () => {
     const file = csv("Name,City\nAma,Kono\n");
     await expect(runImport("p1", "people.csv", file, { "0": "full_name", "1": "city" }, false, "update")).rejects.toThrow(/registration number|email/);

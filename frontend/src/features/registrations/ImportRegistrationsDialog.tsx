@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ApiError } from "@/lib/api";
 import { downloadAuthenticatedFile } from "@/lib/api";
-import { importRegistrations, previewRegistrationImport, type ExistingRows, type ImportPreview, type ImportResult } from "./api";
+import { Badge } from "@/components/ui/badge";
+import { importRegistrations, previewRegistrationImport, type ExistingRows, type ImportPreview, type ImportResult, type ImportRowPreview } from "./api";
 
 const NONE = "__skip";
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -37,6 +38,94 @@ function Issues({ title, items, tone }: { title: string; items: ImportResult["er
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+const ACTION_LABEL: Record<ImportRowPreview["action"], string> = {
+  create: "New",
+  update: "Update",
+  error: "Problem",
+  skipped: "Skipped",
+};
+const ACTION_TONE: Record<ImportRowPreview["action"], string> = {
+  create: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+  update: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
+  error: "bg-destructive/15 text-destructive",
+  skipped: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+};
+
+/** Every row of the document as the import would handle it, before anything is saved. */
+function RowPreviewTable({ rows, columns }: { rows: ImportRowPreview[]; columns: { key: string; label: string }[] }) {
+  const [filter, setFilter] = React.useState<"all" | "ok" | "problems">("all");
+  const sorted = [...rows].sort((a, b) => a.row - b.row);
+  const shown = sorted.filter((r) => (filter === "all" ? true : filter === "ok" ? r.action === "create" || r.action === "update" : r.action === "error" || r.action === "skipped" || r.incomplete.length > 0));
+  const counts = { ok: rows.filter((r) => r.action === "create" || r.action === "update").length, problems: rows.filter((r) => r.action === "error" || r.action === "skipped" || r.incomplete.length > 0).length };
+  return (
+    <div className="flex flex-col gap-2">
+      <div role="group" aria-label="Which rows to show" className="inline-flex w-fit rounded-lg border border-border/70 p-0.5 text-xs">
+        {(
+          [
+            ["all", `All rows (${rows.length})`],
+            ["ok", `Will be saved (${counts.ok})`],
+            ["problems", `Needs attention (${counts.problems})`],
+          ] as const
+        ).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={filter === value}
+            onClick={() => setFilter(value)}
+            className={`rounded-md px-2.5 py-1 font-medium transition-colors ${filter === value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="max-h-[45vh] overflow-auto rounded-lg border border-border/60">
+        <table className="w-full whitespace-nowrap text-left text-xs">
+          <thead className="sticky top-0 bg-muted/80 backdrop-blur">
+            <tr>
+              <th className="px-3 py-2 font-medium">Row</th>
+              <th className="px-3 py-2 font-medium">Result</th>
+              {columns.map((c) => (
+                <th key={c.key} className="px-3 py-2 font-medium">
+                  {c.label}
+                </th>
+              ))}
+              <th className="px-3 py-2 font-medium">Notes</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border/50">
+            {shown.map((r) => (
+              <tr key={r.row} className={r.action === "error" ? "bg-destructive/5" : undefined}>
+                <td className="px-3 py-1.5 text-muted-foreground">{r.row}</td>
+                <td className="px-3 py-1.5">
+                  <Badge variant="secondary" className={ACTION_TONE[r.action]}>
+                    {ACTION_LABEL[r.action]}
+                    {r.matches ? ` ${r.matches}` : ""}
+                  </Badge>
+                </td>
+                {columns.map((c) => (
+                  <td key={c.key} className="max-w-[16rem] truncate px-3 py-1.5" title={r.values[c.key]}>
+                    {r.values[c.key] || <span className="text-muted-foreground">—</span>}
+                  </td>
+                ))}
+                <td className="px-3 py-1.5 text-muted-foreground">
+                  {[...r.messages, ...(r.incomplete.length > 0 ? [`Missing: ${r.incomplete.map((m) => m.replace(/ is required$/, "")).join(", ")}`] : [])].join("; ") || "—"}
+                </td>
+              </tr>
+            ))}
+            {shown.length === 0 && (
+              <tr>
+                <td colSpan={columns.length + 3} className="px-3 py-6 text-center text-muted-foreground">
+                  No rows here.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -287,9 +376,14 @@ export function ImportRegistrationsDialog({ programId, termLabel }: { programId:
                     </>
                   )}.
                 </p>
-                <Issues title="Rows with problems (will not be imported)" items={check.errors} tone="error" />
-                <Issues title="Rows that will be skipped" items={check.skipped} tone="warn" />
-                <Issues title="Will be imported with required answers still missing (fill them in by editing the registration)" items={check.incomplete} tone="warn" />
+                <RowPreviewTable
+                  rows={check.rows}
+                  columns={Object.entries(mapping)
+                    .filter(([, key]) => key !== "__registration_number")
+                    .sort(([a], [b]) => Number(a) - Number(b))
+                    .map(([, key]) => ({ key, label: preview.fields.find((f) => f.fieldKey === key)?.label ?? key }))}
+                />
+                <p className="text-xs text-muted-foreground">Rows with a problem or skipped are not saved. Rows missing required answers are saved, and can be completed later by editing the registration.</p>
               </div>
             )}
 
@@ -298,7 +392,7 @@ export function ImportRegistrationsDialog({ programId, termLabel }: { programId:
                 Choose another file
               </Button>
               <Button variant="outline" onClick={() => run(true)} loading={busy === "checking"} disabled={busy !== null || mappedCount === 0}>
-                Check the data
+                Check and preview
               </Button>
               <Button onClick={() => run(false)} loading={busy === "importing"} disabled={busy !== null || mappedCount === 0 || (check !== null && check.valid === 0)}>
                 {check ? `${existing === "skip" ? "Import" : "Import / update"} ${check.valid}` : existing === "skip" ? "Import" : "Import / update"}

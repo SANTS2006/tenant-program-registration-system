@@ -56,8 +56,29 @@ export interface ImportRowIssue {
 /** What to do with a row that matches a registration the program already has. */
 export type ExistingRows = "skip" | "update" | "update_only";
 
+/** One row of the document as the import sees it, shown before anything is saved. */
+export interface ImportRowPreview {
+  /** The row as numbered in the document (the header is row 1). */
+  row: number;
+  /** What would happen to it: saved as new, update an existing registration, left out because of a problem, or skipped. */
+  action: "create" | "update" | "error" | "skipped";
+  /** The number of the registration it would update. */
+  matches?: string;
+  /** The answers the row carries, by question key, as they will be saved. */
+  values: Record<string, string>;
+  /** Why it has a problem or is skipped. */
+  messages: string[];
+  /** Required questions it leaves empty (the row is still imported). */
+  incomplete: string[];
+}
+
+const showValue = (value: unknown): string =>
+  value === null || value === undefined ? "" : Array.isArray(value) ? value.map(String).join(", ") : typeof value === "boolean" ? (value ? "Yes" : "No") : String(value);
+
 export interface ImportResult {
   dryRun: boolean;
+  /** Every row as it would be handled; filled in by a check (dry run) only. */
+  rows: ImportRowPreview[];
   total: number;
   /** Rows that passed every check (and, unless it was a check only, were saved). */
   valid: number;
@@ -148,6 +169,7 @@ export async function runImport(
 
   const result: ImportResult = {
     dryRun,
+    rows: [],
     total: table.rows.length,
     valid: 0,
     imported: 0,
@@ -160,13 +182,29 @@ export async function runImport(
   };
   const note = `Imported from ${filename.slice(0, 120)}`;
   const updateNote = `Updated from ${filename.slice(0, 120)}`;
+  // The row being handled, for the preview of a check.
+  let current: { responses: Record<string, unknown>; matches?: string } = { responses: {} };
+  const showRow = (row: number, action: ImportRowPreview["action"], messages: string[], incomplete: string[] = []) => {
+    if (!dryRun) return;
+    result.rows.push({
+      row,
+      action,
+      matches: current.matches,
+      values: Object.fromEntries(Object.entries(current.responses).map(([key, value]) => [key, showValue(value)])),
+      messages,
+      incomplete,
+    });
+  };
   const addIssue = (list: ImportRowIssue[], row: number, messages: string[]) => {
     if (list.length < REPORT_LIMIT) list.push({ row, messages });
+    if (list === result.errors) showRow(row, "error", messages);
+    else if (list === result.skipped) showRow(row, "skipped", messages);
   };
   // Rows are accepted with required answers missing; list them so the admin can complete them afterwards.
   const noteIncomplete = (row: number, answers: Record<string, unknown>) => {
     const missing = missingRequiredAnswers(checkFields, answers, [], published.sections);
     if (missing.length > 0) addIssue(result.incomplete, row, missing);
+    return missing;
   };
   const detailsOf = (err: unknown) =>
     err instanceof AppError && Array.isArray(err.details) ? (err.details as string[]) : [err instanceof Error ? err.message : "Invalid row"];
@@ -174,9 +212,11 @@ export async function runImport(
   for (let i = 0; i < parsedRows.length; i++) {
     const rowNumber = i + 2;
     const { responses, number, email } = parsedRows[i]!;
+    current = { responses };
 
     // A row finds its registration by number first, then by email.
     const match = existing === "skip" ? undefined : ((number && byNumber.get(number.toLowerCase())) || (email ? byEmail.get(email) : undefined));
+    current = { responses, matches: match?.registrationNumber };
 
     if (match) {
       // Only what the document supplies is changed; empty cells and other questions keep their answers.
@@ -198,7 +238,7 @@ export async function runImport(
       }
       result.valid++;
       result.willUpdate++;
-      noteIncomplete(rowNumber, finalResponses);
+      showRow(rowNumber, "update", [], noteIncomplete(rowNumber, finalResponses));
       if (dryRun) continue;
       try {
         const saved = await registrationsRepo.updateRegistrationFromImport(match, {
@@ -245,7 +285,7 @@ export async function runImport(
 
     result.valid++;
     result.willCreate++;
-    noteIncomplete(rowNumber, cleaned);
+    showRow(rowNumber, "create", [], noteIncomplete(rowNumber, cleaned));
     if (dryRun) {
       if (program.oneRegistrationPerEmail && emailKey) knownEmails.add(emailKey);
       continue;

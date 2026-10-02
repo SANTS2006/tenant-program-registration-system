@@ -101,8 +101,19 @@ export interface ImportRowIssue {
   messages: string[];
 }
 
+export interface ImportRowPreview {
+  row: number;
+  action: "create" | "update" | "error" | "skipped";
+  matches?: string;
+  values: Record<string, string>;
+  messages: string[];
+  incomplete: string[];
+}
+
 export interface ImportResult {
   dryRun: boolean;
+  /** Every row as it would be handled (a check only). */
+  rows: ImportRowPreview[];
   total: number;
   valid: number;
   imported: number;
