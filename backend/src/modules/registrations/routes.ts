@@ -6,6 +6,8 @@ import {
   exportRegistrationsHandler,
   getProgramStatsHandler,
   getRegistrationHandler,
+  importRegistrationsHandler,
+  previewRegistrationImportHandler,
   listRegistrationsHandler,
   updateRegistrationStatusHandler,
 } from "./controller.js";
@@ -40,6 +42,18 @@ export async function registrationRoutes(app: FastifyInstance) {
     "/:programId/registrations/:registrationId/files/:fileId/download",
     { preHandler: requireProgramAccess("viewer") },
     downloadRegistrationFileHandler,
+  );
+  // Bulk import from an Excel sheet or Word table. The document travels as base64 text, so these routes allow a bigger body.
+  const importRoute = { bodyLimit: 8 * 1024 * 1024, config: { rateLimit: { max: 20, timeWindow: "1 minute" } } };
+  app.post(
+    "/:programId/registrations/import/preview",
+    { preHandler: requireProgramAccess("admin"), ...importRoute },
+    previewRegistrationImportHandler,
+  );
+  app.post(
+    "/:programId/registrations/import",
+    { preHandler: requireProgramAccess("admin"), ...importRoute },
+    importRegistrationsHandler,
   );
   app.patch(
     "/:programId/registrations/:registrationId/status",

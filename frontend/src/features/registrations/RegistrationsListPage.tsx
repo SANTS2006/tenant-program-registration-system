@@ -12,6 +12,7 @@ import { FileSpreadsheet, FileText, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { RefreshButton } from "@/components/RefreshButton";
+import { ImportRegistrationsDialog } from "./ImportRegistrationsDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { RegistrationStatusBadge } from "@/components/StatusBadge";
@@ -121,6 +122,7 @@ export function RegistrationsListPage() {
         <span className="text-sm text-muted-foreground">{data?.total ?? 0} total</span>
         <div className="ml-auto flex flex-wrap gap-2">
           <RefreshButton />
+          {program.myRole === "admin" && program.kind !== "order_form" && <ImportRegistrationsDialog programId={program.id} termLabel="registrations" />}
           <Button
             variant="outline"
             size="sm"

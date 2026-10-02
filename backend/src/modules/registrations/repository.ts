@@ -36,6 +36,8 @@ interface CreateRegistrationInput {
   files: SubmittedFile[];
   /** Refuse a second registration with this email in this program (enforced by the database). */
   enforceUniqueEmail?: boolean;
+  /** What the first line of the status history says; "Registration submitted" when empty. */
+  historyNote?: string;
 }
 
 export async function createRegistration(input: CreateRegistrationInput): Promise<RegistrationRow> {
@@ -72,7 +74,7 @@ export async function createRegistration(input: CreateRegistrationInput): Promis
       registrationId: registration!.id,
       fromStatus: null,
       toStatus: "submitted",
-      note: "Registration submitted",
+      note: input.historyNote ?? "Registration submitted",
     });
 
     return registration!;
@@ -105,6 +107,15 @@ export async function updateDocumentOverrides(registrationId: string, overrides:
 }
 
 /** Whether this email address has already been used to register for the program (any letter case). */
+/** Every email already registered for a program (lower case), for spotting duplicates in bulk. */
+export async function listRegisteredEmails(programId: string): Promise<Set<string>> {
+  const rows = await db
+    .select({ email: sql<string>`lower(${registrations.applicantEmail})` })
+    .from(registrations)
+    .where(and(eq(registrations.programId, programId), sql`${registrations.applicantEmail} is not null`));
+  return new Set(rows.map((r) => r.email));
+}
+
 export async function emailAlreadyRegistered(programId: string, email: string): Promise<boolean> {
   const [row] = await db
     .select({ id: registrations.id })

@@ -55,33 +55,7 @@ export async function submitRegistration(slug: string, input: SubmitRegistration
     throw alreadyRegistered();
   }
 
-  const numbering = resolveNumberingConfig(program.registrationNumberConfig);
-  const year = new Date().getFullYear();
-
-  // An admin can change the format or starting number after numbers were issued,
-  // so a generated number may already be taken -- skip ahead instead of failing.
-  let registration: registrationsRepo.RegistrationRow | undefined;
-  for (let attempt = 0; attempt < MAX_NUMBER_ATTEMPTS && !registration; attempt++) {
-    const sequence = await registrationsRepo.nextRegistrationSequence(program.id, counterBucket(numbering, year));
-    try {
-      registration = await registrationsRepo.createRegistration({
-        programId: program.id,
-        formId: published.form.id,
-        registrationNumber: formatRegistrationNumber(numbering, year, sequence),
-        applicantName: contact.name,
-        applicantEmail: contact.email,
-        applicantPhone: contact.phone,
-        responses: cleanedResponses,
-        files,
-        enforceUniqueEmail: program.oneRegistrationPerEmail,
-      });
-    } catch (err) {
-      if (!isUniqueViolation(err)) throw err;
-      // The same email slipped in between the check above and now: the database refused it.
-      if (violatedConstraint(err) === "registrations_unique_email_guard_idx") throw alreadyRegistered();
-    }
-  }
-  if (!registration) throw AppError.conflict("Could not allocate a registration number, please try again");
+  const registration = await createRegistrationWithNumber(program, published.form.id, contact, cleanedResponses, files);
   const registrationNumber = registration.registrationNumber;
 
   if (program.kind === "order_form") {
@@ -118,6 +92,46 @@ export async function submitRegistration(slug: string, input: SubmitRegistration
 }
 
 const MAX_NUMBER_ATTEMPTS = 25;
+
+/** Saves a registration under the next free registration number for the program. */
+export async function createRegistrationWithNumber(
+  program: programsRepo.ProgramRow,
+  formId: string,
+  contact: { name: string | null; email: string | null; phone: string | null },
+  responses: Record<string, unknown>,
+  files: { fieldKey: string; url: string; publicId: string; filename: string; mimeType: string; sizeBytes: number }[],
+  historyNote?: string,
+): Promise<registrationsRepo.RegistrationRow> {
+  const numbering = resolveNumberingConfig(program.registrationNumberConfig);
+  const year = new Date().getFullYear();
+
+  // An admin can change the format or starting number after numbers were issued,
+  // so a generated number may already be taken -- skip ahead instead of failing.
+  let registration: registrationsRepo.RegistrationRow | undefined;
+  for (let attempt = 0; attempt < MAX_NUMBER_ATTEMPTS && !registration; attempt++) {
+    const sequence = await registrationsRepo.nextRegistrationSequence(program.id, counterBucket(numbering, year));
+    try {
+      registration = await registrationsRepo.createRegistration({
+        programId: program.id,
+        formId,
+        registrationNumber: formatRegistrationNumber(numbering, year, sequence),
+        applicantName: contact.name,
+        applicantEmail: contact.email,
+        applicantPhone: contact.phone,
+        responses,
+        files,
+        enforceUniqueEmail: program.oneRegistrationPerEmail,
+        historyNote,
+      });
+    } catch (err) {
+      if (!isUniqueViolation(err)) throw err;
+      // The same email slipped in between the check and now: the database refused it.
+      if (violatedConstraint(err) === "registrations_unique_email_guard_idx") throw alreadyRegistered();
+    }
+  }
+  if (!registration) throw AppError.conflict("Could not allocate a registration number, please try again");
+  return registration;
+}
 
 const alreadyRegistered = () =>
   AppError.conflict(

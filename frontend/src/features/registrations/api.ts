@@ -81,3 +81,38 @@ export function downloadRegistrationFile(programId: string, registrationId: stri
     file.originalFilename,
   );
 }
+
+export interface ImportPreview {
+  headers: string[];
+  sampleRows: string[][];
+  totalRows: number;
+  maxRows: number;
+  /** Column number -> question key, as guessed from the header text. */
+  mapping: Record<string, string>;
+  fields: { fieldKey: string; label: string; type: string; required: boolean }[];
+}
+
+export interface ImportRowIssue {
+  row: number;
+  messages: string[];
+}
+
+export interface ImportResult {
+  dryRun: boolean;
+  total: number;
+  valid: number;
+  imported: number;
+  skipped: ImportRowIssue[];
+  errors: ImportRowIssue[];
+}
+
+export function previewRegistrationImport(programId: string, filename: string, content: string) {
+  return apiFetch<ImportPreview>(`/programs/${programId}/registrations/import/preview`, { method: "POST", body: { filename, content } });
+}
+
+export function importRegistrations(programId: string, filename: string, content: string, mapping: Record<string, string>, dryRun: boolean) {
+  return apiFetch<ImportResult>(`/programs/${programId}/registrations/import`, {
+    method: "POST",
+    body: { filename, content, mapping, dryRun },
+  });
+}

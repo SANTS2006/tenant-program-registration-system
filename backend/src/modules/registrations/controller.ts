@@ -6,6 +6,8 @@ import { AppError } from "../../lib/errors.js";
 import { sendSuccess } from "../../lib/response.js";
 import { recordAudit } from "../audit/service.js";
 import * as programsRepo from "../programs/repository.js";
+import { z } from "zod";
+import { previewImport, runImport } from "./importService.js";
 import { generateCsvExport, generateXlsxExport } from "./exportService.js";
 import { submissionPdfForAdmin } from "./summary.js";
 import * as registrationsService from "./service.js";
@@ -108,4 +110,38 @@ export async function downloadRegistrationSummaryHandler(request: FastifyRequest
     .header("X-Download-Name", encodeURIComponent(fileName))
     .header("Cache-Control", "no-store")
     .send(buffer);
+}
+
+const importBodySchema = z.object({
+  filename: z.string().min(1).max(200),
+  // The document, base64-encoded (a 5 MB file is about 6.7 MB of text).
+  content: z.string().min(1).max(7_500_000),
+  mapping: z.record(z.string().max(100)).optional(),
+  dryRun: z.boolean().optional(),
+});
+
+export async function previewRegistrationImportHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { programId } = request.params as { programId: string };
+  const body = importBodySchema.parse(request.body);
+  return sendSuccess(reply, await previewImport(programId, body.filename, Buffer.from(body.content, "base64")));
+}
+
+export async function importRegistrationsHandler(request: FastifyRequest, reply: FastifyReply) {
+  if (!request.user) throw AppError.unauthorized();
+  const { programId } = request.params as { programId: string };
+  const body = importBodySchema.parse(request.body);
+  if (!body.mapping) throw AppError.validation("Match the columns to the form's questions first.");
+  const dryRun = body.dryRun === true;
+  const result = await runImport(programId, body.filename, Buffer.from(body.content, "base64"), body.mapping, dryRun);
+  if (!dryRun) {
+    await recordAudit({
+      actorUserId: request.user.id,
+      action: "registration.import",
+      entityType: "program",
+      entityId: programId,
+      metadata: { filename: body.filename, total: result.total, imported: result.imported, failed: result.errors.length, skipped: result.skipped.length },
+      ipAddress: request.ip,
+    });
+  }
+  return sendSuccess(reply, result, dryRun ? "Check finished" : `${result.imported} registrations imported`);
 }
