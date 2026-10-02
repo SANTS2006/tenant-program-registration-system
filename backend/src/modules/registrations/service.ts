@@ -11,7 +11,7 @@ import * as programsRepo from "../programs/repository.js";
 import * as registrationsRepo from "./repository.js";
 import { programStatusChoices, type ListRegistrationsQuery, type SubmitRegistrationInput, type UpdateStatusInput } from "./schemas.js";
 import { counterBucket, formatRegistrationNumber, resolveNumberingConfig } from "./numbering.js";
-import { dropHiddenFileUploads, extractApplicantContact, validateAndNormalizeResponses } from "./validation.js";
+import { dropHiddenFileUploads, evaluateRule, extractApplicantContact, validateAndNormalizeResponses } from "./validation.js";
 
 function isRegistrationWindowOpen(program: programsRepo.ProgramRow): boolean {
   const now = new Date();
@@ -32,7 +32,9 @@ export async function submitRegistration(slug: string, input: SubmitRegistration
 
   const published = await formsService.getPublishedFormWithContent(program.id);
   if (!published) throw AppError.conflict("This program does not have a registration form available yet");
-  if (published.form.requireConsent && input.consentAccepted !== true) {
+  // Consent is asked just before submitting, and only when the admin's rules for it match the answers.
+  const consentRules = (published.form.consentConditions ?? []) as Parameters<typeof evaluateRule>[0][];
+  if (published.form.requireConsent && consentRules.every((rule) => evaluateRule(rule, input.responses)) && input.consentAccepted !== true) {
     throw AppError.validation("You must agree to the consent statement to register");
   }
 

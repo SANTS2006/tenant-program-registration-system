@@ -40,6 +40,8 @@ interface DynamicFormProps {
   submitLabel?: string;
   layoutMode?: "stepped" | "single";
   requireConsent?: boolean;
+  /** Consent is only asked when these rules match the answers. */
+  consentConditions?: ConditionalRule[] | null;
   consentText?: string | null;
   onCancel?: () => void;
   /** Asks the person to confirm they checked their answers before the form can be submitted. */
@@ -339,6 +341,7 @@ export function DynamicForm({
   submitLabel,
   layoutMode = "stepped",
   requireConsent = false,
+  consentConditions,
   consentText,
   onCancel,
   requireReviewConfirmation = true,
@@ -347,7 +350,6 @@ export function DynamicForm({
 }: DynamicFormProps) {
   const orderedSections = [...sections].sort((a, b) => a.orderIndex - b.orderIndex);
   const hasSections = orderedSections.length > 0;
-  const [consented, setConsented] = React.useState(!requireConsent);
   const [consentChecked, setConsentChecked] = React.useState(false);
   const draft = React.useMemo(() => loadDraft(storageKey), [storageKey]);
   const [stepIndex, setStepIndex] = React.useState(() => Math.max(0, Math.min(draft?.step ?? 0, Math.max(0, sections.length - 1))));
@@ -385,6 +387,8 @@ export function DynamicForm({
   const groups = shownGroups.length > 0 ? shownGroups : allGroups;
 
   const isSingle = layoutMode === "single";
+  // Consent is asked just before submitting, and only when its conditions match the answers so far.
+  const consentNeeded = requireConsent && (consentConditions ?? []).every((rule) => evaluateRule(rule, responses));
   const steps = isSingle ? [{ id: "all", title: "Registration", fields: groups.flatMap((g) => g.fields) }] : groups;
   const activeStep = Math.min(stepIndex, steps.length - 1);
   const currentStep = steps[activeStep]!;
@@ -412,6 +416,7 @@ export function DynamicForm({
     setStepErrors([]);
     setStepIndex(0);
     setReviewConfirmed(false);
+    setConsentChecked(false);
   };
 
   // Questions the person has typed in themselves no longer follow the question they copy from.
@@ -526,9 +531,15 @@ export function DynamicForm({
 
   const handleBack = () => setStepIndex(Math.max(0, activeStep - 1));
 
+  const CONSENT_REQUIRED_MESSAGE = "Please agree to the consent statement before submitting";
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateStep()) return;
+    if (consentNeeded && !consentChecked) {
+      setStepErrors([CONSENT_REQUIRED_MESSAGE]);
+      return;
+    }
     if (requireReviewConfirmation && !reviewConfirmed) {
       setStepErrors([REVIEW_REQUIRED_MESSAGE]);
       return;
@@ -561,7 +572,7 @@ export function DynamicForm({
         return mode !== undefined && followUpAsksFile(mode);
       })
       .map(([, file]) => file);
-    await onSubmit(responses, files, consented);
+    await onSubmit(responses, files, !consentNeeded || consentChecked);
   };
 
   const renderField = (field: FormField) => {
@@ -852,41 +863,6 @@ export function DynamicForm({
     }
   };
 
-  if (requireConsent && !consented) {
-    return (
-      <div className="flex flex-col gap-5">
-        <div className="flex items-start gap-3 rounded-xl border border-border/70 bg-gradient-brand-soft p-4">
-          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-          <div className="whitespace-pre-line text-sm text-foreground">
-            {consentText || "By continuing, you consent to the collection of the information in this form."}
-          </div>
-        </div>
-        <label htmlFor="consent-agree" className="flex cursor-pointer items-start gap-3 text-sm">
-          <Checkbox
-            id="consent-agree"
-            checked={consentChecked}
-            onCheckedChange={(checked) => setConsentChecked(checked === true)}
-            className="mt-0.5"
-          />
-          <span>I have read and agree to the consent statement above.</span>
-        </label>
-        <div className="flex items-center justify-between gap-3">
-          {onCancel ? (
-            <Button type="button" variant="outline" onClick={onCancel}>
-              Cancel
-            </Button>
-          ) : (
-            <span />
-          )}
-          <Button type="button" onClick={() => setConsented(true)} disabled={!consentChecked}>
-            Continue to the form
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   const combinedErrors = [...(errors ?? []), ...stepErrors];
 
   /** What the person entered for a question, as plain text for the review screen. */
@@ -996,6 +972,30 @@ export function DynamicForm({
         </div>
       ) : (
         <div className="flex flex-col gap-5">{currentStep.fields.map(renderField)}</div>
+      )}
+
+      {consentNeeded && (isSingle || isLastStep) && (
+        <div className="flex flex-col gap-3 rounded-xl border border-border/70 bg-gradient-brand-soft p-4">
+          <div className="flex items-start gap-3">
+            <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+            <div className="whitespace-pre-line text-sm text-foreground">
+              {consentText || "By submitting, you consent to the collection of the information in this form."}
+            </div>
+          </div>
+          <label htmlFor="consent-agree" className="flex cursor-pointer items-start gap-3 text-sm">
+            <Checkbox
+              id="consent-agree"
+              checked={consentChecked}
+              onCheckedChange={(checked) => {
+                setConsentChecked(checked === true);
+                if (checked === true) setStepErrors((errs) => errs.filter((e) => e !== CONSENT_REQUIRED_MESSAGE));
+              }}
+              className="mt-0.5"
+              aria-required="true"
+            />
+            <span>I have read and agree to the consent statement above.</span>
+          </label>
+        </div>
       )}
 
       {requireReviewConfirmation && (isSingle || isLastStep) && (

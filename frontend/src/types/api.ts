@@ -198,6 +198,7 @@ export interface FormMeta {
   confirmationMessage: string | null;
   requireConsent: boolean;
   consentText: string | null;
+  consentConditions?: ConditionalRule[] | null;
   showRegistrationNumber: boolean;
   layoutMode: "stepped" | "single";
   status: FormStatus;

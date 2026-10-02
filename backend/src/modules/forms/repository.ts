@@ -56,6 +56,7 @@ interface FormMetaFields {
   confirmationMessage?: string | null;
   requireConsent?: boolean;
   consentText?: string | null;
+  consentConditions?: unknown;
   showRegistrationNumber?: boolean;
   layoutMode?: "stepped" | "single";
 }

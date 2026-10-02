@@ -19,6 +19,7 @@ async function getOrCreateDraft(programId: string): Promise<formsRepo.FormRow> {
     confirmationMessage: published?.confirmationMessage ?? "Thank you for registering!",
     requireConsent: published?.requireConsent ?? false,
     consentText: published?.consentText ?? undefined,
+    consentConditions: published?.consentConditions ?? undefined,
     showRegistrationNumber: published?.showRegistrationNumber ?? true,
     layoutMode: published?.layoutMode ?? "stepped",
   });
@@ -62,6 +63,7 @@ export async function saveDraft(programId: string, input: UpsertFormInput) {
     confirmationMessage: input.confirmationMessage ?? null,
     requireConsent: input.requireConsent,
     consentText: input.consentText ?? null,
+    consentConditions: input.consentConditions ?? null,
     showRegistrationNumber: input.showRegistrationNumber,
     layoutMode: input.layoutMode,
   });
@@ -143,6 +145,7 @@ export async function duplicateFormForProgram(sourceProgramId: string, targetPro
     confirmationMessage: source.confirmationMessage ?? undefined,
     requireConsent: source.requireConsent,
     consentText: source.consentText ?? undefined,
+    consentConditions: source.consentConditions ?? undefined,
     showRegistrationNumber: source.showRegistrationNumber,
     layoutMode: source.layoutMode,
   });

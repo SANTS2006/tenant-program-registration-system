@@ -28,6 +28,8 @@ export const forms = pgTable(
     confirmationMessage: text("confirmation_message"),
     requireConsent: boolean("require_consent").notNull().default(false),
     consentText: text("consent_text"),
+    // The consent is only asked when these rules match the answers (shown just before submitting).
+    consentConditions: jsonb("consent_conditions"),
     showRegistrationNumber: boolean("show_registration_number").notNull().default(true),
     layoutMode: formLayoutModeEnum("layout_mode").notNull().default("stepped"),
     status: formStatusEnum("status").notNull().default("draft"),

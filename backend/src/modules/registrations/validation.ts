@@ -130,7 +130,7 @@ function isEmptyValue(value: unknown): boolean {
   return value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
 }
 
-function evaluateRule(rule: ConditionalRule, responses: Record<string, unknown>): boolean {
+export function evaluateRule(rule: ConditionalRule, responses: Record<string, unknown>): boolean {
   const actual = responses[rule.fieldKey];
   switch (rule.operator) {
     case "equals":

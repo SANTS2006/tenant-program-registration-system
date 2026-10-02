@@ -1,4 +1,5 @@
 import { ConditionalLogicEditor } from "./FieldAdvancedSettings";
+import type { ConditionalRule } from "@/types/api";
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -54,6 +55,7 @@ export function FormBuilderPage() {
   const [confirmationMessage, setConfirmationMessage] = React.useState("");
   const [requireConsent, setRequireConsent] = React.useState(false);
   const [consentText, setConsentText] = React.useState("");
+  const [consentConditions, setConsentConditions] = React.useState<ConditionalRule[] | undefined>(undefined);
   const [showRegistrationNumber, setShowRegistrationNumber] = React.useState(true);
   const [layoutMode, setLayoutMode] = React.useState<FormLayoutMode>("stepped");
   const [sections, setSections] = React.useState<EditableSection[]>([]);
@@ -73,6 +75,7 @@ export function FormBuilderPage() {
     setConfirmationMessage(data.form.confirmationMessage ?? "");
     setRequireConsent(data.form.requireConsent);
     setConsentText(data.form.consentText ?? "");
+    setConsentConditions(data.form.consentConditions ?? undefined);
     setShowRegistrationNumber(data.form.showRegistrationNumber ?? true);
     setLayoutMode(data.form.layoutMode);
     setSections(
@@ -168,6 +171,7 @@ export function FormBuilderPage() {
     confirmationMessage: confirmationMessage || undefined,
     requireConsent,
     consentText: consentText || undefined,
+    consentConditions: requireConsent ? consentConditions : undefined,
     showRegistrationNumber,
     layoutMode,
     sections: sections.map((s) => ({
@@ -380,6 +384,7 @@ export function FormBuilderPage() {
               fields={previewFields}
               layoutMode={layoutMode}
               requireConsent={requireConsent}
+              consentConditions={consentConditions}
               consentText={consentText}
               onSubmit={async () => undefined}
             />
@@ -426,7 +431,7 @@ export function FormBuilderPage() {
             <div className="flex items-center justify-between gap-3">
               <Label htmlFor="requireConsent" className="flex min-w-0 items-center gap-2 font-medium">
                 <ShieldCheck className="h-4 w-4 text-primary" />
-                Require consent before starting
+                Require consent before submitting
               </Label>
               <Switch id="requireConsent" className="shrink-0" checked={requireConsent} onCheckedChange={setRequireConsent} />
             </div>
@@ -438,6 +443,15 @@ export function FormBuilderPage() {
                   onChange={(e) => setConsentText(e.target.value)}
                   rows={3}
                   placeholder="e.g. By registering, you agree to share this information with the program organizers..."
+                />
+                <p className="text-xs text-muted-foreground">Shown with a checkbox just before the submit button, after the questions.</p>
+                <ConditionalLogicEditor
+                  rules={consentConditions}
+                  ownerKey=""
+                  otherFields={fields}
+                  onChange={setConsentConditions}
+                  heading="Ask for consent only when… (optional)"
+                  hint="Leave empty to always ask. Otherwise consent is only asked when another answer matches, or when another question is filled in or left empty."
                 />
               </div>
             )}
@@ -508,6 +522,7 @@ export function FormBuilderPage() {
                 fields={previewFields}
                 layoutMode={layoutMode}
                 requireConsent={requireConsent}
+              consentConditions={consentConditions}
                 consentText={consentText}
                 onSubmit={async () => undefined}
               />

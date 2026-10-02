@@ -122,6 +122,7 @@ export const upsertFormSchema = z.object({
   confirmationMessage: z.string().max(2000).optional(),
   requireConsent: z.boolean().default(false),
   consentText: z.string().max(3000).optional(),
+  consentConditions: z.array(conditionalRuleSchema).max(10).optional(),
   showRegistrationNumber: z.boolean().default(true),
   layoutMode: z.enum(formLayoutModeValues).default("stepped"),
   sections: z.array(sectionInputSchema),
