@@ -38,6 +38,10 @@ export interface RegistrationDetail {
   files: RegistrationFile[];
   history: RegistrationHistoryEntry[];
   form: FormWithContent;
+  /** The program's questions as they are now, for editing; null until a form is published. */
+  currentForm: { form: FormWithContent["form"]; sections: FormWithContent["sections"]; fields: FormWithContent["fields"] } | null;
+  /** Required questions this registration has not answered yet. */
+  missingRequired: string[];
 }
 
 export function getRegistration(programId: string, registrationId: string) {
@@ -107,6 +111,8 @@ export interface ImportResult {
   willUpdate: number;
   skipped: ImportRowIssue[];
   errors: ImportRowIssue[];
+  /** Rows saved even though some required questions are still empty. */
+  incomplete: ImportRowIssue[];
 }
 
 export function previewRegistrationImport(programId: string, filename: string, content: string) {
@@ -127,4 +133,8 @@ export function importRegistrations(
     method: "POST",
     body: { filename, content, mapping, dryRun, existing },
   });
+}
+
+export function editRegistrationAnswers(programId: string, registrationId: string, responses: Record<string, unknown>) {
+  return apiFetch<Registration>(`/programs/${programId}/registrations/${registrationId}`, { method: "PATCH", body: { responses } });
 }

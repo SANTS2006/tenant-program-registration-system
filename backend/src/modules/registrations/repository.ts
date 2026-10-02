@@ -140,6 +140,9 @@ export async function updateRegistrationFromImport(
     responses: Record<string, unknown>;
     enforceUniqueEmail: boolean;
     note: string;
+    /** The form the answers now follow; the registration is moved to it. */
+    formId?: string;
+    changedBy?: string;
   },
 ): Promise<RegistrationRow> {
   return db.transaction(async (tx) => {
@@ -150,6 +153,7 @@ export async function updateRegistrationFromImport(
         applicantEmail: values.applicantEmail,
         applicantPhone: values.applicantPhone,
         responses: values.responses,
+        ...(values.formId ? { formId: values.formId } : {}),
         uniqueEmailGuard: Boolean(values.enforceUniqueEmail && values.applicantEmail),
       })
       .where(eq(registrations.id, registration.id))
@@ -158,6 +162,7 @@ export async function updateRegistrationFromImport(
       registrationId: registration.id,
       fromStatus: registration.status,
       toStatus: registration.status,
+      changedBy: values.changedBy,
       note: values.note,
     });
     return row!;

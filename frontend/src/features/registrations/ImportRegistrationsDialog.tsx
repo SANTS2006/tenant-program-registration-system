@@ -157,6 +157,7 @@ export function ImportRegistrationsDialog({ programId, termLabel }: { programId:
             </div>
             <Issues title="Rows with problems (not imported)" items={result.errors} tone="error" />
             <Issues title="Rows skipped" items={result.skipped} tone="warn" />
+            <Issues title="Imported with required answers missing (open the registration and choose Edit answers)" items={result.incomplete} tone="warn" />
             <DialogFooter>
               <Button onClick={() => setOpen(false)}>Done</Button>
             </DialogFooter>
@@ -262,6 +263,7 @@ export function ImportRegistrationsDialog({ programId, termLabel }: { programId:
                 </p>
                 <Issues title="Rows with problems (will not be imported)" items={check.errors} tone="error" />
                 <Issues title="Rows that will be skipped" items={check.skipped} tone="warn" />
+                <Issues title="Will be imported with required answers still missing (fill them in by editing the registration)" items={check.incomplete} tone="warn" />
               </div>
             )}
 

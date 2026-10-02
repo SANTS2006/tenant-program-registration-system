@@ -382,11 +382,19 @@ export function dropHiddenFileUploads(
   return files.filter((f) => !hidden.has(f.fieldKey));
 }
 
+/** Messages that only say an answer is missing (as opposed to wrong). */
+const MISSING_ANSWER = /( is required$|requires a file upload$|^Please specify your answer|: please provide )/;
+
+/**
+ * Checks the answers against the form and returns them cleaned up. With `ignoreRequired`, an answer that
+ * is simply missing is not an error (used for imported and edited registrations); wrong answers still are.
+ */
 export function validateAndNormalizeResponses(
   fields: FieldRow[],
   rawResponses: Record<string, unknown>,
   files: SubmittedFile[],
   sections: SectionLike[] = [],
+  options: { ignoreRequired?: boolean } = {},
 ): Record<string, unknown> {
   const errors: string[] = [];
   const hiddenSections = hiddenSectionIds(sections, rawResponses);
@@ -448,8 +456,9 @@ export function validateAndNormalizeResponses(
     }
   }
 
-  if (errors.length > 0) {
-    throw AppError.validation("Registration form has validation errors", errors);
+  const blocking = options.ignoreRequired ? errors.filter((e) => !MISSING_ANSWER.test(e)) : errors;
+  if (blocking.length > 0) {
+    throw AppError.validation("Registration form has validation errors", blocking);
   }
 
   return cleaned;
@@ -487,4 +496,20 @@ export function extractApplicantContact(
   // Forms often split names (first / middle / last); combine them into one display name.
   const combined = [parts.first, parts.middle, parts.last].filter(Boolean).join(" ");
   return { name: fullName ?? (combined || anyName), email, phone };
+}
+
+/** The required questions a registration has not answered yet, as readable messages (empty when it is complete). */
+export function missingRequiredAnswers(
+  fields: FieldRow[],
+  responses: Record<string, unknown>,
+  files: SubmittedFile[],
+  sections: SectionLike[] = [],
+): string[] {
+  try {
+    validateAndNormalizeResponses(fields, responses, files, sections);
+    return [];
+  } catch (err) {
+    const details = err instanceof AppError && Array.isArray(err.details) ? (err.details as string[]) : [];
+    return details.filter((e) => MISSING_ANSWER.test(e));
+  }
 }

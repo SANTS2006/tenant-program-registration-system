@@ -39,6 +39,10 @@ interface DynamicFormProps {
   errors?: string[];
   submitLabel?: string;
   layoutMode?: "stepped" | "single";
+  /** Starts the form with these answers filled in (editing an existing registration). */
+  initialValues?: Record<string, unknown>;
+  /** Missing required answers do not stop saving; wrong ones still do. */
+  lenient?: boolean;
   requireConsent?: boolean;
   /** Consent is only asked when these rules match the answers. */
   consentConditions?: ConditionalRule[] | null;
@@ -355,6 +359,8 @@ export function DynamicForm({
   errors,
   submitLabel,
   layoutMode = "stepped",
+  initialValues,
+  lenient = false,
   requireConsent = false,
   consentConditions,
   consentText,
@@ -371,7 +377,11 @@ export function DynamicForm({
   const draft = React.useMemo(() => loadDraft(storageKey), [storageKey]);
   const [stepIndex, setStepIndex] = React.useState(() => Math.max(0, Math.min(draft?.step ?? 0, Math.max(0, sections.length - 1))));
   const [responses, setResponses] = React.useState<Record<string, unknown>>(() =>
-    draft ? pruneDependentAnswers(fields, draft.responses) : applyConditionalDefaults(fields, initialResponses(fields), new Set()),
+    draft
+      ? pruneDependentAnswers(fields, draft.responses)
+      : initialValues
+        ? pruneDependentAnswers(fields, initialValues)
+        : applyConditionalDefaults(fields, initialResponses(fields), new Set()),
   );
   const [uploadedFiles, setUploadedFiles] = React.useState<Record<string, UploadedFileInfo>>(() => draft?.files ?? {});
   const [uploadingKey, setUploadingKey] = React.useState<string | null>(null);
@@ -438,11 +448,12 @@ export function DynamicForm({
   };
 
   // Questions the person has typed in themselves no longer follow the question they copy from.
+  const seed = draft?.responses ?? initialValues;
   const touched = React.useRef<Set<string>>(
     new Set(
       fields
-        .filter((f) => f.config.autoFillFrom && draft && !isEmpty(draft.responses[f.fieldKey]))
-        .filter((f) => JSON.stringify(autoFillValue(f, draft!.responses[f.config.autoFillFrom!])) !== JSON.stringify(draft!.responses[f.fieldKey]))
+        .filter((f) => f.config.autoFillFrom && seed && !isEmpty(seed[f.fieldKey]))
+        .filter((f) => JSON.stringify(autoFillValue(f, seed![f.config.autoFillFrom!])) !== JSON.stringify(seed![f.fieldKey]))
         .map((f) => f.fieldKey),
     ),
   );
@@ -533,7 +544,8 @@ export function DynamicForm({
         missing.push(`Please specify your answer for ${field.label}`);
       }
     }
-    return missing;
+    // Editing an existing registration: answers still missing are allowed, wrong ones are not.
+    return lenient ? missing.filter((m) => !/( is required$|: please provide |^Please specify your answer)/.test(m)) : missing;
   };
 
   const validateStep = (): boolean => {

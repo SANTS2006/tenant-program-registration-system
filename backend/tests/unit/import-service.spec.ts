@@ -64,6 +64,15 @@ describe("importing registrations from a document", () => {
     expect(r.errors[0]!.row).toBe(2);
   });
 
+  it("imports a row even when required answers are empty, and lists it as incomplete", async () => {
+    const file = csv("Name,Email,City\nMusa B,musa@example.com,\n,kadi@example.com,Makeni\n");
+    const r = await runImport("p1", "people.csv", file, mapping, false, "skip");
+    expect(r.imported).toBe(2);
+    expect(r.errors).toHaveLength(0);
+    expect(r.incomplete.map((i) => i.row)).toEqual([2, 3]);
+    expect(r.incomplete[0]!.messages.join(" ")).toMatch(/City/);
+  });
+
   it("updates the registration an email matches, changing only what the file supplies", async () => {
     const file = csv("Name,Email,City\n,ama@example.com,Kono\n");
     const r = await runImport("p1", "people.csv", file, mapping, false, "update");

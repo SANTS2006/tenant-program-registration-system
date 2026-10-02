@@ -147,3 +147,21 @@ export async function importRegistrationsHandler(request: FastifyRequest, reply:
   }
   return sendSuccess(reply, result, dryRun ? "Check finished" : `${result.imported} imported, ${result.updated} updated`);
 }
+
+const editAnswersSchema = z.object({ responses: z.record(z.unknown()) });
+
+export async function editRegistrationAnswersHandler(request: FastifyRequest, reply: FastifyReply) {
+  if (!request.user) throw AppError.unauthorized();
+  const { programId, registrationId } = request.params as { programId: string; registrationId: string };
+  const { responses } = editAnswersSchema.parse(request.body);
+  const registration = await registrationsService.editRegistrationAnswers(programId, registrationId, { id: request.user.id, name: request.user.name ?? request.user.email }, responses);
+  await recordAudit({
+    actorUserId: request.user.id,
+    action: "registration.edit",
+    entityType: "registration",
+    entityId: registrationId,
+    metadata: { programId },
+    ipAddress: request.ip,
+  });
+  return sendSuccess(reply, registration, "Registration updated");
+}

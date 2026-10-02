@@ -5,7 +5,7 @@ import * as programsRepo from "../programs/repository.js";
 import * as registrationsRepo from "./repository.js";
 import { convertCell, importableFields, parseImportFile, suggestMapping, MAX_IMPORT_ROWS, REGISTRATION_NUMBER_KEY } from "./importParser.js";
 import { createRegistrationWithNumber } from "./service.js";
-import { extractApplicantContact, validateAndNormalizeResponses } from "./validation.js";
+import { extractApplicantContact, missingRequiredAnswers, validateAndNormalizeResponses } from "./validation.js";
 
 const REPORT_LIMIT = 200;
 const FILE_TYPES = new Set(["image_upload", "pdf_upload", "document_upload"]);
@@ -58,6 +58,8 @@ export interface ImportResult {
   imported: number;
   /** Existing registrations updated. */
   updated: number;
+  /** Rows imported even though some required questions are not answered yet; they can be completed by editing the registration. */
+  incomplete: ImportRowIssue[];
   /** What the import will do (or just did): new registrations and updates. */
   willCreate: number;
   willUpdate: number;
@@ -108,9 +110,6 @@ export async function runImport(
 
   // A document can't carry uploaded files, so an upload question never blocks a row.
   const checkFields = published.fields.map((f) => (FILE_TYPES.has(f.type) ? { ...f, required: false } : f));
-  const mappedKeys = new Set(columns.map((c) => c.field.fieldKey));
-  // When updating, only the questions the document supplies are checked as required; the rest keep what they had.
-  const updateFields = checkFields.map((f) => (mappedKeys.has(f.fieldKey) ? f : { ...f, required: false }));
   const knownEmails = program.oneRegistrationPerEmail ? await registrationsRepo.listRegisteredEmails(program.id) : new Set<string>();
 
   // Convert every row once, and look up the registrations they might update in one go.
@@ -150,11 +149,17 @@ export async function runImport(
     willUpdate: 0,
     skipped: [],
     errors: [],
+    incomplete: [],
   };
   const note = `Imported from ${filename.slice(0, 120)}`;
   const updateNote = `Updated from ${filename.slice(0, 120)}`;
   const addIssue = (list: ImportRowIssue[], row: number, messages: string[]) => {
     if (list.length < REPORT_LIMIT) list.push({ row, messages });
+  };
+  // Rows are accepted with required answers missing; list them so the admin can complete them afterwards.
+  const noteIncomplete = (row: number, answers: Record<string, unknown>) => {
+    const missing = missingRequiredAnswers(checkFields, answers, [], published.sections);
+    if (missing.length > 0) addIssue(result.incomplete, row, missing);
   };
   const detailsOf = (err: unknown) =>
     err instanceof AppError && Array.isArray(err.details) ? (err.details as string[]) : [err instanceof Error ? err.message : "Invalid row"];
@@ -171,7 +176,7 @@ export async function runImport(
       const merged = { ...(match.responses as Record<string, unknown>), ...responses };
       let cleaned: Record<string, unknown>;
       try {
-        cleaned = validateAndNormalizeResponses(updateFields, merged, [], published.sections);
+        cleaned = validateAndNormalizeResponses(checkFields, merged, [], published.sections, { ignoreRequired: true });
       } catch (err) {
         addIssue(result.errors, rowNumber, detailsOf(err));
         continue;
@@ -186,6 +191,7 @@ export async function runImport(
       }
       result.valid++;
       result.willUpdate++;
+      noteIncomplete(rowNumber, finalResponses);
       if (dryRun) continue;
       try {
         const saved = await registrationsRepo.updateRegistrationFromImport(match, {
@@ -195,6 +201,7 @@ export async function runImport(
           responses: finalResponses,
           enforceUniqueEmail: program.oneRegistrationPerEmail,
           note: updateNote,
+          formId: published.form.id,
         });
         result.updated++;
         if (program.oneRegistrationPerEmail && newEmail) knownEmails.add(newEmail);
@@ -216,7 +223,7 @@ export async function runImport(
 
     let cleaned: Record<string, unknown>;
     try {
-      cleaned = validateAndNormalizeResponses(checkFields, responses, [], published.sections);
+      cleaned = validateAndNormalizeResponses(checkFields, responses, [], published.sections, { ignoreRequired: true });
     } catch (err) {
       addIssue(result.errors, rowNumber, detailsOf(err));
       continue;
@@ -231,6 +238,7 @@ export async function runImport(
 
     result.valid++;
     result.willCreate++;
+    noteIncomplete(rowNumber, cleaned);
     if (dryRun) {
       if (program.oneRegistrationPerEmail && emailKey) knownEmails.add(emailKey);
       continue;

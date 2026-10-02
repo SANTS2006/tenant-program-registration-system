@@ -11,7 +11,7 @@ import * as programsRepo from "../programs/repository.js";
 import * as registrationsRepo from "./repository.js";
 import { programStatusChoices, type ListRegistrationsQuery, type SubmitRegistrationInput, type UpdateStatusInput } from "./schemas.js";
 import { counterBucket, formatRegistrationNumber, resolveNumberingConfig } from "./numbering.js";
-import { dropHiddenFileUploads, evaluateRule, extractApplicantContact, validateAndNormalizeResponses } from "./validation.js";
+import { dropHiddenFileUploads, evaluateRule, extractApplicantContact, missingRequiredAnswers, validateAndNormalizeResponses } from "./validation.js";
 
 function isRegistrationWindowOpen(program: programsRepo.ProgramRow): boolean {
   const now = new Date();
@@ -188,7 +188,86 @@ export async function getRegistrationDetail(programId: string, registrationId: s
     formsService.getFormVersionWithContent(registration.formId),
   ]);
 
-  return { registration, files, history, form: formVersion };
+  // The questions as they are now, for editing, and any required answers still missing against them.
+  const current = await formsService.getPublishedFormWithContent(registration.programId);
+  const missingRequired = current
+    ? missingRequiredAnswers(
+        current.fields,
+        registration.responses as Record<string, unknown>,
+        files.map((f) => ({ fieldKey: f.fieldKey, url: f.secureUrl, publicId: f.cloudinaryPublicId, filename: f.originalFilename, mimeType: f.mimeType, sizeBytes: f.sizeBytes })),
+        current.sections,
+      )
+    : [];
+
+  return {
+    registration,
+    files,
+    history,
+    form: formVersion,
+    currentForm: current ? { form: current.form, sections: current.sections, fields: current.fields } : null,
+    missingRequired,
+  };
+}
+
+const FILE_ANSWER_TYPES = new Set(["image_upload", "pdf_upload", "document_upload"]);
+
+/**
+ * An admin edits a registration's answers to follow the program's current questions. Missing required
+ * answers are allowed (they can be filled in later) but wrong ones are not; uploaded files are left alone.
+ */
+export async function editRegistrationAnswers(
+  programId: string,
+  registrationId: string,
+  actor: { id: string; name: string },
+  responses: Record<string, unknown>,
+) {
+  const registration = await registrationsRepo.findRegistrationInProgram(programId, registrationId);
+  if (!registration) throw AppError.notFound("Registration not found");
+  const program = await programsRepo.findProgramById(programId);
+  if (!program) throw AppError.notFound("Program not found");
+  const published = await formsService.getPublishedFormWithContent(programId);
+  if (!published) throw AppError.conflict("Publish this program's registration form first.");
+
+  const existing = registration.responses as Record<string, unknown>;
+  const merged = { ...existing, ...responses };
+  const storedFiles = await registrationsRepo.getRegistrationFiles(registration.id);
+  const files = storedFiles.map((f) => ({
+    fieldKey: f.fieldKey,
+    url: f.secureUrl,
+    publicId: f.cloudinaryPublicId,
+    filename: f.originalFilename,
+    mimeType: f.mimeType,
+    sizeBytes: f.sizeBytes,
+  }));
+  const cleaned = validateAndNormalizeResponses(published.fields, merged, files, published.sections, { ignoreRequired: true });
+
+  const finalResponses: Record<string, unknown> = { ...existing, ...cleaned };
+  // Uploaded files are not changed here: keep what was there.
+  for (const field of published.fields) {
+    if (FILE_ANSWER_TYPES.has(field.type)) finalResponses[field.fieldKey] = existing[field.fieldKey] ?? cleaned[field.fieldKey];
+  }
+
+  const contact = extractApplicantContact(published.fields, finalResponses);
+  const email = contact.email?.trim().toLowerCase();
+  if (program.oneRegistrationPerEmail && email && email !== registration.applicantEmail?.trim().toLowerCase()) {
+    if (await registrationsRepo.emailAlreadyRegistered(program.id, email)) throw alreadyRegistered();
+  }
+
+  try {
+    return await registrationsRepo.updateRegistrationFromImport(registration, {
+      applicantName: contact.name,
+      applicantEmail: contact.email,
+      applicantPhone: contact.phone,
+      responses: finalResponses,
+      enforceUniqueEmail: program.oneRegistrationPerEmail,
+      note: `Answers edited by ${actor.name}`,
+      formId: published.form.id,
+      changedBy: actor.id,
+    });
+  } catch (err) {
+    if (isUniqueViolation(err) && violatedConstraint(err) === "registrations_unique_email_guard_idx") throw alreadyRegistered();
+    throw err;
+  }
 }
 
 export async function updateRegistrationStatus(

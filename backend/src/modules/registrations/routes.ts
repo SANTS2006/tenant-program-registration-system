@@ -5,6 +5,7 @@ import {
   downloadRegistrationSummaryHandler,
   exportRegistrationsHandler,
   getProgramStatsHandler,
+  editRegistrationAnswersHandler,
   getRegistrationHandler,
   importRegistrationsHandler,
   previewRegistrationImportHandler,
@@ -54,6 +55,11 @@ export async function registrationRoutes(app: FastifyInstance) {
     "/:programId/registrations/import",
     { preHandler: requireProgramAccess("admin"), ...importRoute },
     importRegistrationsHandler,
+  );
+  app.patch(
+    "/:programId/registrations/:registrationId",
+    { preHandler: requireProgramAccess("admin") },
+    editRegistrationAnswersHandler,
   );
   app.patch(
     "/:programId/registrations/:registrationId/status",

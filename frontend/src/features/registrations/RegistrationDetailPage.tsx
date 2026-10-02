@@ -1,7 +1,9 @@
 import * as React from "react";
+import { DynamicForm } from "../public-registration/DynamicForm";
+import { useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { CreditCard, Download, Eye, FileText, Ticket as TicketIcon } from "lucide-react";
+import { AlertTriangle, CreditCard, Download, Eye, FileText, Pencil, Ticket as TicketIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,7 +15,7 @@ import { RegistrationVerifications } from "../verifications/VerificationsPage";
 import { RegistrantIdCardPanel } from "../idcards/RegistrantIdCardPanel";
 import { isOtherOption, otherTextKey } from "../public-registration/DynamicForm";
 import { downloadRegistrantDocument } from "../designs/documentImage";
-import { downloadRegistrationFile } from "./api";
+import { downloadRegistrationFile, editRegistrationAnswers } from "./api";
 import { useRegistration, useUpdateRegistrationStatus } from "./hooks";
 import type { RegistrationFile, RegistrationStatus } from "@/types/api";
 
@@ -54,6 +56,8 @@ export function RegistrationDetailPage() {
   const [note, setNote] = React.useState("");
   const [downloading, setDownloading] = React.useState<"id-card" | "ticket" | "details" | null>(null);
   const canEdit = program.myRole === "admin";
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = React.useState(false);
 
   if (isLoading || !data) return <p className="text-sm text-muted-foreground">Loading {terms.singular}...</p>;
 
@@ -70,7 +74,18 @@ export function RegistrationDetailPage() {
     }
   };
 
-  const { registration, files, history, form } = data;
+  const { registration, files, history, form, currentForm, missingRequired } = data;
+
+  const saveAnswers = async (responses: Record<string, unknown>) => {
+    try {
+      await editRegistrationAnswers(program.id, registration.id, responses);
+      await queryClient.invalidateQueries({ queryKey: ["registrations", program.id] });
+      toast.success("Registration updated");
+      setEditing(false);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to update the registration");
+    }
+  };
 
   const downloadDetails = async () => {
     setDownloading("details");
@@ -131,10 +146,44 @@ export function RegistrationDetailPage() {
                   {downloading === "ticket" ? "Preparing..." : "Ticket"}
                 </Button>
               )}
+              {canEdit && currentForm && !editing && (
+                <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+                  <Pencil className="h-4 w-4" />
+                  Edit answers
+                </Button>
+              )}
               <RegistrationStatusBadge status={registration.status} label={terms.statusLabel(registration.status)} tone={terms.statusTone?.(registration.status)} />
             </div>
           </CardHeader>
           <CardContent>
+            {missingRequired.length > 0 && !editing && (
+              <div role="status" className="mb-4 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <div>
+                  <p className="font-medium">Some required answers are missing</p>
+                  <p className="text-muted-foreground">{missingRequired.join(" · ")}</p>
+                </div>
+              </div>
+            )}
+            {editing && currentForm ? (
+              <div className="flex flex-col gap-3">
+                <p className="text-sm text-muted-foreground">
+                  The questions below are the program&apos;s current registration questions. Required answers can be filled in later. Uploaded files are not changed here.
+                </p>
+                <DynamicForm
+                  sections={currentForm.sections}
+                  fields={currentForm.fields.filter((f) => !f.type.endsWith("_upload"))}
+                  layoutMode="single"
+                  initialValues={registration.responses as Record<string, unknown>}
+                  lenient
+                  requireReviewConfirmation={false}
+                  submitLabel="Save changes"
+                  onCancel={() => setEditing(false)}
+                  onSubmit={async (responses) => saveAnswers(responses)}
+                />
+              </div>
+            ) : (
+              <>
             {form.sections
               .sort((a, b) => a.orderIndex - b.orderIndex)
               .map((section) => (
@@ -157,6 +206,8 @@ export function RegistrationDetailPage() {
                 </div>
               ) : null;
             })()}
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
