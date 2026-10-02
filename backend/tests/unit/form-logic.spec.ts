@@ -207,3 +207,22 @@ describe("file upload questions with conditions", () => {
     expect(dropHiddenFileUploads(fields, { has_id: true }, [file])).toHaveLength(1);
   });
 });
+
+describe("required only when conditions match", () => {
+  const fields = [
+    field({ fieldKey: "employed", type: "yes_no" }),
+    field({
+      fieldKey: "employer",
+      type: "short_text",
+      required: true,
+      config: { requiredConditions: [{ fieldKey: "employed", operator: "equals", value: "true" }] },
+    }),
+  ];
+  it("is optional while the conditions do not match", () => {
+    expect(check(fields, { employed: false }).ok).toBe(true);
+  });
+  it("is required once they match", () => {
+    expect(check(fields, { employed: true }).ok).toBe(false);
+    expect(check(fields, { employed: true, employer: "Acme" }).ok).toBe(true);
+  });
+});

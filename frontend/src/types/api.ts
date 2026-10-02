@@ -130,6 +130,8 @@ export interface FieldConfig {
   maxSelections?: number;
   /** Choices that ask for more: option (or "Yes"/"No") -> what to ask for. */
   followUps?: Record<string, FollowUp>;
+  /** A required question is only required when these rules match. */
+  requiredConditions?: ConditionalRule[];
   /** The "Other" text box is only asked when these rules match. */
   otherConditions?: ConditionalRule[];
 }

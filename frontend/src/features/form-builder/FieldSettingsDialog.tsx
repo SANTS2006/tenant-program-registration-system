@@ -99,6 +99,17 @@ export function FieldSettingsDialog({
             </Label>
           </div>
 
+          {draft.required && (
+            <ConditionalLogicEditor
+              rules={draft.config.requiredConditions}
+              ownerKey={draft.fieldKey}
+              otherFields={otherFields}
+              onChange={(requiredConditions) => updateConfig({ requiredConditions })}
+              heading="Make it required only when… (optional)"
+              hint="Leave this empty to always require it. Otherwise it is only required when another answer matches, or when another question is filled in or left empty."
+            />
+          )}
+
           {(draft.type === "short_text" || draft.type === "long_text" || draft.type === "address") && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div className="flex flex-col gap-1.5">

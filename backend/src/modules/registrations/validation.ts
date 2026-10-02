@@ -150,6 +150,13 @@ function evaluateRule(rule: ConditionalRule, responses: Record<string, unknown>)
   }
 }
 
+/** Required, unless the admin made it required only when certain other answers match. */
+function isRequired(field: FieldRow, responses: Record<string, unknown>): boolean {
+  if (!field.required) return false;
+  const rules = ((field.config as Record<string, unknown>)?.requiredConditions ?? []) as ConditionalRule[];
+  return rules.every((rule) => evaluateRule(rule, responses));
+}
+
 function isFieldVisible(field: FieldRow, responses: Record<string, unknown>): boolean {
   const rules = (field.conditionalLogic as ConditionalRule[] | null) ?? [];
   if (rules.length === 0) return true;
@@ -204,7 +211,7 @@ function validateFieldValue(
   const notApplicable = Boolean(config.optionsDependOn) && (allowedOptions(field, responses)?.length ?? 0) === 0;
 
   if (isEmptyValue(value)) {
-    if (field.required && !notApplicable) errors.push(`${label} is required`);
+    if (isRequired(field, responses) && !notApplicable) errors.push(`${label} is required`);
     return null;
   }
 
@@ -355,7 +362,7 @@ export function validateAndNormalizeResponses(
 
     if (FILE_FIELD_TYPES.has(field.type)) {
       const uploaded = filesByField.get(field.fieldKey) ?? [];
-      if (field.required && uploaded.length === 0) {
+      if (isRequired(field, rawResponses) && uploaded.length === 0) {
         errors.push(`${field.label} requires a file upload`);
       }
       cleaned[field.fieldKey] = uploaded.map((f) => ({ url: f.url, filename: f.filename }));

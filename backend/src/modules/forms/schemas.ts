@@ -61,6 +61,8 @@ export const fieldConfigSchema = z
     autoFillFrom: z.string().min(1).max(100).optional(),
     // Multiple choice: the most options a person may tick.
     maxSelections: z.number().int().min(1).max(100).optional(),
+    // A required question is only required when these rules match.
+    requiredConditions: z.array(conditionalRuleSchema).max(10).optional(),
     // The "Other" text box is only asked when these rules match.
     otherConditions: z.array(conditionalRuleSchema).max(10).optional(),
     // Choices that ask for more: option (or "Yes"/"No") -> what to ask for.

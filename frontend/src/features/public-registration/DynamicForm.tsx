@@ -125,6 +125,11 @@ export function optionFollowKey(fieldKey: string, option: string) {
   return `${fieldKey}__fu__${option}`;
 }
 
+/** Required, unless the admin made it required only when certain other answers match. */
+function isRequired(field: FormField, responses: Record<string, unknown>): boolean {
+  return field.required && (field.config.requiredConditions ?? []).every((rule) => evaluateRule(rule, responses));
+}
+
 /** The "Other" text box only shows when the admin's rules for it match the answers so far. */
 function otherApplies(field: FormField, responses: Record<string, unknown>): boolean {
   return (field.config.otherConditions ?? []).every((rule) => evaluateRule(rule, responses));
@@ -407,7 +412,7 @@ export function DynamicForm({
     const missing: string[] = [];
     for (const field of fieldsToCheck) {
       if (!isVisible(field, responses)) continue;
-      if (!field.required) continue;
+      if (!isRequired(field, responses)) continue;
       // Cascading field with no options for the parent's answer doesn't apply.
       if (field.config.optionsDependOn && optionsFor(field, responses).length === 0) continue;
       const isFile = field.type.endsWith("_upload");
@@ -524,7 +529,7 @@ export function DynamicForm({
       <div key={field.fieldKey} className="flex flex-col gap-1.5">
         <Label htmlFor={field.fieldKey}>
           {field.label}
-          {field.required && <span className="text-destructive"> *</span>}
+          {isRequired(field, responses) && <span className="text-destructive"> *</span>}
         </Label>
         {field.description && <p className="text-xs text-muted-foreground">{field.description}</p>}
 
@@ -625,7 +630,7 @@ export function DynamicForm({
     const common = {
       id: field.fieldKey,
       placeholder: field.placeholder ?? undefined,
-      required: field.required,
+      required: isRequired(field, responses),
     };
     if (field.config.optionsDependOn && optionsFor(field, responses).length === 0) {
       return renderAwaitingParent(field);
