@@ -107,7 +107,9 @@ export async function parseImportFile(filename: string, buffer: Buffer): Promise
       raw = await parseSheet(workbook.getWorksheet("Import") ?? workbook.worksheets.find((s) => s.rowCount > 1) ?? workbook.worksheets[0]);
     } else if (name.endsWith(".csv")) {
       const workbook = new ExcelJS.Workbook();
-      const sheet = await workbook.csv.read(Readable.from(buffer));
+      // Excel writes a byte-order mark at the start of a CSV; it is not part of the first column name.
+      const text = buffer.length >= 3 && buffer[0] === 0xef && buffer[1] === 0xbb && buffer[2] === 0xbf ? buffer.subarray(3) : buffer;
+      const sheet = await workbook.csv.read(Readable.from(text));
       raw = await parseSheet(sheet);
     } else if (name.endsWith(".docx")) {
       raw = await parseDocx(buffer);

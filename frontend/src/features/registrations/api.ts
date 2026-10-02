@@ -105,6 +105,7 @@ export interface ImportRowPreview {
   row: number;
   action: "create" | "update" | "error" | "skipped";
   matches?: string;
+  cells: string[];
   values: Record<string, string>;
   messages: string[];
   incomplete: string[];

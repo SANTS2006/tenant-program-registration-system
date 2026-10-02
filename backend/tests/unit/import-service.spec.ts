@@ -125,9 +125,18 @@ describe("importing registrations from a document", () => {
     expect(byRow[4]!.action).toBe("update");
     expect(byRow[4]!.matches).toBe("REG-001");
     expect(byRow[4]!.values.city).toBe("Kono");
+    // The row as it was in the document, so it can be exported, fixed and imported again.
+    expect(byRow[3]!.cells).toEqual(["Bad", "not-an-email", "Bo"]);
     // A real import does not carry the preview.
     const real = await runImport("p1", "people.csv", file, mapping, false, "update");
     expect(real.rows).toHaveLength(0);
+  });
+
+  it("a file of rows to fix, with the notes columns added, imports again", async () => {
+    const fixed = csv("﻿Name,Email,City,Original row,Import notes\nBad,bad@example.com,Bo,3,Email must be valid\n");
+    const r = await runImport("p1", "fix.csv", fixed, mapping, false, "skip");
+    expect(r.imported).toBe(1);
+    expect(r.errors).toHaveLength(0);
   });
 
   it("will not update without a way to find the registration", async () => {

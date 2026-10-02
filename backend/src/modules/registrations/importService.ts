@@ -64,6 +64,8 @@ export interface ImportRowPreview {
   action: "create" | "update" | "error" | "skipped";
   /** The number of the registration it would update. */
   matches?: string;
+  /** The row as it was in the document, one entry per column. */
+  cells: string[];
   /** The answers the row carries, by question key, as they will be saved. */
   values: Record<string, string>;
   /** Why it has a problem or is skipped. */
@@ -183,13 +185,14 @@ export async function runImport(
   const note = `Imported from ${filename.slice(0, 120)}`;
   const updateNote = `Updated from ${filename.slice(0, 120)}`;
   // The row being handled, for the preview of a check.
-  let current: { responses: Record<string, unknown>; matches?: string } = { responses: {} };
+  let current: { responses: Record<string, unknown>; matches?: string; cells: string[] } = { responses: {}, cells: [] };
   const showRow = (row: number, action: ImportRowPreview["action"], messages: string[], incomplete: string[] = []) => {
     if (!dryRun) return;
     result.rows.push({
       row,
       action,
       matches: current.matches,
+      cells: current.cells,
       values: Object.fromEntries(Object.entries(current.responses).map(([key, value]) => [key, showValue(value)])),
       messages,
       incomplete,
@@ -212,11 +215,11 @@ export async function runImport(
   for (let i = 0; i < parsedRows.length; i++) {
     const rowNumber = i + 2;
     const { responses, number, email } = parsedRows[i]!;
-    current = { responses };
+    current = { responses, cells: table.rows[i]! };
 
     // A row finds its registration by number first, then by email.
     const match = existing === "skip" ? undefined : ((number && byNumber.get(number.toLowerCase())) || (email ? byEmail.get(email) : undefined));
-    current = { responses, matches: match?.registrationNumber };
+    current = { responses, matches: match?.registrationNumber, cells: table.rows[i]! };
 
     if (match) {
       // Only what the document supplies is changed; empty cells and other questions keep their answers.

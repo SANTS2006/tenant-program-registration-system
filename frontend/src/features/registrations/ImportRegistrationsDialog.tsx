@@ -56,13 +56,48 @@ const ACTION_TONE: Record<ImportRowPreview["action"], string> = {
 };
 
 /** Every row of the document as the import would handle it, before anything is saved. */
-function RowPreviewTable({ rows, columns }: { rows: ImportRowPreview[]; columns: { key: string; label: string }[] }) {
+const csvCell = (value: string) => (/[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value);
+
+/** Saves the rows that need attention as a CSV in the document's own columns, with the reasons added, ready to fix and import again. */
+function downloadProblemRows(rows: ImportRowPreview[], headers: string[], baseName: string) {
+  const lines = [[...headers, "Original row", "Import notes"].map(csvCell).join(",")];
+  for (const r of rows) {
+    const notes = [
+      ...r.messages,
+      ...(r.incomplete.length > 0 ? [`Missing: ${r.incomplete.map((m) => m.replace(/ is required$/, "")).join(", ")}`] : []),
+    ].join("; ");
+    lines.push([...headers.map((_, i) => r.cells[i] ?? ""), String(r.row), notes].map(csvCell).join(","));
+  }
+  const blob = new Blob([`\uFEFF${lines.join("\r\n")}\r\n`], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${baseName.replace(/\.[^.]+$/, "")} - rows to fix.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function RowPreviewTable({
+  rows,
+  columns,
+  headers,
+  fileName,
+}: {
+  rows: ImportRowPreview[];
+  columns: { key: string; label: string }[];
+  headers: string[];
+  fileName: string;
+}) {
   const [filter, setFilter] = React.useState<"all" | "ok" | "problems">("all");
   const sorted = [...rows].sort((a, b) => a.row - b.row);
   const shown = sorted.filter((r) => (filter === "all" ? true : filter === "ok" ? r.action === "create" || r.action === "update" : r.action === "error" || r.action === "skipped" || r.incomplete.length > 0));
   const counts = { ok: rows.filter((r) => r.action === "create" || r.action === "update").length, problems: rows.filter((r) => r.action === "error" || r.action === "skipped" || r.incomplete.length > 0).length };
+  const needAttention = sorted.filter((r) => r.action === "error" || r.action === "skipped" || r.incomplete.length > 0);
   return (
     <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2">
       <div role="group" aria-label="Which rows to show" className="inline-flex w-fit rounded-lg border border-border/70 p-0.5 text-xs">
         {(
           [
@@ -81,6 +116,18 @@ function RowPreviewTable({ rows, columns }: { rows: ImportRowPreview[]; columns:
             {label}
           </button>
         ))}
+      </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="ml-auto"
+          disabled={needAttention.length === 0}
+          onClick={() => downloadProblemRows(needAttention, headers, fileName)}
+        >
+          <Download className="h-4 w-4" />
+          Download rows to fix ({needAttention.length})
+        </Button>
       </div>
       <div className="max-h-[45vh] overflow-auto rounded-lg border border-border/60">
         <table className="w-full whitespace-nowrap text-left text-xs">
@@ -377,13 +424,15 @@ export function ImportRegistrationsDialog({ programId, termLabel }: { programId:
                   )}.
                 </p>
                 <RowPreviewTable
+                  headers={preview.headers}
+                  fileName={file?.name ?? "import"}
                   rows={check.rows}
                   columns={Object.entries(mapping)
                     .filter(([, key]) => key !== "__registration_number")
                     .sort(([a], [b]) => Number(a) - Number(b))
                     .map(([, key]) => ({ key, label: preview.fields.find((f) => f.fieldKey === key)?.label ?? key }))}
                 />
-                <p className="text-xs text-muted-foreground">Rows with a problem or skipped are not saved. Rows missing required answers are saved, and can be completed later by editing the registration.</p>
+                <p className="text-xs text-muted-foreground">Rows with a problem or skipped are not saved. Rows missing required answers are saved, and can be completed later by editing the registration. Use “Download rows to fix” to get the rows that need attention, with the reasons, as a file you can correct and import again.</p>
               </div>
             )}
 
