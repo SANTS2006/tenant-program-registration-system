@@ -16,7 +16,7 @@ import {
 } from "recharts";
 import { useTheme } from "@/app/ThemeContext";
 import { categoricalPalette, SEQUENTIAL_BLUE, STATUS_COLORS } from "./palette";
-import type { TrendPoint, DemographicBreakdown } from "./api";
+import type { CountEntry, TrendPoint, DemographicBreakdown } from "./api";
 
 function useChartInk() {
   const { theme } = useTheme();
@@ -125,31 +125,135 @@ export function StatusPieChart({ byStatus, height = 260, labelFor }: { byStatus:
   );
 }
 
-export function DemographicBarChart({ breakdown, height = 240 }: { breakdown: DemographicBreakdown; height?: number }) {
+export function DemographicBarChart({ breakdown }: { breakdown: DemographicBreakdown; height?: number }) {
+  const total = breakdown.data.reduce((sum, d) => sum + d.count, 0);
+  return <DistributionChart data={breakdown.data} base={total} label={breakdown.label} kinds={["bars", "pie"]} />;
+}
+
+export type ChartKind = "bars" | "pie" | "histogram";
+
+const KIND_LABELS: Record<ChartKind, string> = { bars: "Bars", pie: "Pie", histogram: "Histogram" };
+
+const pct = (part: number, whole: number) => (whole === 0 ? 0 : Math.round((part / whole) * 100));
+const clip = (text: string, max = 22) => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
+
+function CountTooltip({ active, payload, base, noun }: { active?: boolean; payload?: { payload: CountEntry }[]; base: number; noun: string }) {
+  const entry = payload?.[0]?.payload;
+  if (!active || !entry) return null;
+  return (
+    <div className="max-w-[240px] rounded-lg border border-border/70 bg-card px-3 py-2 text-xs shadow-lg">
+      <p className="mb-0.5 font-medium text-foreground">{entry.value}</p>
+      <p className="text-muted-foreground">
+        <span className="font-medium text-foreground">{entry.count}</span> {noun}
+        {entry.count === 1 ? "" : "s"} · {pct(entry.count, base)}%
+      </p>
+    </div>
+  );
+}
+
+/** Small switch between the ways of drawing the same counts. */
+function KindSwitch({ kinds, value, onChange }: { kinds: ChartKind[]; value: ChartKind; onChange: (kind: ChartKind) => void }) {
+  if (kinds.length < 2) return null;
+  return (
+    <div role="group" aria-label="Chart type" className="inline-flex w-fit rounded-lg border border-border/70 p-0.5 text-xs">
+      {kinds.map((kind) => (
+        <button
+          key={kind}
+          type="button"
+          aria-pressed={value === kind}
+          onClick={() => onChange(kind)}
+          className={`rounded-md px-2.5 py-1 font-medium transition-colors ${
+            value === kind ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {KIND_LABELS[kind]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * The same list of counts as horizontal bars, a pie, or a histogram (touching columns, for values
+ * that run along a scale such as numbers, dates or ages). The person can switch between them.
+ */
+export function DistributionChart({
+  data,
+  base,
+  label,
+  kinds = ["bars", "pie"],
+  defaultKind,
+  noun = "registrant",
+}: {
+  data: CountEntry[];
+  /** What the percentages are out of. */
+  base: number;
+  label: string;
+  kinds?: ChartKind[];
+  defaultKind?: ChartKind;
+  noun?: string;
+}) {
   const { theme, ink, grid } = useChartInk();
   const palette = categoricalPalette(theme);
-  const data = breakdown.data.map((d, i) => ({ ...d, fill: palette[i % palette.length] }));
+  const [kind, setKind] = React.useState<ChartKind>(defaultKind && kinds.includes(defaultKind) ? defaultKind : kinds[0]!);
+  const summary = `${label}: ${data.map((d) => `${d.value} ${d.count}`).join(", ")}`;
+  const tip = <CountTooltip base={base} noun={noun} />;
+
+  let chart: React.ReactNode;
+  if (kind === "pie") {
+    const slices = data.filter((d) => d.count > 0).map((d, i) => ({ ...d, name: d.value, fill: palette[i % palette.length] }));
+    chart = slices.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">No answers yet.</p> : (
+      <ResponsiveContainer width="100%" height={Math.max(260, 220 + Math.ceil(slices.length / 2) * 12)}>
+        <PieChart>
+          <Pie data={slices} dataKey="count" nameKey="name" innerRadius="45%" outerRadius="75%" paddingAngle={2} strokeWidth={0}>
+            {slices.map((s) => (
+              <Cell key={s.value} fill={s.fill} />
+            ))}
+          </Pie>
+          <Tooltip content={tip} />
+          <Legend
+            verticalAlign="bottom"
+            formatter={(value) => (
+              <span style={{ color: ink, fontSize: 12 }}>
+                {clip(String(value), 28)} ({pct(slices.find((s) => s.value === value)?.count ?? 0, base)}%)
+              </span>
+            )}
+          />
+        </PieChart>
+      </ResponsiveContainer>
+    );
+  } else if (kind === "histogram") {
+    chart = (
+      <ResponsiveContainer width="100%" height={260}>
+        <BarChart data={data} barCategoryGap={1} margin={{ top: 8, right: 8, left: -12, bottom: 4 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke={grid} vertical={false} />
+          <XAxis dataKey="value" tick={{ fill: ink, fontSize: 11 }} tickFormatter={(v: string) => clip(v, 12)} axisLine={{ stroke: grid }} tickLine={false} interval={0} />
+          <YAxis allowDecimals={false} tick={{ fill: ink, fontSize: 11 }} axisLine={false} tickLine={false} width={36} />
+          <Tooltip content={tip} cursor={{ fill: grid, opacity: 0.4 }} />
+          <Bar dataKey="count" fill={SEQUENTIAL_BLUE} radius={[2, 2, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    );
+  } else {
+    chart = (
+      <ResponsiveContainer width="100%" height={Math.max(120, data.length * 30 + 24)}>
+        <BarChart data={data} layout="vertical" margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke={grid} horizontal={false} />
+          <XAxis type="number" allowDecimals={false} tick={{ fill: ink, fontSize: 11 }} axisLine={false} tickLine={false} />
+          <YAxis type="category" dataKey="value" width={130} tick={{ fill: ink, fontSize: 11 }} tickFormatter={(v: string) => clip(v)} axisLine={false} tickLine={false} interval={0} />
+          <Tooltip content={tip} cursor={{ fill: grid, opacity: 0.4 }} />
+          <Bar dataKey="count" fill={SEQUENTIAL_BLUE} radius={[0, 4, 4, 0]} maxBarSize={20} />
+        </BarChart>
+      </ResponsiveContainer>
+    );
+  }
 
   return (
-    <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={data} layout="vertical" margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke={grid} horizontal={false} />
-        <XAxis type="number" allowDecimals={false} tick={{ fill: ink, fontSize: 11 }} axisLine={false} tickLine={false} />
-        <YAxis
-          type="category"
-          dataKey="value"
-          tick={{ fill: ink, fontSize: 11 }}
-          axisLine={false}
-          tickLine={false}
-          width={100}
-        />
-        <Tooltip content={<ChartTooltip />} />
-        <Bar dataKey="count" name={breakdown.label} radius={[0, 4, 4, 0]} maxBarSize={22}>
-          {data.map((entry) => (
-            <Cell key={entry.value} fill={entry.fill} />
-          ))}
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
+    <div className="flex flex-col gap-3">
+      <KindSwitch kinds={kinds} value={kind} onChange={setKind} />
+      <div role="img" aria-label={summary}>
+        {chart}
+      </div>
+    </div>
   );
 }

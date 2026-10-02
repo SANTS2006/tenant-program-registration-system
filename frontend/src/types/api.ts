@@ -132,10 +132,14 @@ export interface FieldConfig {
   followUps?: Record<string, FollowUp>;
 }
 
+export type FollowUpMode = "text" | "short_text" | "number" | "email" | "phone" | "date" | "dropdown" | "file" | "text_or_file";
+
 export interface FollowUp {
-  mode: "text" | "file" | "text_or_file";
+  mode: FollowUpMode;
   label?: string;
   required?: boolean;
+  /** The choices, when the mode is "dropdown". */
+  options?: string[];
 }
 
 export interface ConditionalRule {

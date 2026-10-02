@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, X } from "lucide-react";
-import { AutoFillEditor, DateLimitEditor, DefaultValueEditor, DependentOptionsEditor, FollowUpEditor, MaxSelectionsEditor } from "./FieldAdvancedSettings";
+import { AutoFillEditor, ConditionalLogicEditor, DateLimitEditor, DefaultValueEditor, DependentOptionsEditor, FollowUpEditor, MaxSelectionsEditor } from "./FieldAdvancedSettings";
 import { metaFor } from "./fieldTypes";
 import type { EditableField } from "./types";
 import { slugifyKey } from "@/lib/utils";
@@ -224,47 +224,7 @@ export function FieldSettingsDialog({
             </div>
           )}
 
-          {otherFields.length > 0 && (
-            <div className="flex flex-col gap-2 rounded-md border border-dashed border-border p-3">
-              <Label>Conditional logic (optional)</Label>
-              <p className="text-xs text-muted-foreground">Only show this field when another field's answer matches.</p>
-              <div className="flex items-center gap-2">
-                <Select
-                  value={draft.conditionalLogic?.[0]?.fieldKey ?? "none"}
-                  onValueChange={(value) =>
-                    update({
-                      conditionalLogic:
-                        value === "none" ? undefined : [{ fieldKey: value, operator: "equals", value: "" }],
-                    })
-                  }
-                >
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="No condition" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No condition</SelectItem>
-                    {otherFields.map((f) => (
-                      <SelectItem key={f.fieldKey} value={f.fieldKey}>
-                        {f.label || f.fieldKey}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {draft.conditionalLogic?.[0] && (
-                  <Input
-                    placeholder="equals value"
-                    value={String(draft.conditionalLogic[0].value ?? "")}
-                    onChange={(e) =>
-                      update({
-                        conditionalLogic: [{ ...draft.conditionalLogic![0]!, value: e.target.value }],
-                      })
-                    }
-                    className="flex-1"
-                  />
-                )}
-              </div>
-            </div>
-          )}
+          <ConditionalLogicEditor draft={draft} otherFields={otherFields} onChange={(conditionalLogic) => update({ conditionalLogic })} />
         </div>
 
         <DialogFooter>

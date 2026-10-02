@@ -3,7 +3,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type { FieldConfig, FollowUp } from "@/types/api";
+import { Plus, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import type { ConditionalRule, FieldConfig, FollowUp } from "@/types/api";
 import type { EditableField } from "./types";
 
 type UpdateConfig = (patch: Partial<FieldConfig>) => void;
@@ -217,7 +219,19 @@ export function AutoFillEditor({ draft, otherFields, updateConfig }: { draft: Ed
   );
 }
 
-const FOLLOW_UP_TYPES = new Set(["single_choice", "dropdown", "yes_no"]);
+const FOLLOW_UP_TYPES = new Set(["single_choice", "dropdown", "yes_no", "gender", "country"]);
+
+const FOLLOW_UP_MODES: { value: FollowUp["mode"]; label: string }[] = [
+  { value: "short_text", label: "Short text (one line)" },
+  { value: "text", label: "Paragraph (long text)" },
+  { value: "number", label: "Number" },
+  { value: "email", label: "Email address" },
+  { value: "phone", label: "Phone number" },
+  { value: "date", label: "Date" },
+  { value: "dropdown", label: "Dropdown (you list the choices)" },
+  { value: "file", label: "File upload" },
+  { value: "text_or_file", label: "Paragraph or file upload" },
+];
 
 /** The most options a person may tick on a multiple choice question. */
 export function MaxSelectionsEditor({ draft, updateConfig }: { draft: EditableField; updateConfig: UpdateConfig }) {
@@ -245,7 +259,7 @@ export function MaxSelectionsEditor({ draft, updateConfig }: { draft: EditableFi
  * or upload the design, No shows nothing.
  */
 export function FollowUpEditor({ draft, updateConfig }: { draft: EditableField; updateConfig: UpdateConfig }) {
-  if (!FOLLOW_UP_TYPES.has(draft.type) || draft.config.optionsDependOn) return null;
+  if (!FOLLOW_UP_TYPES.has(draft.type)) return null;
   const choices = draft.type === "yes_no" ? ["Yes", "No"] : (draft.config.options ?? []).filter((o) => o.trim() && !/^other/i.test(o.trim()));
   if (choices.length === 0) return null;
   const followUps = draft.config.followUps ?? {};
@@ -261,7 +275,7 @@ export function FollowUpEditor({ draft, updateConfig }: { draft: EditableField; 
     <div className="flex flex-col gap-3 rounded-md border border-dashed border-border p-3">
       <p className="text-sm font-medium">Ask for more details</p>
       <p className="-mt-2 text-xs text-muted-foreground">
-        Turn this on for an option to show an extra box when it is chosen. Options left off show nothing extra.
+        Turn this on for an option to show an extra input when it is chosen, and decide what kind of input it is. Options left off show nothing extra.
       </p>
       {choices.map((option) => {
         const followUp = followUps[option];
@@ -281,9 +295,11 @@ export function FollowUpEditor({ draft, updateConfig }: { draft: EditableField; 
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="text">A written answer</SelectItem>
-                    <SelectItem value="file">An uploaded file</SelectItem>
-                    <SelectItem value="text_or_file">A written answer or an uploaded file</SelectItem>
+                    {FOLLOW_UP_MODES.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>
+                        {m.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <Input
@@ -292,6 +308,15 @@ export function FollowUpEditor({ draft, updateConfig }: { draft: EditableField; 
                   value={followUp.label ?? ""}
                   onChange={(e) => setFollowUp(option, { ...followUp, label: e.target.value })}
                 />
+                {followUp.mode === "dropdown" && (
+                  <Textarea
+                    rows={3}
+                    aria-label={`Choices shown when ${option} is chosen`}
+                    placeholder="One choice per line"
+                    defaultValue={(followUp.options ?? []).join("\n")}
+                    onChange={(e) => setFollowUp(option, { ...followUp, options: linesToOptions(e.target.value) })}
+                  />
+                )}
                 <label className="flex items-center gap-2 text-xs">
                   <Checkbox checked={followUp.required === true} onCheckedChange={(checked) => setFollowUp(option, { ...followUp, required: checked === true })} />
                   Required
@@ -351,7 +376,7 @@ export function DependentOptionsEditor({
         Filter these options based on another answer
       </label>
       <p className="-mt-2 text-xs text-muted-foreground">
-        For example, only show the chiefdoms that belong to the district the registrant picked.
+        For example, only show the chiefdoms that belong to the district the registrant picked. Once the options are listed, you can also make any option ask for more information below.
       </p>
 
       {dep && (
@@ -396,6 +421,133 @@ export function DependentOptionsEditor({
             <p className="text-xs text-destructive">The question this depends on no longer exists. Choose another.</p>
           )}
         </>
+      )}
+    </div>
+  );
+}
+
+const OPERATORS: { value: ConditionalRule["operator"]; label: string; needsValue: boolean }[] = [
+  { value: "equals", label: "is", needsValue: true },
+  { value: "not_equals", label: "is not", needsValue: true },
+  { value: "contains", label: "includes", needsValue: true },
+  { value: "is_not_empty", label: "has been answered", needsValue: false },
+  { value: "is_empty", label: "has not been answered", needsValue: false },
+];
+
+/** The answers a person can give to a question, when it has a fixed list. */
+function answerChoices(field: EditableField): { value: string; label: string }[] | null {
+  if (field.type === "yes_no") return [{ value: "true", label: "Yes" }, { value: "false", label: "No" }];
+  const options = (field.config.options ?? []).filter(Boolean);
+  return options.length ? options.map((o) => ({ value: o, label: o })) : null;
+}
+
+/** Show this question only when other answers match. Works for every kind of question. */
+export function ConditionalLogicEditor({
+  draft,
+  otherFields,
+  onChange,
+}: {
+  draft: EditableField;
+  otherFields: EditableField[];
+  onChange: (rules: ConditionalRule[] | undefined) => void;
+}) {
+  const rules = draft.conditionalLogic ?? [];
+  // A question can't wait on one that already waits on it.
+  const sources = otherFields.filter(
+    (f) => f.fieldKey !== draft.fieldKey && !(f.conditionalLogic ?? []).some((r) => r.fieldKey === draft.fieldKey),
+  );
+  if (sources.length === 0 && rules.length === 0) return null;
+
+  const setRule = (index: number, patch: Partial<ConditionalRule>) =>
+    onChange(rules.map((r, i) => (i === index ? { ...r, ...patch } : r)));
+  const removeRule = (index: number) => {
+    const next = rules.filter((_, i) => i !== index);
+    onChange(next.length ? next : undefined);
+  };
+
+  return (
+    <div className="flex flex-col gap-3 rounded-md border border-dashed border-border p-3">
+      <Label>Show this question only when… (optional)</Label>
+      <p className="-mt-2 text-xs text-muted-foreground">
+        Hide this question until another answer matches. With more than one rule, all of them must match.
+      </p>
+      {rules.map((rule, index) => {
+        const source = sources.find((f) => f.fieldKey === rule.fieldKey) ?? otherFields.find((f) => f.fieldKey === rule.fieldKey);
+        const choices = source ? answerChoices(source) : null;
+        const operator = OPERATORS.find((o) => o.value === rule.operator) ?? OPERATORS[0]!;
+        return (
+          <div key={index} className="flex flex-col gap-2 rounded-md bg-muted/30 p-2">
+            <div className="flex items-center gap-2">
+              <Select
+                value={rule.fieldKey}
+                onValueChange={(fieldKey) => setRule(index, { fieldKey, value: "" })}
+              >
+                <SelectTrigger aria-label="Question to check" className="flex-1">
+                  <SelectValue placeholder="Choose a question" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sources.map((f) => (
+                    <SelectItem key={f.fieldKey} value={f.fieldKey}>
+                      {f.label || f.fieldKey}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button type="button" variant="ghost" size="icon" aria-label="Remove this rule" onClick={() => removeRule(index)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Select value={rule.operator} onValueChange={(op) => setRule(index, { operator: op as ConditionalRule["operator"] })}>
+                <SelectTrigger aria-label="Condition" className="sm:w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {OPERATORS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {operator.needsValue &&
+                (choices ? (
+                  <Select value={String(rule.value ?? "") || undefined} onValueChange={(value) => setRule(index, { value })}>
+                    <SelectTrigger aria-label="Answer" className="flex-1">
+                      <SelectValue placeholder="Choose an answer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {choices.map((c) => (
+                        <SelectItem key={c.value} value={c.value}>
+                          {c.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    aria-label="Answer"
+                    placeholder="The answer to look for"
+                    value={String(rule.value ?? "")}
+                    onChange={(e) => setRule(index, { value: e.target.value })}
+                    className="flex-1"
+                  />
+                ))}
+            </div>
+          </div>
+        );
+      })}
+      {sources.length > 0 && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-fit"
+          onClick={() => onChange([...rules, { fieldKey: sources[0]!.fieldKey, operator: "equals", value: "" }])}
+        >
+          <Plus className="h-4 w-4" />
+          {rules.length === 0 ? "Add a rule" : "Add another rule"}
+        </Button>
       )}
     </div>
   );

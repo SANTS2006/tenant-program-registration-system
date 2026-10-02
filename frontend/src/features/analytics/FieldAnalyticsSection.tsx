@@ -1,10 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { BarChart3 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useTheme } from "@/app/ThemeContext";
 import { SEQUENTIAL_BLUE } from "./palette";
+import { DistributionChart } from "./charts";
 import { getFieldAnalytics, type CountEntry, type FieldAnalytics } from "./api";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -29,63 +28,6 @@ const TYPE_LABELS: Record<string, string> = {
 
 function percent(part: number, whole: number) {
   return whole === 0 ? 0 : Math.round((part / whole) * 100);
-}
-
-function truncate(text: string, max = 22) {
-  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
-}
-
-function CountTooltip({
-  active,
-  payload,
-  base,
-}: {
-  active?: boolean;
-  payload?: { payload: CountEntry }[];
-  base: number;
-}) {
-  const entry = payload?.[0]?.payload;
-  if (!active || !entry) return null;
-  return (
-    <div className="max-w-[240px] rounded-lg border border-border/70 bg-card px-3 py-2 text-xs shadow-lg">
-      <p className="mb-0.5 font-medium text-foreground">{entry.value}</p>
-      <p className="text-muted-foreground">
-        <span className="font-medium text-foreground">{entry.count}</span> registrant{entry.count === 1 ? "" : "s"} ·{" "}
-        {percent(entry.count, base)}%
-      </p>
-    </div>
-  );
-}
-
-/** One series of counts per category: a single hue, sized to the number of bars. */
-function CountBars({ data, base, label }: { data: CountEntry[]; base: number; label: string }) {
-  const { theme } = useTheme();
-  const ink = theme === "dark" ? "#c3c2b7" : "#52514e";
-  const grid = theme === "dark" ? "#2c2c2a" : "#e1e0d9";
-  const height = Math.max(120, data.length * 30 + 24);
-
-  return (
-    <div role="img" aria-label={`${label}: ${data.map((d) => `${d.value} ${d.count}`).join(", ")}`}>
-      <ResponsiveContainer width="100%" height={height}>
-        <BarChart data={data} layout="vertical" margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke={grid} horizontal={false} />
-          <XAxis type="number" allowDecimals={false} tick={{ fill: ink, fontSize: 11 }} axisLine={false} tickLine={false} />
-          <YAxis
-            type="category"
-            dataKey="value"
-            width={130}
-            tick={{ fill: ink, fontSize: 11 }}
-            tickFormatter={(v: string) => truncate(v)}
-            axisLine={false}
-            tickLine={false}
-            interval={0}
-          />
-          <Tooltip content={<CountTooltip base={base} />} cursor={{ fill: grid, opacity: 0.4 }} />
-          <Bar dataKey="count" fill={SEQUENTIAL_BLUE} radius={[0, 4, 4, 0]} maxBarSize={20} />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  );
 }
 
 /** Ranked list with inline magnitude bars, for free-text answers. */
@@ -131,7 +73,7 @@ function FieldBody({ field }: { field: FieldAnalytics }) {
       return (
         <div className="flex flex-col gap-4">
           {field.multiple && <p className="text-xs text-muted-foreground">Registrants could pick more than one option.</p>}
-          <CountBars data={field.options} base={field.answered} label={field.label} />
+          <DistributionChart data={field.options} base={field.answered} label={field.label} kinds={["bars", "pie"]} />
           {field.otherAnswers.length > 0 && (
             <div className="flex flex-col gap-2 border-t border-border/60 pt-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">“Other” answers</p>
@@ -151,7 +93,7 @@ function FieldBody({ field }: { field: FieldAnalytics }) {
               <Stat label="Highest" value={field.stats.max} />
             </div>
           )}
-          {field.distribution.length > 0 && <CountBars data={field.distribution} base={field.answered} label={field.label} />}
+          {field.distribution.length > 0 && <DistributionChart data={field.distribution} base={field.answered} label={field.label} kinds={["histogram", "bars", "pie"]} />}
         </div>
       );
     case "date": {
@@ -159,7 +101,7 @@ function FieldBody({ field }: { field: FieldAnalytics }) {
       return (
         <div className="flex flex-col gap-2">
           <p className="text-xs text-muted-foreground">{caption}</p>
-          <CountBars data={field.distribution} base={field.answered} label={field.label} />
+          <DistributionChart data={field.distribution} base={field.answered} label={field.label} kinds={["histogram", "bars", "pie"]} />
         </div>
       );
     }

@@ -7,6 +7,18 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertCircle, ChevronLeft, ChevronRight, Eraser, Loader2, ShieldCheck, UploadCloud } from "lucide-react";
 import type { ConditionalRule, FollowUp, FormField, FormSection } from "@/types/api";
+
+const followUpAsksFile = (mode: FollowUp["mode"]) => mode === "file" || mode === "text_or_file";
+const followUpAsksText = (mode: FollowUp["mode"]) => mode !== "file";
+
+/** Why a follow-up answer doesn't fit the kind of input the admin chose, if it doesn't. */
+function followUpFormatProblem(followUp: FollowUp, text: string): string | null {
+  if (!text) return null;
+  if (followUp.mode === "number") return Number.isFinite(Number(text)) ? null : "must be a number";
+  if (followUp.mode === "email") return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text) ? null : "must be a valid email address";
+  if (followUp.mode === "phone") return /^[+()\d\s.-]{5,25}$/.test(text) ? null : "must be a valid phone number";
+  return null;
+}
 import { cn } from "@/lib/utils";
 
 export interface UploadedFileInfo {
@@ -110,7 +122,7 @@ export function otherTextKey(fieldKey: string) {
 
 /** What the chosen option asks for on top of the choice itself, if the admin turned that on. */
 function followUpFor(field: FormField, value: unknown): FollowUp | null {
-  if (!["single_choice", "dropdown", "yes_no"].includes(field.type)) return null;
+  if (!["single_choice", "dropdown", "yes_no", "gender", "country"].includes(field.type)) return null;
   const key = typeof value === "boolean" ? (value ? "Yes" : "No") : typeof value === "string" ? value : "";
   return field.config.followUps?.[key] ?? null;
 }
@@ -278,6 +290,12 @@ export function DynamicForm({
   const [uploadedFiles, setUploadedFiles] = React.useState<Record<string, UploadedFileInfo>>(() => draft?.files ?? {});
   const [uploadingKey, setUploadingKey] = React.useState<string | null>(null);
   const [stepErrors, setStepErrors] = React.useState<string[]>([]);
+  const errorBoxRef = React.useRef<HTMLDivElement>(null);
+  const errorCount = (errors?.length ?? 0) + stepErrors.length;
+  // The messages sit just above the submit button; make sure they are in view when they appear.
+  React.useEffect(() => {
+    if (errorCount > 0) errorBoxRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [errorCount, errors, stepErrors]);
   const [reviewConfirmed, setReviewConfirmed] = React.useState(false);
   const [reviewing, setReviewing] = React.useState(false);
 
@@ -384,8 +402,14 @@ export function DynamicForm({
         const key = otherTextKey(field.fieldKey);
         const hasText = !isEmpty(String(responses[key] ?? "").trim());
         const hasFile = !!uploadedFiles[key];
-        const ok = followUp.mode === "text" ? hasText : followUp.mode === "file" ? hasFile : hasText || hasFile;
+        const asksText = followUpAsksText(followUp.mode);
+        const asksFile = followUpAsksFile(followUp.mode);
+        const ok = asksText && asksFile ? hasText || hasFile : asksText ? hasText : hasFile;
         if (!ok) missing.push(`${field.label}: please provide ${followUp.label?.trim() || "more details"}`);
+      }
+      if (followUp && followUpAsksText(followUp.mode)) {
+        const problem = followUpFormatProblem(followUp, String(responses[otherTextKey(field.fieldKey)] ?? "").trim());
+        if (problem) missing.push(`${field.label}: ${followUp.label?.trim() || "your answer"} ${problem}`);
       }
     }
     for (const field of fieldsToCheck) {
@@ -433,7 +457,7 @@ export function DynamicForm({
         if (!key.endsWith("__other")) return true;
         const owner = fields.find((f) => otherTextKey(f.fieldKey) === key);
         const mode = owner && isVisible(owner, responses) ? followUpFor(owner, responses[owner.fieldKey])?.mode : undefined;
-        return mode === "file" || mode === "text_or_file";
+        return mode !== undefined && followUpAsksFile(mode);
       })
       .map(([, file]) => file);
     await onSubmit(responses, files, consented);
@@ -465,9 +489,12 @@ export function DynamicForm({
   /** Free-text box that appears right under a choice field when an "Other" option is picked. */
   const renderFollowUp = (field: FormField, followUp: FollowUp) => {
     const key = otherTextKey(field.fieldKey);
-    const asksText = followUp.mode !== "file";
-    const asksFile = followUp.mode !== "text";
+    const asksText = followUpAsksText(followUp.mode);
+    const asksFile = followUpAsksFile(followUp.mode);
     const prompt = followUp.label?.trim() || (asksFile && !asksText ? "Upload a file" : "Tell us more");
+    const textValue = (responses[key] as string) ?? "";
+    const setText = (v: string) => setResponses((r) => ({ ...r, [key]: v }));
+    const inputType = ({ number: "number", email: "email", phone: "tel", date: "date" } as Record<string, string>)[followUp.mode];
     const uploaded = uploadedFiles[key];
     const isUploading = uploadingKey === key;
     return (
@@ -476,14 +503,24 @@ export function DynamicForm({
           {prompt}
           {followUp.required && <span className="text-destructive"> *</span>}
         </Label>
-        {asksText && (
-          <Textarea
-            id={key}
-            rows={3}
-            maxLength={2000}
-            value={(responses[key] as string) ?? ""}
-            onChange={(e) => setResponses((r) => ({ ...r, [key]: e.target.value }))}
-          />
+        {asksText && followUp.mode === "dropdown" && (
+          <Select value={textValue || undefined} onValueChange={setText}>
+            <SelectTrigger id={key}>
+              <SelectValue placeholder="Select an option" />
+            </SelectTrigger>
+            <SelectContent>
+              {(followUp.options ?? []).map((o) => (
+                <SelectItem key={o} value={o}>
+                  {o}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        {asksText && followUp.mode === "short_text" && <Input id={key} maxLength={300} value={textValue} onChange={(e) => setText(e.target.value)} />}
+        {asksText && inputType && <Input id={key} type={inputType} maxLength={300} value={textValue} onChange={(e) => setText(e.target.value)} />}
+        {asksText && (followUp.mode === "text" || followUp.mode === "text_or_file") && (
+          <Textarea id={key} rows={3} maxLength={2000} value={textValue} onChange={(e) => setText(e.target.value)} />
         )}
         {asksFile && (
           <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-input bg-background px-4 py-4 text-sm text-muted-foreground hover:bg-muted">
@@ -832,20 +869,6 @@ export function DynamicForm({
         </div>
       )}
 
-      {combinedErrors.length > 0 && (
-        <div className="flex flex-col gap-1 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-          <div className="flex items-center gap-2 font-medium">
-            <AlertCircle className="h-4 w-4" />
-            Please fix the following
-          </div>
-          <ul className="list-disc pl-6">
-            {combinedErrors.map((err, i) => (
-              <li key={i}>{err}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
       {isSingle ? (
         <div className="flex flex-col gap-8">
           {groups.map((group) => (
@@ -881,6 +904,20 @@ export function DynamicForm({
             I entered is complete and correct.
           </span>
         </label>
+      )}
+
+      {combinedErrors.length > 0 && (
+        <div ref={errorBoxRef} role="alert" className="flex flex-col gap-1 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+          <div className="flex items-center gap-2 font-medium">
+            <AlertCircle className="h-4 w-4" />
+            Please fix the following
+          </div>
+          <ul className="list-disc pl-6">
+            {combinedErrors.map((err, i) => (
+              <li key={i}>{err}</li>
+            ))}
+          </ul>
+        </div>
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3 pt-2">

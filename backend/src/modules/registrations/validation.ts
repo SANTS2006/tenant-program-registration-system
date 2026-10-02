@@ -30,13 +30,36 @@ export function otherTextKey(fieldKey: string): string {
 }
 
 export interface FollowUp {
-  mode: "text" | "file" | "text_or_file";
+  mode: "text" | "short_text" | "number" | "email" | "phone" | "date" | "dropdown" | "file" | "text_or_file";
   label?: string;
   required?: boolean;
+  options?: string[];
+}
+
+const followUpAsksFile = (mode: FollowUp["mode"]) => mode === "file" || mode === "text_or_file";
+const followUpAsksText = (mode: FollowUp["mode"]) => mode !== "file";
+
+/** Messages for a follow-up answer that doesn't fit the kind of input the admin chose. */
+function followUpFormatError(followUp: FollowUp, text: string): string | null {
+  if (!text) return null;
+  switch (followUp.mode) {
+    case "number":
+      return Number.isFinite(Number(text)) ? null : "must be a number";
+    case "email":
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text) ? null : "must be a valid email address";
+    case "phone":
+      return /^[+()\d\s.-]{5,25}$/.test(text) ? null : "must be a valid phone number";
+    case "date":
+      return /^\d{4}-\d{2}-\d{2}$/.test(text) && !Number.isNaN(Date.parse(text)) ? null : "must be a valid date";
+    case "dropdown":
+      return (followUp.options ?? []).includes(text) ? null : "must be one of the listed choices";
+    default:
+      return null;
+  }
 }
 
 const FOLLOW_UP_TEXT_MAX_LENGTH = 2000;
-const SINGLE_VALUE_FOLLOW_UP_TYPES = new Set(["single_choice", "dropdown", "yes_no"]);
+const SINGLE_VALUE_FOLLOW_UP_TYPES = new Set(["single_choice", "dropdown", "yes_no", "gender", "country"]);
 
 /** What a chosen option asks for on top of the choice itself (e.g. "Yes" -> describe your design). */
 function followUpFor(field: FieldRow, value: unknown): FollowUp | null {
@@ -299,16 +322,17 @@ export function validateAndNormalizeResponses(
     if (followUp) {
       const key = otherTextKey(field.fieldKey);
       const text = String(rawResponses[key] ?? "").trim();
-      const uploaded = followUp.mode === "text" ? [] : (filesByField.get(key) ?? []);
-      const asksText = followUp.mode !== "file";
-      const asksFile = followUp.mode !== "text";
+      const asksText = followUpAsksText(followUp.mode);
+      const asksFile = followUpAsksFile(followUp.mode);
+      const uploaded = asksFile ? (filesByField.get(key) ?? []) : [];
       const prompt = followUp.label?.trim() || "more details";
       if (text.length > FOLLOW_UP_TEXT_MAX_LENGTH) errors.push(`${field.label}: ${prompt} must be at most ${FOLLOW_UP_TEXT_MAX_LENGTH} characters`);
       if (followUp.required) {
-        const missing =
-          followUp.mode === "text_or_file" ? !text && uploaded.length === 0 : asksText && !asksFile ? !text : asksFile && !asksText ? uploaded.length === 0 : false;
+        const missing = asksText && asksFile ? !text && uploaded.length === 0 : asksText ? !text : uploaded.length === 0;
         if (missing) errors.push(`${field.label}: please provide ${prompt}`);
       }
+      const formatProblem = asksText ? followUpFormatError(followUp, text) : null;
+      if (formatProblem) errors.push(`${field.label}: ${prompt} ${formatProblem}`);
       // The description and any uploaded file names are kept together, so every export and email shows both.
       const parts = [asksText ? text : "", ...uploaded.map((f) => `[file: ${f.filename}]`)].filter(Boolean);
       cleaned[key] = parts.length ? parts.join(" ") : null;

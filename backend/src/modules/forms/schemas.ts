@@ -59,9 +59,10 @@ export const fieldConfigSchema = z
     followUps: z
       .record(
         z.object({
-          mode: z.enum(["text", "file", "text_or_file"]),
+          mode: z.enum(["text", "short_text", "number", "email", "phone", "date", "dropdown", "file", "text_or_file"]),
           label: z.string().max(200).optional(),
           required: z.boolean().optional(),
+          options: z.array(z.string().trim().min(1).max(200)).max(100).optional(),
         }),
       )
       .optional(),
