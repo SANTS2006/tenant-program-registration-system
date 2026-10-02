@@ -118,6 +118,8 @@ const importBodySchema = z.object({
   content: z.string().min(1).max(7_500_000),
   mapping: z.record(z.string().max(100)).optional(),
   dryRun: z.boolean().optional(),
+  /** What to do with a row that matches a registration the program already has. */
+  existing: z.enum(["skip", "update", "update_only"]).optional(),
 });
 
 export async function previewRegistrationImportHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -132,16 +134,16 @@ export async function importRegistrationsHandler(request: FastifyRequest, reply:
   const body = importBodySchema.parse(request.body);
   if (!body.mapping) throw AppError.validation("Match the columns to the form's questions first.");
   const dryRun = body.dryRun === true;
-  const result = await runImport(programId, body.filename, Buffer.from(body.content, "base64"), body.mapping, dryRun);
+  const result = await runImport(programId, body.filename, Buffer.from(body.content, "base64"), body.mapping, dryRun, body.existing ?? "skip");
   if (!dryRun) {
     await recordAudit({
       actorUserId: request.user.id,
       action: "registration.import",
       entityType: "program",
       entityId: programId,
-      metadata: { filename: body.filename, total: result.total, imported: result.imported, failed: result.errors.length, skipped: result.skipped.length },
+      metadata: { filename: body.filename, total: result.total, imported: result.imported, updated: result.updated, failed: result.errors.length, skipped: result.skipped.length },
       ipAddress: request.ip,
     });
   }
-  return sendSuccess(reply, result, dryRun ? "Check finished" : `${result.imported} registrations imported`);
+  return sendSuccess(reply, result, dryRun ? "Check finished" : `${result.imported} imported, ${result.updated} updated`);
 }

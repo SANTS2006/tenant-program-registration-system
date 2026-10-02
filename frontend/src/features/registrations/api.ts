@@ -102,6 +102,9 @@ export interface ImportResult {
   total: number;
   valid: number;
   imported: number;
+  updated: number;
+  willCreate: number;
+  willUpdate: number;
   skipped: ImportRowIssue[];
   errors: ImportRowIssue[];
 }
@@ -110,9 +113,18 @@ export function previewRegistrationImport(programId: string, filename: string, c
   return apiFetch<ImportPreview>(`/programs/${programId}/registrations/import/preview`, { method: "POST", body: { filename, content } });
 }
 
-export function importRegistrations(programId: string, filename: string, content: string, mapping: Record<string, string>, dryRun: boolean) {
+export type ExistingRows = "skip" | "update" | "update_only";
+
+export function importRegistrations(
+  programId: string,
+  filename: string,
+  content: string,
+  mapping: Record<string, string>,
+  dryRun: boolean,
+  existing: ExistingRows = "skip",
+) {
   return apiFetch<ImportResult>(`/programs/${programId}/registrations/import`, {
     method: "POST",
-    body: { filename, content, mapping, dryRun },
+    body: { filename, content, mapping, dryRun, existing },
   });
 }

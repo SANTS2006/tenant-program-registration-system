@@ -4,6 +4,9 @@ import JSZip from "jszip";
 import { AppError } from "../../lib/errors.js";
 import type { FieldRow } from "../forms/repository.js";
 
+/** The column that holds an existing registration's number, used to find it again. */
+export const REGISTRATION_NUMBER_KEY = "__registration_number";
+
 export const MAX_IMPORT_ROWS = 500;
 export const MAX_IMPORT_COLUMNS = 100;
 export const MAX_IMPORT_FILE_BYTES = 5 * 1024 * 1024;
@@ -151,6 +154,13 @@ export function suggestMapping(headers: string[], fields: FieldRow[]): Record<st
         return label.length >= 3 && h.length >= 3 && (label.includes(h) || h.includes(label));
       }),
     );
+  });
+  normalized.forEach((h, i) => {
+    if (!h || mapping[String(i)] || used.has(REGISTRATION_NUMBER_KEY)) return;
+    if (/^(registration|reg|order|ticket|reference|ref)( ?(number|no|num|id|#))?$/.test(h) || /registration (number|no)/.test(h)) {
+      used.add(REGISTRATION_NUMBER_KEY);
+      mapping[String(i)] = REGISTRATION_NUMBER_KEY;
+    }
   });
   const byType = (types: string[]) => fields.find((f) => types.includes(f.type) && !used.has(f.fieldKey));
   normalized.forEach((h, i) => {

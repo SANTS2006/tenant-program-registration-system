@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gte, ilike, isNull, lte, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ilike, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import {
   programCounters,
@@ -114,6 +114,54 @@ export async function listRegisteredEmails(programId: string): Promise<Set<strin
     .from(registrations)
     .where(and(eq(registrations.programId, programId), sql`${registrations.applicantEmail} is not null`));
   return new Set(rows.map((r) => r.email));
+}
+
+/** Existing registrations of a program with any of these emails or registration numbers, newest first. */
+export async function findRegistrationsForImport(programId: string, emails: string[], numbers: string[]): Promise<RegistrationRow[]> {
+  if (emails.length === 0 && numbers.length === 0) return [];
+  const matches = [
+    ...(emails.length ? [inArray(sql<string>`lower(${registrations.applicantEmail})`, emails)] : []),
+    ...(numbers.length ? [inArray(registrations.registrationNumber, numbers)] : []),
+  ];
+  return db
+    .select()
+    .from(registrations)
+    .where(and(eq(registrations.programId, programId), or(...matches)))
+    .orderBy(desc(registrations.submittedAt));
+}
+
+/** Replaces a registration's answers and contact details from an imported document, and notes it in the history. */
+export async function updateRegistrationFromImport(
+  registration: RegistrationRow,
+  values: {
+    applicantName: string | null;
+    applicantEmail: string | null;
+    applicantPhone: string | null;
+    responses: Record<string, unknown>;
+    enforceUniqueEmail: boolean;
+    note: string;
+  },
+): Promise<RegistrationRow> {
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(registrations)
+      .set({
+        applicantName: values.applicantName,
+        applicantEmail: values.applicantEmail,
+        applicantPhone: values.applicantPhone,
+        responses: values.responses,
+        uniqueEmailGuard: Boolean(values.enforceUniqueEmail && values.applicantEmail),
+      })
+      .where(eq(registrations.id, registration.id))
+      .returning();
+    await tx.insert(registrationStatusHistory).values({
+      registrationId: registration.id,
+      fromStatus: registration.status,
+      toStatus: registration.status,
+      note: values.note,
+    });
+    return row!;
+  });
 }
 
 export async function emailAlreadyRegistered(programId: string, email: string): Promise<boolean> {

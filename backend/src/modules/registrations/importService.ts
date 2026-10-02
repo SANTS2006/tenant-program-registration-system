@@ -3,7 +3,7 @@ import * as formsService from "../forms/service.js";
 import type { FieldRow } from "../forms/repository.js";
 import * as programsRepo from "../programs/repository.js";
 import * as registrationsRepo from "./repository.js";
-import { convertCell, importableFields, parseImportFile, suggestMapping, MAX_IMPORT_ROWS } from "./importParser.js";
+import { convertCell, importableFields, parseImportFile, suggestMapping, MAX_IMPORT_ROWS, REGISTRATION_NUMBER_KEY } from "./importParser.js";
 import { createRegistrationWithNumber } from "./service.js";
 import { extractApplicantContact, validateAndNormalizeResponses } from "./validation.js";
 
@@ -29,10 +29,14 @@ export async function previewImport(programId: string, filename: string, content
     totalRows: table.rows.length,
     maxRows: MAX_IMPORT_ROWS,
     mapping: suggestMapping(table.headers, fields),
-    fields: fields
-      .slice()
-      .sort((a, b) => a.orderIndex - b.orderIndex)
-      .map((f) => ({ fieldKey: f.fieldKey, label: f.label, type: f.type, required: f.required })),
+    fields: [
+      ...fields
+        .slice()
+        .sort((a, b) => a.orderIndex - b.orderIndex)
+        .map((f) => ({ fieldKey: f.fieldKey, label: f.label, type: f.type, required: f.required })),
+      // Not a question: it finds the registration a row should update.
+      { fieldKey: REGISTRATION_NUMBER_KEY, label: "Registration number (finds existing)", type: "registration_number", required: false },
+    ],
   };
 }
 
@@ -42,12 +46,21 @@ export interface ImportRowIssue {
   messages: string[];
 }
 
+/** What to do with a row that matches a registration the program already has. */
+export type ExistingRows = "skip" | "update" | "update_only";
+
 export interface ImportResult {
   dryRun: boolean;
   total: number;
   /** Rows that passed every check (and, unless it was a check only, were saved). */
   valid: number;
+  /** New registrations saved. */
   imported: number;
+  /** Existing registrations updated. */
+  updated: number;
+  /** What the import will do (or just did): new registrations and updates. */
+  willCreate: number;
+  willUpdate: number;
   skipped: ImportRowIssue[];
   errors: ImportRowIssue[];
 }
@@ -62,15 +75,24 @@ export async function runImport(
   content: Buffer,
   mapping: Record<string, string>,
   dryRun: boolean,
+  existing: ExistingRows = "skip",
 ): Promise<ImportResult> {
   const { program, published } = await loadProgramForm(programId);
   const table = await parseImportFile(filename, content);
 
   const fieldsByKey = new Map(importableFields(published.fields).map((f) => [f.fieldKey, f] as const));
   const columns: { index: number; field: FieldRow }[] = [];
+  let numberColumn: number | undefined;
   const usedFields = new Set<string>();
   for (const [columnIndex, fieldKey] of Object.entries(mapping)) {
     const index = Number(columnIndex);
+    if (fieldKey === REGISTRATION_NUMBER_KEY) {
+      if (!Number.isInteger(index) || index < 0 || index >= table.headers.length || numberColumn !== undefined) {
+        throw AppError.validation("The column matching is not valid. Choose the columns again.");
+      }
+      numberColumn = index;
+      continue;
+    }
     const field = fieldsByKey.get(fieldKey);
     if (!Number.isInteger(index) || index < 0 || index >= table.headers.length || !field) {
       throw AppError.validation("The column matching is not valid. Choose the columns again.");
@@ -79,33 +101,124 @@ export async function runImport(
     usedFields.add(fieldKey);
     columns.push({ index, field });
   }
+  if (existing !== "skip" && numberColumn === undefined && !columns.some((c) => c.field.type === "email")) {
+    throw AppError.validation("To update existing registrations, match a column to the registration number or to the email question, so each row can find its registration.");
+  }
   if (columns.length === 0) throw AppError.validation("Match at least one column to a question before importing.");
 
   // A document can't carry uploaded files, so an upload question never blocks a row.
   const checkFields = published.fields.map((f) => (FILE_TYPES.has(f.type) ? { ...f, required: false } : f));
+  const mappedKeys = new Set(columns.map((c) => c.field.fieldKey));
+  // When updating, only the questions the document supplies are checked as required; the rest keep what they had.
+  const updateFields = checkFields.map((f) => (mappedKeys.has(f.fieldKey) ? f : { ...f, required: false }));
   const knownEmails = program.oneRegistrationPerEmail ? await registrationsRepo.listRegisteredEmails(program.id) : new Set<string>();
 
-  const result: ImportResult = { dryRun, total: table.rows.length, valid: 0, imported: 0, skipped: [], errors: [] };
-  const note = `Imported from ${filename.slice(0, 120)}`;
-  const addIssue = (list: ImportRowIssue[], row: number, messages: string[]) => {
-    if (list.length < REPORT_LIMIT) list.push({ row, messages });
-  };
-
-  for (let i = 0; i < table.rows.length; i++) {
-    const rowNumber = i + 2;
-    const cells = table.rows[i]!;
+  // Convert every row once, and look up the registrations they might update in one go.
+  const parsedRows = table.rows.map((cells) => {
     const responses: Record<string, unknown> = {};
     for (const { index, field } of columns) {
       const value = convertCell(field, cells[index] ?? "");
       if (value !== undefined) responses[field.fieldKey] = value;
+    }
+    const number = numberColumn === undefined ? "" : (cells[numberColumn] ?? "").trim();
+    const email = extractApplicantContact(published.fields, responses).email?.trim().toLowerCase() ?? "";
+    return { responses, number, email };
+  });
+  const byNumber = new Map<string, registrationsRepo.RegistrationRow>();
+  const byEmail = new Map<string, registrationsRepo.RegistrationRow>();
+  if (existing !== "skip") {
+    const found = await registrationsRepo.findRegistrationsForImport(
+      program.id,
+      [...new Set(parsedRows.map((r) => r.email).filter(Boolean))],
+      [...new Set(parsedRows.map((r) => r.number).filter(Boolean))],
+    );
+    // Newest first, so the first one seen for an email is the latest.
+    for (const reg of found) {
+      byNumber.set(reg.registrationNumber.toLowerCase(), reg);
+      const key = reg.applicantEmail?.trim().toLowerCase();
+      if (key && !byEmail.has(key)) byEmail.set(key, reg);
+    }
+  }
+
+  const result: ImportResult = {
+    dryRun,
+    total: table.rows.length,
+    valid: 0,
+    imported: 0,
+    updated: 0,
+    willCreate: 0,
+    willUpdate: 0,
+    skipped: [],
+    errors: [],
+  };
+  const note = `Imported from ${filename.slice(0, 120)}`;
+  const updateNote = `Updated from ${filename.slice(0, 120)}`;
+  const addIssue = (list: ImportRowIssue[], row: number, messages: string[]) => {
+    if (list.length < REPORT_LIMIT) list.push({ row, messages });
+  };
+  const detailsOf = (err: unknown) =>
+    err instanceof AppError && Array.isArray(err.details) ? (err.details as string[]) : [err instanceof Error ? err.message : "Invalid row"];
+
+  for (let i = 0; i < parsedRows.length; i++) {
+    const rowNumber = i + 2;
+    const { responses, number, email } = parsedRows[i]!;
+
+    // A row finds its registration by number first, then by email.
+    const match = existing === "skip" ? undefined : ((number && byNumber.get(number.toLowerCase())) || (email ? byEmail.get(email) : undefined));
+
+    if (match) {
+      // Only what the document supplies is changed; empty cells and other questions keep their answers.
+      const merged = { ...(match.responses as Record<string, unknown>), ...responses };
+      let cleaned: Record<string, unknown>;
+      try {
+        cleaned = validateAndNormalizeResponses(updateFields, merged, [], published.sections);
+      } catch (err) {
+        addIssue(result.errors, rowNumber, detailsOf(err));
+        continue;
+      }
+      const finalResponses: Record<string, unknown> = { ...(match.responses as Record<string, unknown>) };
+      for (const key of Object.keys(responses)) finalResponses[key] = cleaned[key];
+      const contact = extractApplicantContact(published.fields, finalResponses);
+      const newEmail = contact.email?.trim().toLowerCase();
+      if (program.oneRegistrationPerEmail && newEmail && newEmail !== match.applicantEmail?.trim().toLowerCase() && knownEmails.has(newEmail)) {
+        addIssue(result.errors, rowNumber, [`${contact.email} is already used by another registration`]);
+        continue;
+      }
+      result.valid++;
+      result.willUpdate++;
+      if (dryRun) continue;
+      try {
+        const saved = await registrationsRepo.updateRegistrationFromImport(match, {
+          applicantName: contact.name,
+          applicantEmail: contact.email,
+          applicantPhone: contact.phone,
+          responses: finalResponses,
+          enforceUniqueEmail: program.oneRegistrationPerEmail,
+          note: updateNote,
+        });
+        result.updated++;
+        if (program.oneRegistrationPerEmail && newEmail) knownEmails.add(newEmail);
+        // A later row for the same person builds on this update.
+        byNumber.set(saved.registrationNumber.toLowerCase(), saved);
+        if (newEmail) byEmail.set(newEmail, saved);
+      } catch (err) {
+        result.valid--;
+        result.willUpdate--;
+        addIssue(result.errors, rowNumber, [err instanceof AppError ? err.message : "This row could not be saved (is the email already used?)"]);
+      }
+      continue;
+    }
+
+    if (existing === "update_only") {
+      addIssue(result.skipped, rowNumber, ["No existing registration was found for this row"]);
+      continue;
     }
 
     let cleaned: Record<string, unknown>;
     try {
       cleaned = validateAndNormalizeResponses(checkFields, responses, [], published.sections);
     } catch (err) {
-      const details = err instanceof AppError && Array.isArray(err.details) ? (err.details as string[]) : [err instanceof Error ? err.message : "Invalid row"];
-      addIssue(result.errors, rowNumber, details);
+      addIssue(result.errors, rowNumber, detailsOf(err));
       continue;
     }
 
@@ -116,18 +229,20 @@ export async function runImport(
       continue;
     }
 
+    result.valid++;
+    result.willCreate++;
     if (dryRun) {
-      result.valid++;
       if (program.oneRegistrationPerEmail && emailKey) knownEmails.add(emailKey);
       continue;
     }
 
     try {
       await createRegistrationWithNumber(program, published.form.id, contact, cleaned, [], note);
-      result.valid++;
       result.imported++;
       if (program.oneRegistrationPerEmail && emailKey) knownEmails.add(emailKey);
     } catch (err) {
+      result.valid--;
+      result.willCreate--;
       addIssue(result.errors, rowNumber, [err instanceof AppError ? err.message : "This row could not be saved"]);
     }
   }

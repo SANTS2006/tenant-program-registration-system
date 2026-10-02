@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ApiError } from "@/lib/api";
-import { importRegistrations, previewRegistrationImport, type ImportPreview, type ImportResult } from "./api";
+import { importRegistrations, previewRegistrationImport, type ExistingRows, type ImportPreview, type ImportResult } from "./api";
 
 const NONE = "__skip";
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -53,6 +53,7 @@ export function ImportRegistrationsDialog({ programId, termLabel }: { programId:
   const [mapping, setMapping] = React.useState<Record<string, string>>({});
   const [check, setCheck] = React.useState<ImportResult | null>(null);
   const [result, setResult] = React.useState<ImportResult | null>(null);
+  const [existing, setExisting] = React.useState<ExistingRows>("skip");
 
   const reset = () => {
     setBusy(null);
@@ -61,6 +62,7 @@ export function ImportRegistrationsDialog({ programId, termLabel }: { programId:
     setMapping({});
     setCheck(null);
     setResult(null);
+    setExisting("skip");
   };
 
   const onFile = async (picked: File | undefined) => {
@@ -97,12 +99,12 @@ export function ImportRegistrationsDialog({ programId, termLabel }: { programId:
     if (!file) return;
     setBusy(dryRun ? "checking" : "importing");
     try {
-      const data = await importRegistrations(programId, file.name, file.content, mapping, dryRun);
+      const data = await importRegistrations(programId, file.name, file.content, mapping, dryRun, existing);
       if (dryRun) setCheck(data);
       else {
         setResult(data);
         await queryClient.invalidateQueries({ queryKey: ["registrations", programId] });
-        toast.success(`${data.imported} imported`);
+        toast.success(`${data.imported} imported, ${data.updated} updated`);
       }
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "The import did not work");
@@ -143,11 +145,13 @@ export function ImportRegistrationsDialog({ programId, termLabel }: { programId:
             <div className="flex items-center gap-3 rounded-lg border border-border/70 bg-gradient-brand-soft p-4">
               <CheckCircle2 className="h-6 w-6 shrink-0 text-primary" />
               <div className="text-sm">
-                <p className="text-base font-semibold">{result.imported} imported</p>
+                <p className="text-base font-semibold">
+                  {result.imported} imported{result.updated > 0 || existing !== "skip" ? `, ${result.updated} updated` : ""}
+                </p>
                 <p className="text-muted-foreground">
                   {result.errors.length + result.skipped.length > 0
                     ? `${result.errors.length + result.skipped.length} of ${result.total} rows were left out.`
-                    : `All ${result.total} rows were imported.`}
+                    : `All ${result.total} rows were imported or updated.`}
                 </p>
               </div>
             </div>
@@ -221,10 +225,40 @@ export function ImportRegistrationsDialog({ programId, termLabel }: { programId:
               </p>
             )}
 
+            <div className="flex flex-col gap-1.5 rounded-lg border border-border/60 p-3">
+              <p className="text-sm font-medium">If a row matches a registration this program already has</p>
+              <Select
+                value={existing}
+                onValueChange={(v) => {
+                  setExisting(v as ExistingRows);
+                  setCheck(null);
+                }}
+              >
+                <SelectTrigger aria-label="What to do with rows that match an existing registration">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="skip">Add every row as a new registration</SelectItem>
+                  <SelectItem value="update">Update the existing registration, and add the rows with no match</SelectItem>
+                  <SelectItem value="update_only">Only update existing registrations; ignore rows with no match</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {existing === "skip"
+                  ? "If the program allows one registration per email, rows whose email is already registered are skipped."
+                  : "A row finds its registration by the registration number column, or else by the email. Only the answers in your document change; empty cells and other questions keep what they had."}
+              </p>
+            </div>
+
             {check && (
               <div className="flex flex-col gap-3">
                 <p className="text-sm">
-                  <span className="font-semibold">{check.valid}</span> of {check.total} rows are ready to import.
+                  <span className="font-semibold">{check.valid}</span> of {check.total} rows are ready:{" "}
+                  <span className="font-medium">{check.willCreate}</span> new{existing !== "skip" && (
+                    <>
+                      , <span className="font-medium">{check.willUpdate}</span> updates
+                    </>
+                  )}.
                 </p>
                 <Issues title="Rows with problems (will not be imported)" items={check.errors} tone="error" />
                 <Issues title="Rows that will be skipped" items={check.skipped} tone="warn" />
@@ -239,7 +273,7 @@ export function ImportRegistrationsDialog({ programId, termLabel }: { programId:
                 Check the data
               </Button>
               <Button onClick={() => run(false)} loading={busy === "importing"} disabled={busy !== null || mappedCount === 0 || (check !== null && check.valid === 0)}>
-                {check ? `Import ${check.valid} ${termLabel}` : "Import"}
+                {check ? `${existing === "skip" ? "Import" : "Import / update"} ${check.valid}` : existing === "skip" ? "Import" : "Import / update"}
               </Button>
             </DialogFooter>
           </div>
