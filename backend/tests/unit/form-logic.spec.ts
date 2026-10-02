@@ -250,3 +250,28 @@ describe("sections with conditions", () => {
     expect(run({ adult: true, job: "Teacher" }).ok).toBe(true);
   });
 });
+
+describe("limits that apply only under conditions", () => {
+  const fields = [
+    field({ fieldKey: "paid", type: "yes_no" }),
+    field({
+      fieldKey: "dob",
+      type: "date_of_birth",
+      config: { minAge: 18, limitConditions: [{ fieldKey: "paid", operator: "equals", value: "true" }] },
+    }),
+    field({
+      fieldKey: "nick",
+      type: "short_text",
+      config: { minLength: 5, limitConditions: [{ fieldKey: "paid", operator: "equals", value: "true" }] },
+    }),
+  ];
+  const recent = new Date(Date.now() - 5 * 365 * 86_400_000).toISOString().slice(0, 10);
+  it("does not apply the limits while the conditions are not met", () => {
+    expect(check(fields, { paid: false, dob: recent, nick: "ab" }).ok).toBe(true);
+  });
+  it("applies them once the conditions are met", () => {
+    expect(check(fields, { paid: true, dob: recent }).ok).toBe(false);
+    expect(check(fields, { paid: true, nick: "ab" }).ok).toBe(false);
+    expect(check(fields, { paid: true, dob: "1990-01-01", nick: "abcdef" }).ok).toBe(true);
+  });
+});

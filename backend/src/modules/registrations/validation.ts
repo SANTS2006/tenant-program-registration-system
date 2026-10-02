@@ -197,13 +197,23 @@ export function dateLimitErrors(label: string, type: string, config: Record<stri
   return errors;
 }
 
+const LIMIT_KEYS = ["minLength", "maxLength", "regex", "minNumber", "maxNumber", "minDate", "maxDate", "minAge", "maxAge", "maxSelections"];
+
+/** The question's settings, without its limits when the admin made them apply only under conditions that aren't met. */
+function configWithLimits(field: FieldRow, responses: Record<string, unknown>): Record<string, unknown> {
+  const config = { ...((field.config as Record<string, unknown>) ?? {}) };
+  const rules = (config.limitConditions ?? []) as ConditionalRule[];
+  if (!rules.every((rule) => evaluateRule(rule, responses))) for (const key of LIMIT_KEYS) delete config[key];
+  return config;
+}
+
 function validateFieldValue(
   field: FieldRow,
   value: unknown,
   errors: string[],
   responses: Record<string, unknown>,
 ): unknown {
-  const config = (field.config as Record<string, unknown>) ?? {};
+  const config = configWithLimits(field, responses);
   const label = field.label;
 
   // A cascading field with no choices for the parent's answer (e.g. District "Other")

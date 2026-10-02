@@ -213,6 +213,18 @@ export function FieldSettingsDialog({
             </div>
           )}
 
+          {["minLength", "maxLength", "regex", "minNumber", "maxNumber", "minDate", "maxDate", "minAge", "maxAge", "maxSelections"].some(
+            (key) => (draft.config as Record<string, unknown>)[key] !== undefined && (draft.config as Record<string, unknown>)[key] !== "",
+          ) && (
+            <ConditionalLogicEditor
+              rules={draft.config.limitConditions}
+              ownerKey={draft.fieldKey}
+              otherFields={otherFields}
+              onChange={(limitConditions) => updateConfig({ limitConditions })}
+              heading="Apply this question's limits only when… (optional)"
+              hint="Leave empty to always apply them. Otherwise the length, number, date, age and selection limits only apply when another answer matches, or when another question is filled in or left empty."
+            />
+          )}
           <DateLimitEditor draft={draft} updateConfig={updateConfig} />
           <MaxSelectionsEditor draft={draft} updateConfig={updateConfig} />
           {meta.hasOptions && (draft.config.options ?? []).some((o) => /^other\b/i.test(o.trim())) && (

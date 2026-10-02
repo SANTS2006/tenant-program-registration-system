@@ -208,13 +208,24 @@ function initialResponses(fields: FormField[]): Record<string, unknown> {
   return pruneDependentAnswers(fields, responses);
 }
 
+const LIMIT_KEYS = ["minLength", "maxLength", "regex", "minNumber", "maxNumber", "minDate", "maxDate", "minAge", "maxAge", "maxSelections"] as const;
+
+/** The question's settings, without its limits when the admin made them apply only under conditions that aren't met. */
+function limitsFor(field: FormField, responses: Record<string, unknown>): FormField["config"] {
+  const rules = field.config.limitConditions ?? [];
+  if (rules.every((rule) => evaluateRule(rule, responses))) return field.config;
+  const config = { ...field.config };
+  for (const key of LIMIT_KEYS) delete config[key];
+  return config;
+}
+
 const DAY_MS = 86_400_000;
 const pad = (n: number) => String(n).padStart(2, "0");
 const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
 /** The earliest and latest day a date field accepts right now, from its limits and (for birth dates) age range. */
-function dateBounds(field: FormField): { min?: string; max?: string } {
-  const { minDate, maxDate, minAge, maxAge } = field.config;
+function dateBounds(field: FormField, responses: Record<string, unknown>): { min?: string; max?: string } {
+  const { minDate, maxDate, minAge, maxAge } = limitsFor(field, responses);
   const today = new Date();
   const resolve = (v: string | undefined) => (v === "today" ? ymd(today) : v);
   let min = resolve(minDate);
@@ -234,10 +245,10 @@ function dateBounds(field: FormField): { min?: string; max?: string } {
   return { min, max };
 }
 
-function dateProblem(field: FormField, value: unknown): string | null {
+function dateProblem(field: FormField, value: unknown, responses: Record<string, unknown>): string | null {
   if (!["date", "date_of_birth", "datetime"].includes(field.type) || typeof value !== "string" || !value) return null;
   const day = value.slice(0, 10);
-  const { min, max } = dateBounds(field);
+  const { min, max } = dateBounds(field, responses);
   if (min && day < min) return `${field.label} can't be earlier than ${min}`;
   if (max && day > max) return `${field.label} can't be later than ${max}`;
   return null;
@@ -456,7 +467,7 @@ export function DynamicForm({
     }
     for (const field of fieldsToCheck) {
       if (!isVisible(field, responses)) continue;
-      const problem = dateProblem(field, responses[field.fieldKey]);
+      const problem = dateProblem(field, responses[field.fieldKey], responses);
       if (problem) missing.push(problem);
     }
     for (const field of fieldsToCheck) {
@@ -694,15 +705,15 @@ export function DynamicForm({
           <Input
             {...common}
             type="number"
-            min={field.config.minNumber}
-            max={field.config.maxNumber}
+            min={limitsFor(field, responses).minNumber}
+            max={limitsFor(field, responses).maxNumber}
             value={(value as number) ?? ""}
             onChange={(e) => setValue(field.fieldKey, e.target.value === "" ? "" : Number(e.target.value))}
           />
         );
       case "date":
       case "date_of_birth": {
-        const { min, max } = dateBounds(field);
+        const { min, max } = dateBounds(field, responses);
         return (
           <Input {...common} type="date" min={min} max={max} value={(value as string) ?? ""} onChange={(e) => setValue(field.fieldKey, e.target.value)} />
         );
@@ -712,7 +723,7 @@ export function DynamicForm({
           <Input {...common} type="time" value={(value as string) ?? ""} onChange={(e) => setValue(field.fieldKey, e.target.value)} />
         );
       case "datetime": {
-        const { min, max } = dateBounds(field);
+        const { min, max } = dateBounds(field, responses);
         return (
           <Input
             {...common}
@@ -762,16 +773,16 @@ export function DynamicForm({
         const selected = Array.isArray(value) ? (value as string[]) : [];
         return (
           <div className="flex flex-col gap-2">
-            {field.config.maxSelections !== undefined && (
+            {limitsFor(field, responses).maxSelections !== undefined && (
               <p className="text-xs text-muted-foreground">
-                Choose up to {field.config.maxSelections} ({selected.length} selected)
+                Choose up to {limitsFor(field, responses).maxSelections} ({selected.length} selected)
               </p>
             )}
             {optionsFor(field, responses).map((option) => (
               <label key={option} className="flex items-center gap-2 text-sm">
                 <Checkbox
                   checked={selected.includes(option)}
-                  disabled={!selected.includes(option) && field.config.maxSelections !== undefined && selected.length >= field.config.maxSelections}
+                  disabled={!selected.includes(option) && limitsFor(field, responses).maxSelections !== undefined && selected.length >= limitsFor(field, responses).maxSelections!}
                   onCheckedChange={(checked) => {
                     const next = checked ? [...selected, option] : selected.filter((o) => o !== option);
                     setValue(field.fieldKey, next);

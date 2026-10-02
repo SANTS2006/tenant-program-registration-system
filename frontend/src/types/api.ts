@@ -130,6 +130,8 @@ export interface FieldConfig {
   maxSelections?: number;
   /** Choices that ask for more: option (or "Yes"/"No") -> what to ask for. */
   followUps?: Record<string, FollowUp>;
+  /** Length, number, date, age and selection limits only apply when these rules match. */
+  limitConditions?: ConditionalRule[];
   /** The default value is only applied when these rules match. */
   defaultConditions?: ConditionalRule[];
   /** Copying from another question only happens when these rules match. */
