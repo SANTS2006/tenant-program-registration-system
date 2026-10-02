@@ -1,10 +1,11 @@
 import * as React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { ArrowRight, LayoutDashboard, Menu, X } from "lucide-react";
+import { ArrowRight, ChevronDown, LayoutDashboard, Menu, X } from "lucide-react";
 import { useAuth } from "@/app/AuthContext";
 import { BrandLogo } from "@/components/BrandLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { LinkButton } from "@/components/ui/link-button";
 import { cn } from "@/lib/utils";
 import { SiteFooter } from "../legal/SiteFooter";
@@ -36,6 +37,35 @@ const NAV = [
   { href: "#faq", label: "FAQ" },
   { href: "/contact", label: "Contact" },
 ];
+
+/** The links shown in the bar itself; the others open from "More" so the bar never runs out of room. */
+const NAV_MAIN = NAV.slice(0, 5);
+const NAV_MORE = NAV.slice(5);
+
+/** The section the reader is in, from the section ids (the last heading to have passed the top third of the screen). */
+function useActiveSection(ids: string[]) {
+  const [active, setActive] = React.useState<string>("");
+  React.useEffect(() => {
+    const update = () => {
+      const line = window.innerHeight * 0.35;
+      let current = "";
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (el && el.getBoundingClientRect().top <= line) current = `#${id}`;
+      }
+      setActive(current);
+    };
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [ids]);
+  return active;
+}
+
 
 /** Section links scroll within the page; others (like Contact) open their own page. */
 function NavLink({ href, className, onClick, children }: { href: string; className: string; onClick?: () => void; children: React.ReactNode }) {
@@ -72,9 +102,16 @@ function AuthButtons({ stacked }: { stacked?: boolean }) {
   );
 }
 
+const SECTION_IDS = NAV.filter((n) => n.href.startsWith("#")).map((n) => n.href.slice(1));
+
+/**
+ * A floating dock: a brand capsule, a pill of section links with a lit marker for the current section,
+ * and a capsule for theme and sign-in. On smaller screens the links open as a full-screen menu.
+ */
 function Header() {
   const [open, setOpen] = React.useState(false);
   const [scrolled, setScrolled] = React.useState(false);
+  const active = useActiveSection(SECTION_IDS);
 
   React.useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -83,32 +120,74 @@ function Header() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // The full-screen menu holds the page still and closes on Escape.
+  React.useEffect(() => {
+    if (!open) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previous;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const capsule = cn(
+    "rounded-full border backdrop-blur-xl transition-all duration-300",
+    scrolled || open ? "border-border/70 bg-background/80 shadow-lg shadow-primary/5" : "border-border/40 bg-background/40",
+  );
+
   return (
-    <header
-      className={cn(
-        "sticky top-0 z-40 transition-colors duration-300",
-        scrolled || open ? "border-b border-border/70 bg-background/80 backdrop-blur-md" : "border-b border-transparent",
-      )}
-    >
-      <div className="site-container flex h-16 items-center justify-between gap-4">
-        <a href="#top" aria-label="Program Registration, back to top" className="flex items-center gap-2 font-semibold tracking-tight">
-          <BrandLogo className="h-9" />
-          <span className="gradient-text whitespace-nowrap text-base sm:text-lg">Program Registration</span>
+    <header className="sticky top-0 z-40 pt-3">
+      <div className="site-container flex items-center justify-between gap-3">
+        {/* Brand */}
+        <a href="#top" aria-label="Program Registration, back to top" className={cn(capsule, "flex min-w-0 shrink-0 items-center gap-2 py-1.5 pl-2 pr-4")}>
+          <BrandLogo className="h-8" />
+          <span className="gradient-text whitespace-nowrap text-sm font-semibold tracking-tight sm:text-base">Program Registration</span>
         </a>
 
-        <nav className="hidden items-center gap-1 xl:flex">
-          {NAV.map((item) => (
-            <NavLink
-              key={item.href}
-              href={item.href}
-              className="whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-gradient-brand-soft hover:text-primary"
+        {/* Section links */}
+        <nav aria-label="Sections" className={cn(capsule, "hidden items-center gap-0.5 p-1 xl:flex")}>
+          {NAV_MAIN.map((item) => {
+            const isActive = item.href === active;
+            return (
+              <NavLink
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "relative whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition-all duration-300",
+                  isActive ? "bg-gradient-brand text-white shadow-glow" : "text-muted-foreground hover:bg-gradient-brand-soft hover:text-primary",
+                )}
+              >
+                {item.label}
+              </NavLink>
+            );
+          })}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className={cn(
+                "inline-flex items-center gap-1 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium outline-none transition-all duration-300 focus-visible:ring-2 focus-visible:ring-ring",
+                NAV_MORE.some((m) => m.href === active) ? "bg-gradient-brand text-white shadow-glow" : "text-muted-foreground hover:bg-gradient-brand-soft hover:text-primary",
+              )}
             >
-              {item.label}
-            </NavLink>
-          ))}
+              More
+              <ChevronDown className="h-3.5 w-3.5" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-40">
+              {NAV_MORE.map((item) => (
+                <DropdownMenuItem key={item.href} asChild>
+                  <NavLink href={item.href} className="w-full cursor-pointer">
+                    {item.label}
+                  </NavLink>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </nav>
 
-        <div className="flex items-center gap-2">
+        {/* Theme, sign in, menu */}
+        <div className={cn(capsule, "flex shrink-0 items-center gap-1.5 p-1")}>
           <ThemeToggle />
           <div className="hidden sm:block">
             <AuthButtons />
@@ -116,7 +195,7 @@ function Header() {
           <Button
             variant="outline"
             size="icon"
-            className="xl:hidden"
+            className="rounded-full xl:hidden"
             aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
@@ -126,22 +205,30 @@ function Header() {
         </div>
       </div>
 
+      {/* Full-screen menu for smaller screens */}
       {open && (
-        <div className="animate-fade-in border-t border-border/70 px-4 pb-6 pt-3 xl:hidden">
-          <nav className="flex flex-col gap-1">
-            {NAV.map((item) => (
-              <NavLink
-                key={item.href}
-                href={item.href}
-                onClick={() => setOpen(false)}
-                className="rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-gradient-brand-soft hover:text-primary"
-              >
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
-          <div className="mt-4 sm:hidden">
-            <AuthButtons stacked />
+        <div className="fixed inset-0 z-[-1] animate-fade-in overflow-y-auto bg-background/95 backdrop-blur-xl xl:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+          <div className="site-container flex min-h-full flex-col justify-center gap-8 pb-10 pt-28">
+            <nav aria-label="Sections" className="grid gap-2 sm:grid-cols-2">
+              {NAV.map((item, index) => (
+                <NavLink
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setOpen(false)}
+                  className={cn(
+                    "group flex items-baseline gap-4 rounded-2xl border border-border/60 bg-card/60 px-5 py-4 transition-all hover:border-primary/40 hover:bg-gradient-brand-soft",
+                    item.href === active && "border-primary/50 bg-gradient-brand-soft",
+                  )}
+                >
+                  <span className="text-xs font-semibold tabular-nums text-primary/70">{String(index + 1).padStart(2, "0")}</span>
+                  <span className="text-xl font-semibold tracking-tight">{item.label}</span>
+                  <ArrowRight className="ml-auto h-4 w-4 -translate-x-1 self-center text-primary opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
+                </NavLink>
+              ))}
+            </nav>
+            <div className="sm:hidden">
+              <AuthButtons stacked />
+            </div>
           </div>
         </div>
       )}
