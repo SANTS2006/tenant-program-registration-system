@@ -31,6 +31,10 @@ export const forms = pgTable(
     // The consent is only asked when these rules match the answers (shown just before submitting).
     consentConditions: jsonb("consent_conditions"),
     showRegistrationNumber: boolean("show_registration_number").notNull().default(true),
+    // The "I have gone through the entire form" checkbox before submitting: on or off, its wording, and when it shows.
+    reviewConfirmEnabled: boolean("review_confirm_enabled").notNull().default(true),
+    reviewConfirmText: text("review_confirm_text"),
+    reviewConfirmConditions: jsonb("review_confirm_conditions"),
     layoutMode: formLayoutModeEnum("layout_mode").notNull().default("stepped"),
     status: formStatusEnum("status").notNull().default("draft"),
     publishedAt: timestamp("published_at", { withTimezone: true }),

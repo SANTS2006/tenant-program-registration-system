@@ -21,6 +21,9 @@ async function getOrCreateDraft(programId: string): Promise<formsRepo.FormRow> {
     consentText: published?.consentText ?? undefined,
     consentConditions: published?.consentConditions ?? undefined,
     showRegistrationNumber: published?.showRegistrationNumber ?? true,
+    reviewConfirmEnabled: published?.reviewConfirmEnabled ?? true,
+    reviewConfirmText: published?.reviewConfirmText ?? undefined,
+    reviewConfirmConditions: published?.reviewConfirmConditions ?? undefined,
     layoutMode: published?.layoutMode ?? "stepped",
   });
 
@@ -65,6 +68,9 @@ export async function saveDraft(programId: string, input: UpsertFormInput) {
     consentText: input.consentText ?? null,
     consentConditions: input.consentConditions ?? null,
     showRegistrationNumber: input.showRegistrationNumber,
+    reviewConfirmEnabled: input.reviewConfirmEnabled,
+    reviewConfirmText: input.reviewConfirmText?.trim() || null,
+    reviewConfirmConditions: input.reviewConfirmConditions ?? null,
     layoutMode: input.layoutMode,
   });
   await formsRepo.replaceDraftContent(draft.id, input.sections, input.fields);
@@ -147,6 +153,9 @@ export async function duplicateFormForProgram(sourceProgramId: string, targetPro
     consentText: source.consentText ?? undefined,
     consentConditions: source.consentConditions ?? undefined,
     showRegistrationNumber: source.showRegistrationNumber,
+    reviewConfirmEnabled: source.reviewConfirmEnabled,
+    reviewConfirmText: source.reviewConfirmText ?? undefined,
+    reviewConfirmConditions: source.reviewConfirmConditions ?? undefined,
     layoutMode: source.layoutMode,
   });
   await formsRepo.copyFormContent(source.id, draft.id);

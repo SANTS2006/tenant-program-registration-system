@@ -57,6 +57,9 @@ export function FormBuilderPage() {
   const [consentText, setConsentText] = React.useState("");
   const [consentConditions, setConsentConditions] = React.useState<ConditionalRule[] | undefined>(undefined);
   const [showRegistrationNumber, setShowRegistrationNumber] = React.useState(true);
+  const [reviewConfirmEnabled, setReviewConfirmEnabled] = React.useState(true);
+  const [reviewConfirmText, setReviewConfirmText] = React.useState("");
+  const [reviewConfirmConditions, setReviewConfirmConditions] = React.useState<ConditionalRule[] | undefined>(undefined);
   const [layoutMode, setLayoutMode] = React.useState<FormLayoutMode>("stepped");
   const [sections, setSections] = React.useState<EditableSection[]>([]);
   const [fields, setFields] = React.useState<EditableField[]>([]);
@@ -77,6 +80,9 @@ export function FormBuilderPage() {
     setConsentText(data.form.consentText ?? "");
     setConsentConditions(data.form.consentConditions ?? undefined);
     setShowRegistrationNumber(data.form.showRegistrationNumber ?? true);
+    setReviewConfirmEnabled(data.form.reviewConfirmEnabled ?? true);
+    setReviewConfirmText(data.form.reviewConfirmText ?? "");
+    setReviewConfirmConditions(data.form.reviewConfirmConditions ?? undefined);
     setLayoutMode(data.form.layoutMode);
     setSections(
       data.sections.map((s) => ({
@@ -173,6 +179,9 @@ export function FormBuilderPage() {
     consentText: consentText || undefined,
     consentConditions: requireConsent ? consentConditions : undefined,
     showRegistrationNumber,
+    reviewConfirmEnabled,
+    reviewConfirmText: reviewConfirmText.trim() || undefined,
+    reviewConfirmConditions: reviewConfirmEnabled ? reviewConfirmConditions : undefined,
     layoutMode,
     sections: sections.map((s) => ({
       key: s.key,
@@ -384,6 +393,9 @@ export function FormBuilderPage() {
               fields={previewFields}
               layoutMode={layoutMode}
               requireConsent={requireConsent}
+              requireReviewConfirmation={reviewConfirmEnabled}
+              reviewConfirmText={reviewConfirmText}
+              reviewConfirmConditions={reviewConfirmConditions}
               consentConditions={consentConditions}
               consentText={consentText}
               onSubmit={async () => undefined}
@@ -457,6 +469,45 @@ export function FormBuilderPage() {
             )}
           </div>
 
+          <div className="flex flex-col gap-3 rounded-lg border border-border/70 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <Label htmlFor="reviewConfirmEnabled" className="flex items-center gap-2 font-medium">
+                  <ShieldCheck className="h-4 w-4 text-primary" />
+                  Ask applicants to confirm their answers
+                </Label>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  A checkbox before the submit button: &ldquo;I have gone through the entire form&hellip;&rdquo;. Turn it off to remove it.
+                </p>
+              </div>
+              <Switch id="reviewConfirmEnabled" className="shrink-0" checked={reviewConfirmEnabled} onCheckedChange={setReviewConfirmEnabled} />
+            </div>
+            {reviewConfirmEnabled && (
+              <>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="reviewConfirmText">Message shown next to the checkbox</Label>
+                  <Textarea
+                    id="reviewConfirmText"
+                    value={reviewConfirmText}
+                    onChange={(e) => setReviewConfirmText(e.target.value)}
+                    rows={2}
+                    maxLength={1000}
+                    placeholder="I have gone through the entire form and confirm that all the information I entered is complete and correct."
+                  />
+                  <p className="text-xs text-muted-foreground">Leave empty to use the standard message.</p>
+                </div>
+                <ConditionalLogicEditor
+                  rules={reviewConfirmConditions}
+                  ownerKey=""
+                  otherFields={fields}
+                  onChange={setReviewConfirmConditions}
+                  heading="Ask for this confirmation only when… (optional)"
+                  hint="Leave empty to always ask. Otherwise it is only asked when another answer matches, or when another question is filled in or left empty."
+                />
+              </>
+            )}
+          </div>
+
           <div className="flex items-center justify-between gap-3 rounded-lg border border-border/70 p-3">
             <div className="min-w-0">
               <Label htmlFor="showRegistrationNumber" className="flex items-center gap-2 font-medium">
@@ -522,6 +573,9 @@ export function FormBuilderPage() {
                 fields={previewFields}
                 layoutMode={layoutMode}
                 requireConsent={requireConsent}
+              requireReviewConfirmation={reviewConfirmEnabled}
+              reviewConfirmText={reviewConfirmText}
+              reviewConfirmConditions={reviewConfirmConditions}
               consentConditions={consentConditions}
                 consentText={consentText}
                 onSubmit={async () => undefined}

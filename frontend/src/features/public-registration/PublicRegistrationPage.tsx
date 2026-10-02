@@ -103,6 +103,9 @@ export function PublicRegistrationPage({ variant = "registration" }: { variant?:
           requireConsent={data.form.requireConsent}
           consentText={data.form.consentText}
           consentConditions={data.form.consentConditions}
+          requireReviewConfirmation={data.form.reviewConfirmEnabled ?? true}
+          reviewConfirmText={data.form.reviewConfirmText}
+          reviewConfirmConditions={data.form.reviewConfirmConditions}
           onUploadFile={(file, fieldKey) => uploadPublicFile(slug!, fieldKey, file)}
           onSubmit={handleSubmit}
           storageKey={draftKey}

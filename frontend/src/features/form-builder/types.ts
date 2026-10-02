@@ -33,6 +33,9 @@ export interface EditableFormPayload {
   consentText?: string;
   consentConditions?: ConditionalRule[];
   showRegistrationNumber: boolean;
+  reviewConfirmEnabled: boolean;
+  reviewConfirmText?: string;
+  reviewConfirmConditions?: ConditionalRule[];
   layoutMode: FormLayoutMode;
   sections: EditableSection[];
   fields: EditableField[];

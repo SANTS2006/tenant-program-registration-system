@@ -200,6 +200,9 @@ export interface FormMeta {
   consentText: string | null;
   consentConditions?: ConditionalRule[] | null;
   showRegistrationNumber: boolean;
+  reviewConfirmEnabled?: boolean;
+  reviewConfirmText?: string | null;
+  reviewConfirmConditions?: ConditionalRule[] | null;
   layoutMode: "stepped" | "single";
   status: FormStatus;
   publishedAt: string | null;

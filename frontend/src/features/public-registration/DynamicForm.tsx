@@ -46,6 +46,10 @@ interface DynamicFormProps {
   onCancel?: () => void;
   /** Asks the person to confirm they checked their answers before the form can be submitted. */
   requireReviewConfirmation?: boolean;
+  /** The admin's own wording for the confirmation checkbox; the standard message when empty. */
+  reviewConfirmText?: string | null;
+  /** The confirmation is only asked when these rules match the answers. */
+  reviewConfirmConditions?: ConditionalRule[] | null;
   /** When set, answers are kept in this browser so a refresh doesn't lose them; cleared on submit or "Clear form". */
   storageKey?: string;
   /** Shows a summary of the answers to confirm before the form is actually submitted. */
@@ -345,6 +349,8 @@ export function DynamicForm({
   consentText,
   onCancel,
   requireReviewConfirmation = true,
+  reviewConfirmText,
+  reviewConfirmConditions,
   storageKey,
   reviewBeforeSubmit = false,
 }: DynamicFormProps) {
@@ -388,6 +394,7 @@ export function DynamicForm({
 
   const isSingle = layoutMode === "single";
   // Consent is asked just before submitting, and only when its conditions match the answers so far.
+  const reviewConfirmNeeded = requireReviewConfirmation && (reviewConfirmConditions ?? []).every((rule) => evaluateRule(rule, responses));
   const consentNeeded = requireConsent && (consentConditions ?? []).every((rule) => evaluateRule(rule, responses));
   const steps = isSingle ? [{ id: "all", title: "Registration", fields: groups.flatMap((g) => g.fields) }] : groups;
   const activeStep = Math.min(stepIndex, steps.length - 1);
@@ -540,7 +547,7 @@ export function DynamicForm({
       setStepErrors([CONSENT_REQUIRED_MESSAGE]);
       return;
     }
-    if (requireReviewConfirmation && !reviewConfirmed) {
+    if (reviewConfirmNeeded && !reviewConfirmed) {
       setStepErrors([REVIEW_REQUIRED_MESSAGE]);
       return;
     }
@@ -998,7 +1005,7 @@ export function DynamicForm({
         </div>
       )}
 
-      {requireReviewConfirmation && (isSingle || isLastStep) && (
+      {reviewConfirmNeeded && (isSingle || isLastStep) && (
         <label
           htmlFor="review-confirm"
           className="flex cursor-pointer items-start gap-3 rounded-xl border border-primary/25 bg-gradient-brand-soft p-4 text-sm"
@@ -1013,10 +1020,14 @@ export function DynamicForm({
             className="mt-0.5"
             aria-required="true"
           />
-          <span>
-            <span className="font-medium">I have gone through the entire form</span> and confirm that all the information
-            I entered is complete and correct.
-          </span>
+          {reviewConfirmText?.trim() ? (
+            <span className="whitespace-pre-line">{reviewConfirmText.trim()}</span>
+          ) : (
+            <span>
+              <span className="font-medium">I have gone through the entire form</span> and confirm that all the information
+              I entered is complete and correct.
+            </span>
+          )}
         </label>
       )}
 
