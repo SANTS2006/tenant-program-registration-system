@@ -500,7 +500,11 @@ export function DynamicForm({
           const asked = owner && isVisible(owner, responses) ? followUpsForMulti(owner, responses[owner.fieldKey], responses).find((x) => x.option === key.slice(at + 6)) : undefined;
           return asked !== undefined && followUpAsksFile(asked.followUp.mode);
         }
-        if (!key.endsWith("__other")) return true;
+        if (!key.endsWith("__other")) {
+          // A file question hidden by its conditions sends nothing.
+          const fileOwner = fields.find((f) => f.fieldKey === key);
+          return !fileOwner || isVisible(fileOwner, responses);
+        }
         const owner = fields.find((f) => otherTextKey(f.fieldKey) === key);
         const mode = owner && isVisible(owner, responses) ? followUpFor(owner, responses[owner.fieldKey], responses)?.mode : undefined;
         return mode !== undefined && followUpAsksFile(mode);

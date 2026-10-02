@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateAndNormalizeResponses } from "../../src/modules/registrations/validation.js";
+import { dropHiddenFileUploads, validateAndNormalizeResponses } from "../../src/modules/registrations/validation.js";
 import type { FieldRow } from "../../src/modules/forms/repository.js";
 
 function field(partial: Partial<FieldRow> & { fieldKey: string; type: string }): FieldRow {
@@ -182,5 +182,28 @@ describe('the "Other" text box with conditions', () => {
   it("is required once its conditions match", () => {
     expect(check(fields, { adult: true, job: "Other" }).ok).toBe(false);
     expect(check(fields, { adult: true, job: "Other", job__other: "Farmer" }).ok).toBe(true);
+  });
+});
+
+describe("file upload questions with conditions", () => {
+  const fields = [
+    field({ fieldKey: "has_id", type: "yes_no" }),
+    field({
+      fieldKey: "id_scan",
+      type: "image_upload",
+      required: true,
+      conditionalLogic: [{ fieldKey: "has_id", operator: "equals", value: "true" }],
+    }),
+  ];
+  const file = { fieldKey: "id_scan", url: "https://res.cloudinary.com/x/a.png", publicId: "a", filename: "a.png", mimeType: "image/png", sizeBytes: 1 };
+  it("is not required while hidden", () => {
+    expect(check(fields, { has_id: false }).ok).toBe(true);
+  });
+  it("is required once shown", () => {
+    expect(check(fields, { has_id: true }).ok).toBe(false);
+  });
+  it("drops an upload left over from a hidden question", () => {
+    expect(dropHiddenFileUploads(fields, { has_id: false }, [file])).toEqual([]);
+    expect(dropHiddenFileUploads(fields, { has_id: true }, [file])).toHaveLength(1);
   });
 });

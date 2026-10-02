@@ -11,7 +11,7 @@ import * as programsRepo from "../programs/repository.js";
 import * as registrationsRepo from "./repository.js";
 import { programStatusChoices, type ListRegistrationsQuery, type SubmitRegistrationInput, type UpdateStatusInput } from "./schemas.js";
 import { counterBucket, formatRegistrationNumber, resolveNumberingConfig } from "./numbering.js";
-import { extractApplicantContact, validateAndNormalizeResponses } from "./validation.js";
+import { dropHiddenFileUploads, extractApplicantContact, validateAndNormalizeResponses } from "./validation.js";
 
 function isRegistrationWindowOpen(program: programsRepo.ProgramRow): boolean {
   const now = new Date();
@@ -36,7 +36,7 @@ export async function submitRegistration(slug: string, input: SubmitRegistration
     throw AppError.validation("You must agree to the consent statement to register");
   }
 
-  const files = input.files.map((f) => ({
+  const submittedFiles = input.files.map((f) => ({
     fieldKey: f.fieldKey,
     url: f.url,
     publicId: f.publicId,
@@ -45,6 +45,7 @@ export async function submitRegistration(slug: string, input: SubmitRegistration
     sizeBytes: f.sizeBytes,
   }));
 
+  const files = dropHiddenFileUploads(published.fields, input.responses, submittedFiles);
   const cleanedResponses = validateAndNormalizeResponses(published.fields, input.responses, files);
   const contact = extractApplicantContact(published.fields, cleanedResponses);
 

@@ -328,6 +328,12 @@ function validateFieldValue(
   }
 }
 
+/** Uploads belonging to a file question that is hidden by its conditions are not kept. */
+export function dropHiddenFileUploads(fields: FieldRow[], responses: Record<string, unknown>, files: SubmittedFile[]): SubmittedFile[] {
+  const hidden = new Set(fields.filter((f) => FILE_FIELD_TYPES.has(f.type) && !isFieldVisible(f, responses)).map((f) => f.fieldKey));
+  return files.filter((f) => !hidden.has(f.fieldKey));
+}
+
 export function validateAndNormalizeResponses(
   fields: FieldRow[],
   rawResponses: Record<string, unknown>,
