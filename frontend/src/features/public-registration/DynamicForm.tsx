@@ -136,6 +136,11 @@ function isRequired(field: FormField, responses: Record<string, unknown>): boole
   return field.required && (field.config.requiredConditions ?? []).every((rule) => evaluateRule(rule, responses));
 }
 
+/** A question's description and help text only show when the admin's rules for them match. */
+function showHelp(field: FormField, responses: Record<string, unknown>): boolean {
+  return (field.config.descriptionConditions ?? []).every((rule) => evaluateRule(rule, responses));
+}
+
 /** The "Other" text box only shows when the admin's rules for it match the answers so far. */
 function otherApplies(field: FormField, responses: Record<string, unknown>): boolean {
   return (field.config.otherConditions ?? []).every((rule) => evaluateRule(rule, responses));
@@ -165,6 +170,12 @@ function followUpFor(field: FormField, value: unknown, responses: Record<string,
 
 /** The choices to show right now -- narrowed by the parent's answer for cascading fields. */
 function optionsFor(field: FormField, responses: Record<string, unknown>): string[] {
+  const rules = field.config.optionConditions ?? {};
+  // An option the admin hid behind conditions is only offered while its conditions match.
+  return baseOptionsFor(field, responses).filter((option) => (rules[option] ?? []).every((rule) => evaluateRule(rule, responses)));
+}
+
+function baseOptionsFor(field: FormField, responses: Record<string, unknown>): string[] {
   const dep = field.config.optionsDependOn;
   if (!dep) return field.config.options ?? [];
   const parentValue = responses[dep.fieldKey];
@@ -178,7 +189,7 @@ function pruneDependentAnswers(fields: FormField[], responses: Record<string, un
   while (changed) {
     changed = false;
     for (const field of fields) {
-      if (!field.config.optionsDependOn || isEmpty(next[field.fieldKey])) continue;
+      if ((!field.config.optionsDependOn && !field.config.optionConditions) || isEmpty(next[field.fieldKey])) continue;
       const allowed = optionsFor(field, next);
       const current = next[field.fieldKey];
       if (Array.isArray(current)) {
@@ -595,12 +606,12 @@ export function DynamicForm({
           {field.label}
           {isRequired(field, responses) && <span className="text-destructive"> *</span>}
         </Label>
-        {field.description && <p className="text-xs text-muted-foreground">{field.description}</p>}
+        {field.description && showHelp(field, responses) && <p className="text-xs text-muted-foreground">{field.description}</p>}
 
         {renderInput(field, value)}
         {renderOtherInput(field, value)}
 
-        {field.helpText && <p className="text-xs text-muted-foreground">{field.helpText}</p>}
+        {field.helpText && showHelp(field, responses) && <p className="text-xs text-muted-foreground">{field.helpText}</p>}
       </div>
     );
   };

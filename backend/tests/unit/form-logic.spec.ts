@@ -275,3 +275,24 @@ describe("limits that apply only under conditions", () => {
     expect(check(fields, { paid: true, dob: "1990-01-01", nick: "abcdef" }).ok).toBe(true);
   });
 });
+
+describe("choices offered only under conditions", () => {
+  const fields = [
+    field({ fieldKey: "region", type: "single_choice", config: { options: ["North", "South"] } }),
+    field({
+      fieldKey: "town",
+      type: "single_choice",
+      config: {
+        options: ["Kono", "Bo"],
+        optionConditions: { Kono: [{ fieldKey: "region", operator: "equals", value: "North" }] },
+      },
+    }),
+  ];
+  it("refuses a hidden choice", () => {
+    expect(check(fields, { region: "South", town: "Kono" }).ok).toBe(false);
+  });
+  it("accepts it once its conditions match, and always accepts unconditional choices", () => {
+    expect(check(fields, { region: "North", town: "Kono" }).ok).toBe(true);
+    expect(check(fields, { region: "South", town: "Bo" }).ok).toBe(true);
+  });
+});

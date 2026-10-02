@@ -61,6 +61,10 @@ export const fieldConfigSchema = z
     autoFillFrom: z.string().min(1).max(100).optional(),
     // Multiple choice: the most options a person may tick.
     maxSelections: z.number().int().min(1).max(100).optional(),
+    // An option is only offered when its rules match: option -> rules.
+    optionConditions: z.record(z.array(conditionalRuleSchema).max(10)).optional(),
+    // The description and help text only show when these rules match.
+    descriptionConditions: z.array(conditionalRuleSchema).max(10).optional(),
     // Length, number, date, age and selection limits only apply when these rules match.
     limitConditions: z.array(conditionalRuleSchema).max(10).optional(),
     // Pre-filled answers: only applied when these rules match.
@@ -124,6 +128,7 @@ export const upsertFormSchema = z.object({
   consentText: z.string().max(3000).optional(),
   consentConditions: z.array(conditionalRuleSchema).max(10).optional(),
   showRegistrationNumber: z.boolean().default(true),
+  registrationNumberConditions: z.array(conditionalRuleSchema).max(10).optional(),
   reviewConfirmEnabled: z.boolean().default(true),
   reviewConfirmText: z.string().max(1000).optional(),
   reviewConfirmConditions: z.array(conditionalRuleSchema).max(10).optional(),

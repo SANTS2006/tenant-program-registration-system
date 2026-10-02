@@ -130,6 +130,10 @@ export interface FieldConfig {
   maxSelections?: number;
   /** Choices that ask for more: option (or "Yes"/"No") -> what to ask for. */
   followUps?: Record<string, FollowUp>;
+  /** An option is only offered when its rules match: option -> rules. */
+  optionConditions?: Record<string, ConditionalRule[]>;
+  /** The description and help text only show when these rules match. */
+  descriptionConditions?: ConditionalRule[];
   /** Length, number, date, age and selection limits only apply when these rules match. */
   limitConditions?: ConditionalRule[];
   /** The default value is only applied when these rules match. */
@@ -200,6 +204,7 @@ export interface FormMeta {
   consentText: string | null;
   consentConditions?: ConditionalRule[] | null;
   showRegistrationNumber: boolean;
+  registrationNumberConditions?: ConditionalRule[] | null;
   reviewConfirmEnabled?: boolean;
   reviewConfirmText?: string | null;
   reviewConfirmConditions?: ConditionalRule[] | null;

@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, X } from "lucide-react";
-import { AutoFillEditor, ConditionalLogicEditor, DateLimitEditor, DefaultValueEditor, DependentOptionsEditor, FollowUpEditor, MaxSelectionsEditor } from "./FieldAdvancedSettings";
+import { AutoFillEditor, ConditionalLogicEditor, OptionConditionsEditor, DateLimitEditor, DefaultValueEditor, DependentOptionsEditor, FollowUpEditor, MaxSelectionsEditor } from "./FieldAdvancedSettings";
 import { metaFor } from "./fieldTypes";
 import type { EditableField } from "./types";
 import { slugifyKey } from "@/lib/utils";
@@ -223,6 +223,17 @@ export function FieldSettingsDialog({
               onChange={(limitConditions) => updateConfig({ limitConditions })}
               heading="Apply this question's limits only when… (optional)"
               hint="Leave empty to always apply them. Otherwise the length, number, date, age and selection limits only apply when another answer matches, or when another question is filled in or left empty."
+            />
+          )}
+          {meta.hasOptions && <OptionConditionsEditor draft={draft} otherFields={otherFields} updateConfig={updateConfig} />}
+          {(draft.description?.trim() || draft.helpText?.trim()) && (
+            <ConditionalLogicEditor
+              rules={draft.config.descriptionConditions}
+              ownerKey={draft.fieldKey}
+              otherFields={otherFields}
+              onChange={(descriptionConditions) => updateConfig({ descriptionConditions })}
+              heading="Show the description and help text only when… (optional)"
+              hint="Leave empty to always show them."
             />
           )}
           <DateLimitEditor draft={draft} updateConfig={updateConfig} />

@@ -117,6 +117,13 @@ interface OptionsDependOn {
 
 /** The options valid for a field right now -- narrowed by its parent's answer for cascading fields. */
 function allowedOptions(field: FieldRow, responses: Record<string, unknown>): string[] | undefined {
+  const list = baseOptions(field, responses);
+  const rules = ((field.config as Record<string, unknown>)?.optionConditions ?? {}) as Record<string, ConditionalRule[]>;
+  // An option the admin hid behind conditions is only valid while its conditions match.
+  return list?.filter((option) => (rules[option] ?? []).every((rule) => evaluateRule(rule, responses)));
+}
+
+function baseOptions(field: FieldRow, responses: Record<string, unknown>): string[] | undefined {
   const config = (field.config as Record<string, unknown>) ?? {};
   const dep = config.optionsDependOn as OptionsDependOn | undefined;
   if (dep) {

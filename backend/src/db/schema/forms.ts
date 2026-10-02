@@ -31,6 +31,8 @@ export const forms = pgTable(
     // The consent is only asked when these rules match the answers (shown just before submitting).
     consentConditions: jsonb("consent_conditions"),
     showRegistrationNumber: boolean("show_registration_number").notNull().default(true),
+    // The registration number is only shown on the success page when these rules match the answers.
+    registrationNumberConditions: jsonb("registration_number_conditions"),
     // The "I have gone through the entire form" checkbox before submitting: on or off, its wording, and when it shows.
     reviewConfirmEnabled: boolean("review_confirm_enabled").notNull().default(true),
     reviewConfirmText: text("review_confirm_text"),

@@ -33,6 +33,7 @@ export interface EditableFormPayload {
   consentText?: string;
   consentConditions?: ConditionalRule[];
   showRegistrationNumber: boolean;
+  registrationNumberConditions?: ConditionalRule[];
   reviewConfirmEnabled: boolean;
   reviewConfirmText?: string;
   reviewConfirmConditions?: ConditionalRule[];

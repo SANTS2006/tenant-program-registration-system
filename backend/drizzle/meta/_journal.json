@@ -162,6 +162,13 @@
       "when": 1790943299056,
       "tag": "0022_motionless_venom",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1790943603852,
+      "tag": "0023_smooth_sharon_ventura",
+      "breakpoints": true
     }
   ]
 }

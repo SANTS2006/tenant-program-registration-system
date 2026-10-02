@@ -58,6 +58,7 @@ interface FormMetaFields {
   consentText?: string | null;
   consentConditions?: unknown;
   showRegistrationNumber?: boolean;
+  registrationNumberConditions?: unknown;
   reviewConfirmEnabled?: boolean;
   reviewConfirmText?: string | null;
   reviewConfirmConditions?: unknown;

@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import * as React from "react";
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ConditionalRule, FieldConfig, FollowUp } from "@/types/api";
@@ -575,6 +576,67 @@ export function ConditionalLogicEditor({
           {rules.length === 0 ? "Add a rule" : "Add another rule"}
         </Button>
       )}
+    </div>
+  );
+}
+
+/** Lets each choice be offered only when conditions match, e.g. show "Kono" only when Region is North. */
+export function OptionConditionsEditor({
+  draft,
+  otherFields,
+  updateConfig,
+}: {
+  draft: EditableField;
+  otherFields: EditableField[];
+  updateConfig: UpdateConfig;
+}) {
+  const options = (draft.config.options ?? []).filter((o) => o.trim());
+  const [opened, setOpened] = React.useState<Set<string>>(() => new Set(Object.keys(draft.config.optionConditions ?? {})));
+  if (draft.config.optionsDependOn || options.length < 2) return null;
+  const all = draft.config.optionConditions ?? {};
+  const setFor = (option: string, rules: ConditionalRule[] | undefined) => {
+    const copy = { ...all };
+    if (rules && rules.length) copy[option] = rules;
+    else delete copy[option];
+    updateConfig({ optionConditions: Object.keys(copy).length ? copy : undefined });
+  };
+  return (
+    <div className="flex flex-col gap-3 rounded-md border border-dashed border-border p-3">
+      <p className="text-sm font-medium">Offer an option only when…</p>
+      <p className="-mt-2 text-xs text-muted-foreground">
+        Hide individual choices until another answer matches, or another question is filled in or left empty. Options without rules are always offered.
+      </p>
+      {options.map((option) => (
+        <div key={option} className="flex flex-col gap-2">
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={opened.has(option)}
+              onCheckedChange={(checked) => {
+                const next = new Set(opened);
+                if (checked === true) next.add(option);
+                else {
+                  next.delete(option);
+                  setFor(option, undefined);
+                }
+                setOpened(next);
+              }}
+            />
+            Add conditions to “{option}”
+          </label>
+          {opened.has(option) && (
+            <div className="ml-6">
+              <ConditionalLogicEditor
+                rules={all[option]}
+                ownerKey={draft.fieldKey}
+                otherFields={otherFields}
+                onChange={(rules) => setFor(option, rules)}
+                heading={`Offer “${option}” only when…`}
+                hint="All rules must match for this option to be offered."
+              />
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }

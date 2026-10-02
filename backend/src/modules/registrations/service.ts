@@ -108,7 +108,10 @@ export async function submitRegistration(slug: string, input: SubmitRegistration
   return {
     registration,
     confirmationMessage: published.form.confirmationMessage,
-    showRegistrationNumber: published.form.showRegistrationNumber,
+    // Shown on the success page only when the admin's rules for it (if any) match the answers.
+    showRegistrationNumber:
+      published.form.showRegistrationNumber &&
+      ((published.form.registrationNumberConditions ?? []) as Parameters<typeof evaluateRule>[0][]).every((rule) => evaluateRule(rule, input.responses)),
     idCardAvailable: program.idCardEnabled && showsOnConfirmation(program.idCardConfig),
     ticketAvailable: program.ticketEnabled && showsOnConfirmation(program.ticketConfig),
   };

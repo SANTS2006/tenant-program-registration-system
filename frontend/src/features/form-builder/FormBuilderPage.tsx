@@ -57,6 +57,7 @@ export function FormBuilderPage() {
   const [consentText, setConsentText] = React.useState("");
   const [consentConditions, setConsentConditions] = React.useState<ConditionalRule[] | undefined>(undefined);
   const [showRegistrationNumber, setShowRegistrationNumber] = React.useState(true);
+  const [registrationNumberConditions, setRegistrationNumberConditions] = React.useState<ConditionalRule[] | undefined>(undefined);
   const [reviewConfirmEnabled, setReviewConfirmEnabled] = React.useState(true);
   const [reviewConfirmText, setReviewConfirmText] = React.useState("");
   const [reviewConfirmConditions, setReviewConfirmConditions] = React.useState<ConditionalRule[] | undefined>(undefined);
@@ -80,6 +81,7 @@ export function FormBuilderPage() {
     setConsentText(data.form.consentText ?? "");
     setConsentConditions(data.form.consentConditions ?? undefined);
     setShowRegistrationNumber(data.form.showRegistrationNumber ?? true);
+    setRegistrationNumberConditions(data.form.registrationNumberConditions ?? undefined);
     setReviewConfirmEnabled(data.form.reviewConfirmEnabled ?? true);
     setReviewConfirmText(data.form.reviewConfirmText ?? "");
     setReviewConfirmConditions(data.form.reviewConfirmConditions ?? undefined);
@@ -179,6 +181,7 @@ export function FormBuilderPage() {
     consentText: consentText || undefined,
     consentConditions: requireConsent ? consentConditions : undefined,
     showRegistrationNumber,
+    registrationNumberConditions: showRegistrationNumber ? registrationNumberConditions : undefined,
     reviewConfirmEnabled,
     reviewConfirmText: reviewConfirmText.trim() || undefined,
     reviewConfirmConditions: reviewConfirmEnabled ? reviewConfirmConditions : undefined,
@@ -508,7 +511,8 @@ export function FormBuilderPage() {
             )}
           </div>
 
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-border/70 p-3">
+          <div className="flex flex-col gap-3 rounded-lg border border-border/70 p-3">
+            <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <Label htmlFor="showRegistrationNumber" className="flex items-center gap-2 font-medium">
                 <Hash className="h-4 w-4 text-primary" />
@@ -519,6 +523,17 @@ export function FormBuilderPage() {
               </p>
             </div>
             <Switch id="showRegistrationNumber" className="shrink-0" checked={showRegistrationNumber} onCheckedChange={setShowRegistrationNumber} />
+            </div>
+            {showRegistrationNumber && (
+              <ConditionalLogicEditor
+                rules={registrationNumberConditions}
+                ownerKey=""
+                otherFields={fields}
+                onChange={setRegistrationNumberConditions}
+                heading="Show the number only when… (optional)"
+                hint="Leave empty to always show it. Otherwise it is shown only when another answer matches, or when another question is filled in or left empty."
+              />
+            )}
           </div>
         </CardContent>
       </Card>
