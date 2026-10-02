@@ -335,9 +335,33 @@ function validateFieldValue(
   }
 }
 
+interface SectionLike {
+  id: string;
+  conditionalLogic: unknown;
+}
+
+/** Sections the admin hid behind conditions that the answers don't meet. */
+function hiddenSectionIds(sections: SectionLike[], responses: Record<string, unknown>): Set<string> {
+  return new Set(
+    sections
+      .filter((s) => ((s.conditionalLogic as ConditionalRule[] | null) ?? []).some((rule) => !evaluateRule(rule, responses)))
+      .map((s) => s.id),
+  );
+}
+
 /** Uploads belonging to a file question that is hidden by its conditions are not kept. */
-export function dropHiddenFileUploads(fields: FieldRow[], responses: Record<string, unknown>, files: SubmittedFile[]): SubmittedFile[] {
-  const hidden = new Set(fields.filter((f) => FILE_FIELD_TYPES.has(f.type) && !isFieldVisible(f, responses)).map((f) => f.fieldKey));
+export function dropHiddenFileUploads(
+  fields: FieldRow[],
+  responses: Record<string, unknown>,
+  files: SubmittedFile[],
+  sections: SectionLike[] = [],
+): SubmittedFile[] {
+  const hiddenSections = hiddenSectionIds(sections, responses);
+  const hidden = new Set(
+    fields
+      .filter((f) => FILE_FIELD_TYPES.has(f.type) && (!isFieldVisible(f, responses) || (f.sectionId !== null && hiddenSections.has(f.sectionId))))
+      .map((f) => f.fieldKey),
+  );
   return files.filter((f) => !hidden.has(f.fieldKey));
 }
 
@@ -345,8 +369,10 @@ export function validateAndNormalizeResponses(
   fields: FieldRow[],
   rawResponses: Record<string, unknown>,
   files: SubmittedFile[],
+  sections: SectionLike[] = [],
 ): Record<string, unknown> {
   const errors: string[] = [];
+  const hiddenSections = hiddenSectionIds(sections, rawResponses);
   const cleaned: Record<string, unknown> = {};
   const filesByField = new Map<string, SubmittedFile[]>();
   for (const file of files) {
@@ -354,7 +380,7 @@ export function validateAndNormalizeResponses(
   }
 
   for (const field of fields) {
-    const visible = isFieldVisible(field, rawResponses);
+    const visible = isFieldVisible(field, rawResponses) && !(field.sectionId !== null && hiddenSections.has(field.sectionId));
     if (!visible) {
       cleaned[field.fieldKey] = null;
       continue;

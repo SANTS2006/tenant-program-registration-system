@@ -45,8 +45,8 @@ export async function submitRegistration(slug: string, input: SubmitRegistration
     sizeBytes: f.sizeBytes,
   }));
 
-  const files = dropHiddenFileUploads(published.fields, input.responses, submittedFiles);
-  const cleanedResponses = validateAndNormalizeResponses(published.fields, input.responses, files);
+  const files = dropHiddenFileUploads(published.fields, input.responses, submittedFiles, published.sections);
+  const cleanedResponses = validateAndNormalizeResponses(published.fields, input.responses, files, published.sections);
   const contact = extractApplicantContact(published.fields, cleanedResponses);
 
   if (program.oneRegistrationPerEmail && contact.email && (await registrationsRepo.emailAlreadyRegistered(program.id, contact.email))) {

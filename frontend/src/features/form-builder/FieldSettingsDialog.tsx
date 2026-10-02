@@ -228,8 +228,28 @@ export function FieldSettingsDialog({
           <FollowUpEditor draft={draft} otherFields={otherFields} updateConfig={updateConfig} />
 
           <AutoFillEditor draft={draft} otherFields={otherFields} updateConfig={updateConfig} />
+          {draft.config.autoFillFrom && (
+            <ConditionalLogicEditor
+              rules={draft.config.autoFillConditions}
+              ownerKey={draft.fieldKey}
+              otherFields={otherFields}
+              onChange={(autoFillConditions) => updateConfig({ autoFillConditions })}
+              heading="Copy the answer only when… (optional)"
+              hint="Leave empty to always copy. Otherwise it is only copied when another answer matches, or when another question is filled in or left empty."
+            />
+          )}
 
           <DefaultValueEditor draft={draft} updateConfig={updateConfig} />
+          {draft.config.defaultValue !== undefined && (
+            <ConditionalLogicEditor
+              rules={draft.config.defaultConditions}
+              ownerKey={draft.fieldKey}
+              otherFields={otherFields}
+              onChange={(defaultConditions) => updateConfig({ defaultConditions })}
+              heading="Pre-fill the default only when… (optional)"
+              hint="Leave empty to always pre-fill it. Otherwise it is only pre-filled when another answer matches, or when another question is filled in or left empty."
+            />
+          )}
 
           {meta.isFile && (
             <div className="flex flex-col gap-1.5">

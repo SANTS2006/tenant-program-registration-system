@@ -195,6 +195,8 @@ function initialResponses(fields: FormField[]): Record<string, unknown> {
   for (const field of fields) {
     const value = field.config.defaultValue;
     if (value === undefined || value === "" || FILE_TYPES.has(field.type)) continue;
+    // A default with conditions waits until they match (see applyConditionalDefaults).
+    if ((field.config.defaultConditions ?? []).length > 0) continue;
     if (Array.isArray(value) && value.length === 0) continue;
 
     if (field.type === "multiple_choice") responses[field.fieldKey] = Array.isArray(value) ? value : [String(value)];
@@ -275,14 +277,38 @@ function applyAutoFill(fields: FormField[], responses: Record<string, unknown>, 
   for (let guard = 0; queue.length && guard < 100; guard++) {
     const source = queue.shift()!;
     for (const field of fields) {
-      if (field.config.autoFillFrom !== source || touched.has(field.fieldKey)) continue;
-      const value = autoFillValue(field, next[source]);
+      const from = field.config.autoFillFrom;
+      const conditions = field.config.autoFillConditions ?? [];
+      // Runs when the question it copies changes, or when an answer its conditions look at changes.
+      const relevant = from === source || (from !== undefined && conditions.some((rule) => rule.fieldKey === source));
+      if (!from || !relevant || touched.has(field.fieldKey)) continue;
+      if (!conditions.every((rule) => evaluateRule(rule, next))) continue;
+      const value = autoFillValue(field, next[from]);
       if (JSON.stringify(value) === JSON.stringify(next[field.fieldKey])) continue;
       next = { ...next };
       if (value === undefined) delete next[field.fieldKey];
       else next[field.fieldKey] = value;
       queue.push(field.fieldKey);
     }
+  }
+  return next;
+}
+
+/** Defaults that wait for conditions are applied once the answers meet them, to questions still untouched and empty. */
+function applyConditionalDefaults(fields: FormField[], responses: Record<string, unknown>, touched: Set<string>) {
+  let next = responses;
+  for (let pass = 0; pass < 3; pass++) {
+    let changed = false;
+    for (const field of fields) {
+      const conditions = field.config.defaultConditions ?? [];
+      if (conditions.length === 0 || touched.has(field.fieldKey) || !isEmpty(next[field.fieldKey])) continue;
+      if (!conditions.every((rule) => evaluateRule(rule, next))) continue;
+      const value = initialResponses([{ ...field, config: { ...field.config, defaultConditions: undefined } }])[field.fieldKey];
+      if (value === undefined) continue;
+      next = { ...next, [field.fieldKey]: value };
+      changed = true;
+    }
+    if (!changed) break;
   }
   return next;
 }
@@ -315,7 +341,7 @@ export function DynamicForm({
   const draft = React.useMemo(() => loadDraft(storageKey), [storageKey]);
   const [stepIndex, setStepIndex] = React.useState(() => Math.max(0, Math.min(draft?.step ?? 0, Math.max(0, sections.length - 1))));
   const [responses, setResponses] = React.useState<Record<string, unknown>>(() =>
-    draft ? pruneDependentAnswers(fields, draft.responses) : initialResponses(fields),
+    draft ? pruneDependentAnswers(fields, draft.responses) : applyConditionalDefaults(fields, initialResponses(fields), new Set()),
   );
   const [uploadedFiles, setUploadedFiles] = React.useState<Record<string, UploadedFileInfo>>(() => draft?.files ?? {});
   const [uploadingKey, setUploadingKey] = React.useState<string | null>(null);
@@ -332,19 +358,26 @@ export function DynamicForm({
   const fieldsBySection = (sectionId: string | null) =>
     fields.filter((f) => f.sectionId === sectionId).sort((a, b) => a.orderIndex - b.orderIndex);
 
-  const groups: { id: string | null; title: string; fields: FormField[] }[] = hasSections
-    ? orderedSections.map((s) => ({ id: s.id, title: s.title, fields: fieldsBySection(s.id) }))
+  const allGroups: { id: string | null; title: string; fields: FormField[]; conditions?: ConditionalRule[] | null }[] = hasSections
+    ? orderedSections.map((s) => ({ id: s.id, title: s.title, fields: fieldsBySection(s.id), conditions: s.conditionalLogic }))
     : [{ id: null, title: "Registration", fields: fieldsBySection(null) }];
 
   const unassigned = fieldsBySection(null);
   if (hasSections && unassigned.length > 0) {
-    groups.push({ id: "unassigned", title: "Additional Information", fields: unassigned });
+    allGroups.push({ id: "unassigned", title: "Additional Information", fields: unassigned });
   }
+
+  // A section hidden by its conditions, or with no question left to show, is skipped entirely.
+  const shownGroups = allGroups.filter(
+    (g) => (g.conditions ?? []).every((rule) => evaluateRule(rule, responses)) && g.fields.some((f) => isVisible(f, responses)),
+  );
+  const groups = shownGroups.length > 0 ? shownGroups : allGroups;
 
   const isSingle = layoutMode === "single";
   const steps = isSingle ? [{ id: "all", title: "Registration", fields: groups.flatMap((g) => g.fields) }] : groups;
-  const currentStep = steps[stepIndex]!;
-  const isLastStep = stepIndex === steps.length - 1;
+  const activeStep = Math.min(stepIndex, steps.length - 1);
+  const currentStep = steps[activeStep]!;
+  const isLastStep = activeStep === steps.length - 1;
 
   // Keep what the person has typed, so a refresh (or an accidental close) doesn't lose it.
   React.useEffect(() => {
@@ -382,7 +415,9 @@ export function DynamicForm({
 
   const setValue = (key: string, value: unknown) => {
     touched.current.add(key);
-    setResponses((r) => pruneDependentAnswers(fields, applyAutoFill(fields, { ...r, [key]: value }, key, touched.current)));
+    setResponses((r) =>
+      applyConditionalDefaults(fields, pruneDependentAnswers(fields, applyAutoFill(fields, { ...r, [key]: value }, key, touched.current)), touched.current),
+    );
   };
 
   const handleFileChange = async (field: FormField, file: File | undefined) => {
@@ -475,10 +510,10 @@ export function DynamicForm({
 
   const handleNext = () => {
     if (!validateStep()) return;
-    setStepIndex((s) => s + 1);
+    setStepIndex(activeStep + 1);
   };
 
-  const handleBack = () => setStepIndex((s) => Math.max(0, s - 1));
+  const handleBack = () => setStepIndex(Math.max(0, activeStep - 1));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -924,14 +959,14 @@ export function DynamicForm({
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>
-              Step {stepIndex + 1} of {steps.length}
+              Step {activeStep + 1} of {steps.length}
             </span>
             <span className="min-w-0 truncate pl-3 text-right">{currentStep.title}</span>
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
             <div
               className="h-full rounded-full bg-primary transition-all"
-              style={{ width: `${((stepIndex + 1) / steps.length) * 100}%` }}
+              style={{ width: `${((activeStep + 1) / steps.length) * 100}%` }}
             />
           </div>
         </div>
@@ -989,7 +1024,7 @@ export function DynamicForm({
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-        {!isSingle && stepIndex > 0 ? (
+        {!isSingle && activeStep > 0 ? (
           <Button type="button" variant="outline" onClick={handleBack}>
             <ChevronLeft className="h-4 w-4" />
             Back

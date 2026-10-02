@@ -1,3 +1,4 @@
+import { ConditionalLogicEditor } from "./FieldAdvancedSettings";
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -75,7 +76,13 @@ export function FormBuilderPage() {
     setShowRegistrationNumber(data.form.showRegistrationNumber ?? true);
     setLayoutMode(data.form.layoutMode);
     setSections(
-      data.sections.map((s) => ({ key: s.id, title: s.title, description: s.description ?? undefined, orderIndex: s.orderIndex })),
+      data.sections.map((s) => ({
+        key: s.id,
+        title: s.title,
+        description: s.description ?? undefined,
+        orderIndex: s.orderIndex,
+        conditionalLogic: s.conditionalLogic ?? undefined,
+      })),
     );
     setFields(
       data.fields.map((f) => ({
@@ -163,7 +170,13 @@ export function FormBuilderPage() {
     consentText: consentText || undefined,
     showRegistrationNumber,
     layoutMode,
-    sections: sections.map((s) => ({ key: s.key, title: s.title, description: s.description, orderIndex: s.orderIndex })),
+    sections: sections.map((s) => ({
+      key: s.key,
+      title: s.title,
+      description: s.description,
+      orderIndex: s.orderIndex,
+      conditionalLogic: s.conditionalLogic,
+    })),
     fields,
   });
 
@@ -216,6 +229,7 @@ export function FormBuilderPage() {
     title: s.title,
     description: s.description ?? null,
     orderIndex: s.orderIndex,
+    conditionalLogic: s.conditionalLogic ?? null,
   }));
 
   const renderSectionCard = (section: EditableSection | null) => {
@@ -241,6 +255,17 @@ export function FormBuilderPage() {
                 onChange={(e) =>
                   setSections((prev) => prev.map((s) => (s.key === section.key ? { ...s, description: e.target.value } : s)))
                 }
+              />
+              <ConditionalLogicEditor
+                rules={section.conditionalLogic}
+                ownerKey=""
+                // A section can't wait on a question inside itself.
+                otherFields={fields.filter((f) => f.sectionKey !== section.key)}
+                onChange={(conditionalLogic) =>
+                  setSections((prev) => prev.map((s) => (s.key === section.key ? { ...s, conditionalLogic } : s)))
+                }
+                heading="Show this section only when… (optional)"
+                hint="Hide the whole section until another answer matches, or another question is filled in or left empty. A section with no visible questions is skipped automatically."
               />
             </div>
           ) : (

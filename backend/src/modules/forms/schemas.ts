@@ -61,6 +61,9 @@ export const fieldConfigSchema = z
     autoFillFrom: z.string().min(1).max(100).optional(),
     // Multiple choice: the most options a person may tick.
     maxSelections: z.number().int().min(1).max(100).optional(),
+    // Pre-filled answers: only applied when these rules match.
+    defaultConditions: z.array(conditionalRuleSchema).max(10).optional(),
+    autoFillConditions: z.array(conditionalRuleSchema).max(10).optional(),
     // A required question is only required when these rules match.
     requiredConditions: z.array(conditionalRuleSchema).max(10).optional(),
     // The "Other" text box is only asked when these rules match.
@@ -87,6 +90,7 @@ export const sectionInputSchema = z.object({
   title: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
   orderIndex: z.number().int().min(0),
+  conditionalLogic: z.array(conditionalRuleSchema).max(10).optional(),
 });
 
 export const fieldInputSchema = z.object({

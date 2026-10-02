@@ -5,6 +5,7 @@ export interface EditableSection {
   title: string;
   description?: string;
   orderIndex: number;
+  conditionalLogic?: ConditionalRule[];
 }
 
 export interface EditableField {

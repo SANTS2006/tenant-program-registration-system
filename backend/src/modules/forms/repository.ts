@@ -119,6 +119,7 @@ export async function replaceDraftContent(
           title: section.title,
           description: section.description,
           orderIndex: section.orderIndex,
+          conditionalLogic: section.conditionalLogic ?? null,
         })
         .returning({ id: formSections.id });
       sectionKeyToId.set(section.key, row!.id);
@@ -158,6 +159,7 @@ export async function copyFormContent(sourceFormId: string, targetFormId: string
           title: section.title,
           description: section.description,
           orderIndex: section.orderIndex,
+          conditionalLogic: section.conditionalLogic,
         })
         .returning({ id: formSections.id });
       oldToNewSectionId.set(section.id, row!.id);

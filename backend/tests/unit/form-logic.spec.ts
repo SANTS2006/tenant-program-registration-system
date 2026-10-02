@@ -226,3 +226,27 @@ describe("required only when conditions match", () => {
     expect(check(fields, { employed: true, employer: "Acme" }).ok).toBe(true);
   });
 });
+
+describe("sections with conditions", () => {
+  const sections = [{ id: "s1", conditionalLogic: [{ fieldKey: "adult", operator: "equals", value: "true" }] }];
+  const fields = [
+    field({ fieldKey: "adult", type: "yes_no" }),
+    field({ fieldKey: "job", type: "short_text", required: true, sectionId: "s1" }),
+  ];
+  const run = (responses: Record<string, unknown>) => {
+    try {
+      return { ok: true as const, value: validateAndNormalizeResponses(fields, responses, [], sections) };
+    } catch {
+      return { ok: false as const };
+    }
+  };
+  it("ignores a required question inside a hidden section", () => {
+    const r = run({ adult: false, job: "stale" });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value.job).toBeNull();
+  });
+  it("requires it once the section is shown", () => {
+    expect(run({ adult: true }).ok).toBe(false);
+    expect(run({ adult: true, job: "Teacher" }).ok).toBe(true);
+  });
+});

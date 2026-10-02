@@ -130,6 +130,10 @@ export interface FieldConfig {
   maxSelections?: number;
   /** Choices that ask for more: option (or "Yes"/"No") -> what to ask for. */
   followUps?: Record<string, FollowUp>;
+  /** The default value is only applied when these rules match. */
+  defaultConditions?: ConditionalRule[];
+  /** Copying from another question only happens when these rules match. */
+  autoFillConditions?: ConditionalRule[];
   /** A required question is only required when these rules match. */
   requiredConditions?: ConditionalRule[];
   /** The "Other" text box is only asked when these rules match. */
@@ -160,6 +164,8 @@ export interface FormSection {
   title: string;
   description: string | null;
   orderIndex: number;
+  /** The section is only shown when these rules match. */
+  conditionalLogic?: ConditionalRule[] | null;
 }
 
 export interface FormField {

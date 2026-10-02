@@ -53,6 +53,8 @@ export const formSections = pgTable(
     title: text("title").notNull(),
     description: text("description"),
     orderIndex: integer("order_index").notNull().default(0),
+    // Show this section only when these rules match (same shape as a field's conditional logic).
+    conditionalLogic: jsonb("conditional_logic"),
   },
   (table) => [index("form_sections_form_id_idx").on(table.formId)],
 );

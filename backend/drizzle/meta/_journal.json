@@ -141,6 +141,13 @@
       "when": 1790857641773,
       "tag": "0019_luxuriant_hellcat",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1790942397109,
+      "tag": "0020_fearless_retro_girl",
+      "breakpoints": true
     }
   ]
 }
