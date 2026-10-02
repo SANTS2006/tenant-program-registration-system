@@ -125,6 +125,11 @@ export function optionFollowKey(fieldKey: string, option: string) {
   return `${fieldKey}__fu__${option}`;
 }
 
+/** The "Other" text box only shows when the admin's rules for it match the answers so far. */
+function otherApplies(field: FormField, responses: Record<string, unknown>): boolean {
+  return (field.config.otherConditions ?? []).every((rule) => evaluateRule(rule, responses));
+}
+
 /** The extra inputs the ticked options of a multiple choice question ask for. */
 function followUpsForMulti(field: FormField, value: unknown, responses: Record<string, unknown>): { option: string; followUp: FollowUp }[] {
   if (field.type !== "multiple_choice" || !Array.isArray(value)) return [];
@@ -449,7 +454,7 @@ export function DynamicForm({
     }
     for (const field of fieldsToCheck) {
       if (!isVisible(field, responses)) continue;
-      const pickedOther = chosenOptions(responses[field.fieldKey]).some(isOtherOption);
+      const pickedOther = chosenOptions(responses[field.fieldKey]).some(isOtherOption) && otherApplies(field, responses);
       if (pickedOther && isEmpty(String(responses[otherTextKey(field.fieldKey)] ?? "").trim())) {
         missing.push(`Please specify your answer for ${field.label}`);
       }
@@ -581,7 +586,7 @@ export function DynamicForm({
     const multiBoxes = multi.map(({ option, followUp: asks }) => (
       <React.Fragment key={option}>{renderFollowUp(field, asks, optionFollowKey(field.fieldKey, option), option)}</React.Fragment>
     ));
-    if (!chosenOptions(value).some(isOtherOption)) return multi.length > 0 ? <>{multiBoxes}</> : null;
+    if (!chosenOptions(value).some(isOtherOption) || !otherApplies(field, responses)) return multi.length > 0 ? <>{multiBoxes}</> : null;
     const key = otherTextKey(field.fieldKey);
     return (
       <>
@@ -837,7 +842,7 @@ export function DynamicForm({
     const followUpFile = uploadedFiles[otherTextKey(field.fieldKey)]?.filename;
     if (isEmpty(value)) return "";
     const pieces = (Array.isArray(value) ? value.map(String) : [typeof value === "boolean" ? (value ? "Yes" : "No") : String(value)]).map((v) => {
-      if (isOtherOption(v) && extra) return `${v}: ${extra}`;
+      if (isOtherOption(v) && extra && otherApplies(field, responses)) return `${v}: ${extra}`;
       if (Array.isArray(value) && field.config.followUps?.[v]) {
         const key = optionFollowKey(field.fieldKey, v);
         const more = [String(responses[key] ?? "").trim(), uploadedFiles[key] ? `[file: ${uploadedFiles[key]!.filename}]` : ""].filter(Boolean).join(" ");

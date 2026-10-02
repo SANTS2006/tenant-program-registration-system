@@ -130,6 +130,8 @@ export interface FieldConfig {
   maxSelections?: number;
   /** Choices that ask for more: option (or "Yes"/"No") -> what to ask for. */
   followUps?: Record<string, FollowUp>;
+  /** The "Other" text box is only asked when these rules match. */
+  otherConditions?: ConditionalRule[];
 }
 
 export type FollowUpMode = "text" | "short_text" | "number" | "email" | "phone" | "date" | "dropdown" | "file" | "text_or_file";

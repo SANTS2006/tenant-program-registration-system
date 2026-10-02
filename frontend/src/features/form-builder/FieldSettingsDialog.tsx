@@ -204,6 +204,16 @@ export function FieldSettingsDialog({
 
           <DateLimitEditor draft={draft} updateConfig={updateConfig} />
           <MaxSelectionsEditor draft={draft} updateConfig={updateConfig} />
+          {meta.hasOptions && (draft.config.options ?? []).some((o) => /^other\b/i.test(o.trim())) && (
+            <ConditionalLogicEditor
+              rules={draft.config.otherConditions}
+              ownerKey={draft.fieldKey}
+              otherFields={otherFields}
+              onChange={(otherConditions) => updateConfig({ otherConditions })}
+              heading={'Ask for the "Other" answer only when… (optional)'}
+              hint={'The "Please specify" box shows only when another answer matches, or when another question is filled in or left empty.'}
+            />
+          )}
           <FollowUpEditor draft={draft} otherFields={otherFields} updateConfig={updateConfig} />
 
           <AutoFillEditor draft={draft} otherFields={otherFields} updateConfig={updateConfig} />

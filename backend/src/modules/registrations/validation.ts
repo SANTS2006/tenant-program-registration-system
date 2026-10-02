@@ -381,7 +381,8 @@ export function validateAndNormalizeResponses(
     }
 
     const chosen = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
-    if (chosen.some((option) => isOtherOption(String(option)))) {
+    const otherRules = ((field.config as Record<string, unknown>)?.otherConditions ?? []) as ConditionalRule[];
+    if (chosen.some((option) => isOtherOption(String(option))) && otherRules.every((rule) => evaluateRule(rule, rawResponses))) {
       const otherText = String(rawResponses[otherTextKey(field.fieldKey)] ?? "").trim();
       if (!otherText) errors.push(`Please specify your answer for ${field.label}`);
       else if (otherText.length > OTHER_TEXT_MAX_LENGTH) {

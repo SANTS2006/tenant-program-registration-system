@@ -166,3 +166,21 @@ describe("multiple choice options that ask for more", () => {
     expect(check(fields, { skills: ["Driving"], skills__fu__Driving: "abc" }).ok).toBe(false);
   });
 });
+
+describe('the "Other" text box with conditions', () => {
+  const fields = [
+    field({ fieldKey: "adult", type: "yes_no" }),
+    field({
+      fieldKey: "job",
+      type: "single_choice",
+      config: { options: ["Teacher", "Other"], otherConditions: [{ fieldKey: "adult", operator: "equals", value: "true" }] },
+    }),
+  ];
+  it("is not required when its conditions do not match", () => {
+    expect(check(fields, { adult: false, job: "Other" }).ok).toBe(true);
+  });
+  it("is required once its conditions match", () => {
+    expect(check(fields, { adult: true, job: "Other" }).ok).toBe(false);
+    expect(check(fields, { adult: true, job: "Other", job__other: "Farmer" }).ok).toBe(true);
+  });
+});
