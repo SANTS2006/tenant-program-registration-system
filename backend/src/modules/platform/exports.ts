@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { dateRangeQuery } from "../../lib/dateRange.js";
 import { z } from "zod";
 import { date, EXPORT_ROW_LIMIT, exportFormatSchema, sendTableExport, type ExportSheet } from "../../lib/tableExport.js";
 import * as supportRepo from "../support/repository.js";
@@ -12,8 +13,8 @@ type Message =Awaited<ReturnType<typeof supportRepo.listSupportMessages>>["items
 /** CSV/Excel downloads of the platform tables: accounts, an account's programs, and the inbox. */
 export async function platformExportRoutes(app: FastifyInstance) {
   app.get("/tenants/export", async (request, reply) => {
-    const { format } = exportFormatSchema.parse(request.query);
-    const { items } = await platformRepo.listTenants({ page: 1, pageSize: EXPORT_ROW_LIMIT });
+    const { format, dateFrom, dateTo } = exportFormatSchema.extend(dateRangeQuery).parse(request.query);
+    const { items } = await platformRepo.listTenants({ page: 1, pageSize: EXPORT_ROW_LIMIT }, { dateFrom, dateTo });
     const sheet: ExportSheet<Tenant> = {
       name: "Accounts",
       rows: items,
@@ -30,10 +31,10 @@ export async function platformExportRoutes(app: FastifyInstance) {
   });
 
   app.get<{ Params: { tenantId: string } }>("/tenants/:tenantId/programs/export", async (request, reply) => {
-    const { format } = exportFormatSchema.parse(request.query);
+    const { format, dateFrom, dateTo } = exportFormatSchema.extend(dateRangeQuery).parse(request.query);
     const [tenant, programs] = await Promise.all([
       platformRepo.findTenantById(request.params.tenantId),
-      platformRepo.listProgramsForTenant(request.params.tenantId),
+      platformRepo.listProgramsForTenant(request.params.tenantId, { dateFrom, dateTo }),
     ]);
     const sheet: ExportSheet<TenantProgram> = {
       name: "Programs",
@@ -50,10 +51,10 @@ export async function platformExportRoutes(app: FastifyInstance) {
   });
 
   app.get<{ Params: { tenantId: string } }>("/tenants/:tenantId/users/export", async (request, reply) => {
-    const { format } = exportFormatSchema.parse(request.query);
+    const { format, dateFrom, dateTo } = exportFormatSchema.extend(dateRangeQuery).parse(request.query);
     const [tenant, users] = await Promise.all([
       platformRepo.findTenantById(request.params.tenantId),
-      platformRepo.listUsersForTenant(request.params.tenantId),
+      platformRepo.listUsersForTenant(request.params.tenantId, { dateFrom, dateTo }),
     ]);
     const sheet: ExportSheet<TenantUser> = {
       name: "Users",
@@ -76,10 +77,11 @@ export async function platformExportRoutes(app: FastifyInstance) {
         kind: z.enum(["feedback", "contact", "report"]).optional(),
         status: z.enum(["new", "read", "resolved"]).optional(),
         search: z.string().trim().max(200).optional(),
+        ...dateRangeQuery,
       })
       .parse(request.query);
     const { items } = await supportRepo.listSupportMessages(
-      { kind: query.kind, status: query.status, search: query.search || undefined },
+      { kind: query.kind, status: query.status, search: query.search || undefined, dateFrom: query.dateFrom, dateTo: query.dateTo },
       { page: 1, pageSize: EXPORT_ROW_LIMIT },
     );
     const sheet: ExportSheet<Message> = {

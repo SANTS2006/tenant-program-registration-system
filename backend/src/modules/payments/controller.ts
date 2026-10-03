@@ -7,6 +7,7 @@ import { paymentEvents, payments, payouts, tenants } from "../../db/schema/index
 import { AppError } from "../../lib/errors.js";
 import { leonesToMinor } from "../../lib/money.js";
 import { paginationSchema } from "../../lib/pagination.js";
+import { dateRangeQuery } from "../../lib/dateRange.js";
 import { sendSuccess } from "../../lib/response.js";
 import { recordAudit } from "../audit/service.js";
 import * as programsRepo from "../programs/repository.js";
@@ -63,7 +64,7 @@ export async function updatePaymentConfigHandler(request: FastifyRequest, reply:
   return sendSuccess(reply, { paymentConfig: resolvePaymentConfig(updated.paymentConfig) });
 }
 
-const listQuerySchema = paginationSchema.extend({ status: z.enum(["pending", "completed", "failed", "expired", "cancelled", "review"]).optional() });
+const listQuerySchema = paginationSchema.extend({ status: z.enum(["pending", "completed", "failed", "expired", "cancelled", "review"]).optional(), ...dateRangeQuery });
 
 export async function listProgramPaymentsHandler(request: FastifyRequest, reply: FastifyReply) {
   const { programId } = request.params as { programId: string };
@@ -105,13 +106,15 @@ export async function fundsSummaryHandler(request: FastifyRequest, reply: Fastif
 export async function fundsEntriesHandler(request: FastifyRequest, reply: FastifyReply) {
   const { tenantId } = actorOf(request);
   noStore(reply);
-  return sendSuccess(reply, await wallet.listEntries(tenantId, paginationSchema.parse(request.query)));
+  const query = paginationSchema.extend(dateRangeQuery).parse(request.query);
+  return sendSuccess(reply, await wallet.listEntries(tenantId, query, { dateFrom: query.dateFrom, dateTo: query.dateTo }));
 }
 
 export async function fundsPayoutsHandler(request: FastifyRequest, reply: FastifyReply) {
   const { tenantId } = actorOf(request);
   noStore(reply);
-  return sendSuccess(reply, await payoutsService.listPayouts(tenantId, paginationSchema.parse(request.query)));
+  const query = paginationSchema.extend(dateRangeQuery).parse(request.query);
+  return sendSuccess(reply, await payoutsService.listPayouts(tenantId, query, { dateFrom: query.dateFrom, dateTo: query.dateTo }));
 }
 
 const accountBodySchema = z.object({

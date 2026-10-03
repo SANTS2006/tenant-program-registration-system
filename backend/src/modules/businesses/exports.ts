@@ -1,3 +1,4 @@
+import { dateRangeQuery } from "../../lib/dateRange.js";
 import type { FastifyInstance } from "fastify";
 import { AppError } from "../../lib/errors.js";
 import { date, EXPORT_ROW_LIMIT, exportFormatSchema, MONEY_FORMAT, sendTableExport, type ExportSheet } from "../../lib/tableExport.js";
@@ -28,10 +29,10 @@ export async function businessExportRoutes(app: FastifyInstance) {
   const viewer = { preHandler: requireBusinessAccess("viewer") };
 
   app.get<{ Params: { businessId: string } }>("/:businessId/cards/export", viewer, async (request, reply) => {
-    const { format } = exportFormatSchema.parse(request.query);
+    const { format, dateFrom, dateTo } = exportFormatSchema.extend(dateRangeQuery).parse(request.query);
     const [business, { items }] = await Promise.all([
       businessService.getBusiness(request.params.businessId),
-      cards.listCards(request.params.businessId, {}, { page: 1, pageSize: EXPORT_ROW_LIMIT }),
+      cards.listCards(request.params.businessId, { dateFrom, dateTo }, { page: 1, pageSize: EXPORT_ROW_LIMIT }),
     ]);
     const sheet: ExportSheet<(typeof items)[number]> = {
       name: "Business cards",

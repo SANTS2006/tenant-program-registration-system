@@ -1,4 +1,5 @@
 import * as React from "react";
+import { DateRangeFilter, useDateRange } from "@/components/DateRangeFilter";
 import { ExportButtons } from "@/components/ExportButtons";
 import { Building2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,7 +12,8 @@ import { usePageMeta } from "@/lib/seo";
 export function TenantsListPage() {
   usePageMeta({ title: "Organizations" });
   const [page, setPage] = React.useState(1);
-  const { data, isLoading } = useTenantsList({ page, pageSize: 20 });
+  const range = useDateRange();
+  const { data, isLoading } = useTenantsList({ page, pageSize: 20, dateFrom: range.dateFrom, dateTo: range.dateTo });
 
   return (
     <div className="flex flex-col gap-6">
@@ -22,8 +24,9 @@ export function TenantsListPage() {
             Every account on the platform. Open one to manage its users and programs.
           </p>
         </div>
-        <ExportButtons path="/platform/tenants/export" fileLabel="Accounts" />
+        <ExportButtons path="/platform/tenants/export" params={{ dateFrom: range.dateFrom, dateTo: range.dateTo }} fileLabel="Accounts" />
       </div>
+      <DateRangeFilter range={range} onChange={() => setPage(1)} label="Created" />
 
       {!isLoading && data?.items.length === 0 && (
         <Card>

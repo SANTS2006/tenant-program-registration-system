@@ -1,4 +1,5 @@
 import { and, count, countDistinct, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { dateRangeConditions, dateRangeQuery, type DateRange } from "../../lib/dateRange.js";
 import { db } from "../../db/client.js";
 import { documentVerifications, registrations, users } from "../../db/schema/index.js";
 import { toOffsetLimit, type PaginationInput } from "../../lib/pagination.js";
@@ -37,6 +38,8 @@ export interface VerificationFilters {
   documentType?: VerificationDocument;
   valid?: boolean;
   registrationId?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
 }
 
 function buildWhere(programId: string, filters: VerificationFilters) {
@@ -44,6 +47,7 @@ function buildWhere(programId: string, filters: VerificationFilters) {
   if (filters.documentType) conditions.push(eq(documentVerifications.documentType, filters.documentType));
   if (filters.valid !== undefined) conditions.push(eq(documentVerifications.valid, filters.valid));
   if (filters.registrationId) conditions.push(eq(documentVerifications.registrationId, filters.registrationId));
+  conditions.push(...dateRangeConditions(documentVerifications.createdAt, filters));
   if (filters.search) {
     const term = `%${filters.search}%`;
     conditions.push(

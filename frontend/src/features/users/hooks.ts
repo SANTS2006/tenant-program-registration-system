@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as usersApi from "./api";
 import type { ProgramRole, UserRole, UserStatus } from "@/types/api";
 
-export function useUsersList(params: { page?: number; pageSize?: number; search?: string }) {
+export function useUsersList(params: { page?: number; pageSize?: number; search?: string; dateFrom?: string; dateTo?: string }) {
   return useQuery({ queryKey: ["users", params], queryFn: () => usersApi.listUsers(params) });
 }
 

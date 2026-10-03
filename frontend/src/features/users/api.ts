@@ -20,11 +20,13 @@ export interface Membership {
   programSlug: string;
 }
 
-export function listUsers(params: { page?: number; pageSize?: number; search?: string }) {
+export function listUsers(params: { page?: number; pageSize?: number; search?: string; dateFrom?: string; dateTo?: string }) {
   const query = new URLSearchParams();
   if (params.page) query.set("page", String(params.page));
   if (params.pageSize) query.set("pageSize", String(params.pageSize));
   if (params.search) query.set("search", params.search);
+  if (params.dateFrom) query.set("dateFrom", params.dateFrom);
+  if (params.dateTo) query.set("dateTo", params.dateTo);
   return apiFetch<PaginatedResult<AdminUser>>(`/users?${query.toString()}`);
 }
 

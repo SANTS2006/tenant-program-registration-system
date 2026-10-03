@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { dateRangeQuery } from "../../lib/dateRange.js";
 import { date, EXPORT_ROW_LIMIT, exportFormatSchema, sendTableExport, type ExportSheet } from "../../lib/tableExport.js";
 import { roleLabel } from "../email/templates.js";
 import * as usersRepo from "./repository.js";
@@ -25,8 +26,8 @@ export async function userRoutes(app: FastifyInstance) {
 
   app.get("/", listUsersHandler);
   app.get("/export", async (request, reply) => {
-    const query = exportFormatSchema.extend({ search: z.string().trim().min(1).optional() }).parse(request.query);
-    const { items } = await usersRepo.listUsers(request.user!.tenantId!, query.search, { page: 1, pageSize: EXPORT_ROW_LIMIT });
+    const query = exportFormatSchema.extend({ search: z.string().trim().min(1).optional(), ...dateRangeQuery }).parse(request.query);
+    const { items } = await usersRepo.listUsers(request.user!.tenantId!, query.search, { page: 1, pageSize: EXPORT_ROW_LIMIT }, { dateFrom: query.dateFrom, dateTo: query.dateTo });
     const sheet: ExportSheet<(typeof items)[number]> = {
       name: "Users",
       rows: items,

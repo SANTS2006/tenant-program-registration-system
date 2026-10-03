@@ -1,4 +1,5 @@
 import { and, count, desc, eq, ilike, or, type SQL } from "drizzle-orm";
+import { dateRangeConditions, dateRangeQuery, type DateRange } from "../../lib/dateRange.js";
 import { db } from "../../db/client.js";
 import { programs, supportMessages, tenants, users } from "../../db/schema/index.js";
 import { toOffsetLimit, type PaginationInput } from "../../lib/pagination.js";
@@ -37,12 +38,13 @@ const listColumns = {
 };
 
 export async function listSupportMessages(
-  filters: { kind?: SupportMessageKind; status?: SupportMessageStatus; search?: string },
+  filters: { kind?: SupportMessageKind; status?: SupportMessageStatus; search?: string; dateFrom?: Date; dateTo?: Date },
   pagination: PaginationInput,
 ) {
   const conditions: SQL[] = [];
   if (filters.kind) conditions.push(eq(supportMessages.kind, filters.kind));
   if (filters.status) conditions.push(eq(supportMessages.status, filters.status));
+  conditions.push(...dateRangeConditions(supportMessages.createdAt, filters));
   if (filters.search) {
     const term = `%${filters.search}%`;
     conditions.push(

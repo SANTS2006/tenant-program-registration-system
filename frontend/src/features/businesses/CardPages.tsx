@@ -1,4 +1,5 @@
 import * as React from "react";
+import { DateRangeFilter, useDateRange } from "@/components/DateRangeFilter";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import QRCode from "qrcode";
@@ -225,7 +226,8 @@ export function CardsListPage() {
   usePageMeta({ title: `Business cards · ${business.name}` });
   const [search, setSearch] = React.useState("");
   const [page, setPage] = React.useState(1);
-  const params = { page, pageSize: 12, search: search || undefined };
+  const range = useDateRange();
+  const params = { page, pageSize: 12, search: search || undefined, dateFrom: range.dateFrom, dateTo: range.dateTo };
   const { data, isLoading } = useQuery({ queryKey: cardKeys.list(business.id, params), queryFn: () => listCards(business.id, params) });
   const base = `/admin/businesses/${business.id}/cards`;
 
@@ -256,9 +258,10 @@ export function CardsListPage() {
             }}
           />
         </div>
+        <DateRangeFilter range={range} onChange={() => setPage(1)} label="Created" />
         <span className="text-sm text-muted-foreground">{data?.total ?? 0} total</span>
         <div className="ml-auto">
-          <ExportButtons path={`/businesses/${business.id}/cards/export`} fileLabel={`${business.name} business cards`} />
+          <ExportButtons path={`/businesses/${business.id}/cards/export`} params={{ dateFrom: range.dateFrom, dateTo: range.dateTo }} fileLabel={`${business.name} business cards`} />
         </div>
       </div>
 

@@ -1,5 +1,6 @@
 import { and, desc, eq, gte, inArray, isNull, lt, notInArray, sql } from "drizzle-orm";
 import { env } from "../../config/env.js";
+import { dateRangeConditions, type DateRange } from "../../lib/dateRange.js";
 import { db } from "../../db/client.js";
 import { payoutAccounts, payouts, tenants, users, walletEntries } from "../../db/schema/index.js";
 import { AppError } from "../../lib/errors.js";
@@ -239,8 +240,9 @@ export async function cancelPayout(actor: { id: string; tenantId: string }, payo
   await recordAudit({ actorUserId: actor.id, action: "payout.cancel", entityType: "payout", entityId: payoutId, ipAddress });
 }
 
-export async function listPayouts(tenantId: string, pagination: PaginationInput) {
+export async function listPayouts(tenantId: string, pagination: PaginationInput, range: DateRange = {}) {
   const { offset, limit } = toOffsetLimit(pagination);
+  const where = and(eq(payouts.tenantId, tenantId), ...dateRangeConditions(payouts.createdAt, range));
   const [items, total] = await Promise.all([
     db
       .select({
@@ -257,11 +259,11 @@ export async function listPayouts(tenantId: string, pagination: PaginationInput)
       })
       .from(payouts)
       .innerJoin(payoutAccounts, eq(payoutAccounts.id, payouts.accountId))
-      .where(eq(payouts.tenantId, tenantId))
+      .where(where)
       .orderBy(desc(payouts.createdAt))
       .limit(limit)
       .offset(offset),
-    db.select({ n: sql<number>`count(*)::int` }).from(payouts).where(eq(payouts.tenantId, tenantId)),
+    db.select({ n: sql<number>`count(*)::int` }).from(payouts).where(where),
   ]);
   return buildPaginatedResult(
     items.map((p) => ({ ...p, accountNumber: maskNumber(p.accountNumber) })),

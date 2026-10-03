@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
+import { dateRangeConditions, dateRangeQuery, type DateRange } from "../../lib/dateRange.js";
 import { buildPaginatedResult, paginationSchema } from "../../lib/pagination.js";
 import { sendSuccess } from "../../lib/response.js";
 import { requireProgramAccess } from "../../middleware/authorize.js";
@@ -12,6 +13,7 @@ const listQuerySchema = paginationSchema.extend({
   documentType: z.enum(["id_card", "ticket", "link"]).optional(),
   result: z.enum(["valid", "invalid"]).optional(),
   registrationId: z.string().uuid().optional(),
+  ...dateRangeQuery,
 });
 
 async function listVerificationsHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -22,6 +24,8 @@ async function listVerificationsHandler(request: FastifyRequest, reply: FastifyR
     documentType: query.documentType,
     valid: query.result === undefined ? undefined : query.result === "valid",
     registrationId: query.registrationId,
+    dateFrom: query.dateFrom,
+    dateTo: query.dateTo,
   };
 
   const [{ items, total }, summary] = await Promise.all([
@@ -39,6 +43,8 @@ async function exportVerificationsHandler(request: FastifyRequest, reply: Fastif
     documentType: query.documentType,
     valid: query.result === undefined ? undefined : query.result === "valid",
     registrationId: query.registrationId,
+    dateFrom: query.dateFrom,
+    dateTo: query.dateTo,
   };
   const [{ items }, program] = await Promise.all([
     verificationsRepo.listVerifications(programId, filters, { page: 1, pageSize: EXPORT_ROW_LIMIT }),

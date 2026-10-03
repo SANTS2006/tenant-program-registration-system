@@ -1,4 +1,5 @@
 import { Link, useParams } from "react-router-dom";
+import { DateRangeFilter, useDateRange } from "@/components/DateRangeFilter";
 import { ExportButtons } from "@/components/ExportButtons";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -14,8 +15,10 @@ export function TenantDetailPage() {
   usePageMeta({ title: "Organization" });
   const { tenantId } = useParams<{ tenantId: string }>();
   const { data: tenant, isLoading: tenantLoading } = useTenant(tenantId);
-  const { data: users, isLoading: usersLoading } = useTenantUsers(tenantId);
-  const { data: programs, isLoading: programsLoading } = useTenantPrograms(tenantId);
+  const usersRange = useDateRange();
+  const programsRange = useDateRange();
+  const { data: users, isLoading: usersLoading } = useTenantUsers(tenantId, { dateFrom: usersRange.dateFrom, dateTo: usersRange.dateTo });
+  const { data: programs, isLoading: programsLoading } = useTenantPrograms(tenantId, { dateFrom: programsRange.dateFrom, dateTo: programsRange.dateTo });
   const updateStatus = useUpdateUserStatus(tenantId ?? "");
 
   const toggleStatus = async (userId: string, name: string, status: string) => {
@@ -47,7 +50,8 @@ export function TenantDetailPage() {
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
           <CardTitle className="text-base">Users</CardTitle>
-          <ExportButtons path={`/platform/tenants/${tenantId}/users/export`} fileLabel={`${tenant?.name ?? "Account"} users`} />
+          <DateRangeFilter range={usersRange} label="Joined" />
+          <ExportButtons path={`/platform/tenants/${tenantId}/users/export`} params={{ dateFrom: usersRange.dateFrom, dateTo: usersRange.dateTo }} fileLabel={`${tenant?.name ?? "Account"} users`} />
         </CardHeader>
         <CardContent className="p-0">
           <Table>
@@ -97,7 +101,8 @@ export function TenantDetailPage() {
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
           <CardTitle className="text-base">Programs</CardTitle>
-          <ExportButtons path={`/platform/tenants/${tenantId}/programs/export`} fileLabel={`${tenant?.name ?? "Account"} programs`} />
+          <DateRangeFilter range={programsRange} label="Created" />
+          <ExportButtons path={`/platform/tenants/${tenantId}/programs/export`} params={{ dateFrom: programsRange.dateFrom, dateTo: programsRange.dateTo }} fileLabel={`${tenant?.name ?? "Account"} programs`} />
         </CardHeader>
         <CardContent className="p-0">
           <Table>

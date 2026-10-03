@@ -28,10 +28,12 @@ export async function createUserHandler(request: FastifyRequest, reply: FastifyR
 export async function listUsersHandler(request: FastifyRequest, reply: FastifyReply) {
   if (!request.user?.tenantId) throw AppError.unauthorized();
   const query = listUsersQuerySchema.parse(request.query);
-  const result = await usersService.listUsers(request.user.tenantId, query.search, {
-    page: query.page,
-    pageSize: query.pageSize,
-  });
+  const result = await usersService.listUsers(
+    request.user.tenantId,
+    query.search,
+    { page: query.page, pageSize: query.pageSize },
+    { dateFrom: query.dateFrom, dateTo: query.dateTo },
+  );
   return sendSuccess(reply, result);
 }
 

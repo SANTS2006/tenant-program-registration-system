@@ -2,6 +2,7 @@ import { createHmac } from "node:crypto";
 import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import jwt from "jsonwebtoken";
 import { env } from "../../config/env.js";
+import { dateRangeConditions } from "../../lib/dateRange.js";
 import { db } from "../../db/client.js";
 import { forms, payments, programs, registrations } from "../../db/schema/index.js";
 import { AppError } from "../../lib/errors.js";
@@ -432,9 +433,9 @@ export async function reconcilePendingPayments(limit = 25): Promise<number> {
 
 // ---------------------------------------------------------------- for the team
 
-export async function listProgramPayments(programId: string, query: { status?: string } & PaginationInput) {
+export async function listProgramPayments(programId: string, query: { status?: string; dateFrom?: Date; dateTo?: Date } & PaginationInput) {
   const { offset, limit } = toOffsetLimit(query);
-  const where = and(eq(payments.programId, programId), query.status ? eq(payments.status, query.status) : undefined);
+  const where = and(eq(payments.programId, programId), query.status ? eq(payments.status, query.status) : undefined, ...dateRangeConditions(payments.createdAt, query));
   const [items, totals] = await Promise.all([
     db
       .select({

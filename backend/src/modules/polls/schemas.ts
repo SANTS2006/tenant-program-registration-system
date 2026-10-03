@@ -1,3 +1,4 @@
+import { dateRangeQuery } from "../../lib/dateRange.js";
 import { z } from "zod";
 import { ownImageUrl } from "../../lib/cloudinaryUrl.js";
 import { paginationSchema } from "../../lib/pagination.js";
@@ -83,6 +84,7 @@ export const saveBallotSchema = z.object({
 });
 
 export const listVotersQuerySchema = paginationSchema.extend({
+  ...dateRangeQuery,
   search: z.string().trim().min(1).optional(),
 });
 

@@ -36,10 +36,12 @@ export interface SupportMessage {
   programName: string | null;
 }
 
-export function listMessages(params: { kind: MessageKind; status?: MessageStatus; search?: string; page: number }) {
+export function listMessages(params: { kind: MessageKind; status?: MessageStatus; search?: string; page: number; dateFrom?: string; dateTo?: string }) {
   const query = new URLSearchParams({ kind: params.kind, page: String(params.page), pageSize: "20" });
   if (params.status) query.set("status", params.status);
   if (params.search) query.set("search", params.search);
+  if (params.dateFrom) query.set("dateFrom", params.dateFrom);
+  if (params.dateTo) query.set("dateTo", params.dateTo);
   return apiFetch<PaginatedResult<SupportMessage> & { newCounts: Record<MessageKind, number> }>(
     `/platform/messages?${query.toString()}`,
   );

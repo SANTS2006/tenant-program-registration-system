@@ -1,4 +1,5 @@
 import * as React from "react";
+import { DateRangeFilter, useDateRange } from "@/components/DateRangeFilter";
 import { ExportButtons } from "@/components/ExportButtons";
 import { useNavigate } from "react-router-dom";
 import { Barcode, CalendarCheck, CreditCard, QrCode, ScanLine, Search, ShieldAlert, Ticket, UserCheck } from "lucide-react";
@@ -38,6 +39,7 @@ export function VerificationsPage() {
   const [documentType, setDocumentType] = React.useState("all");
   const [result, setResult] = React.useState("all");
   const [page, setPage] = React.useState(1);
+  const range = useDateRange();
   const [scanner, setScanner] = React.useState<ScanMode | null>(null);
 
   const { data, isLoading } = useVerifications(program.id, {
@@ -46,6 +48,7 @@ export function VerificationsPage() {
     search: search || undefined,
     documentType: documentType === "all" ? undefined : (documentType as VerificationDocument),
     result: result === "all" ? undefined : (result as "valid" | "invalid"),
+    dateFrom: range.dateFrom, dateTo: range.dateTo,
   });
 
   const summary = data?.summary;
@@ -85,6 +88,7 @@ export function VerificationsPage() {
             }}
           />
         </div>
+        <DateRangeFilter range={range} onChange={() => setPage(1)} label="Scanned" />
         <Select
           value={documentType}
           onValueChange={(v) => {
@@ -125,6 +129,7 @@ export function VerificationsPage() {
             search,
             documentType: documentType === "all" ? undefined : documentType,
             result: result === "all" ? undefined : result,
+            dateFrom: range.dateFrom, dateTo: range.dateTo,
           }}
           fileLabel={`${program.name} verifications`}
         />

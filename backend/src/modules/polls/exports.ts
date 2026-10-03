@@ -1,3 +1,4 @@
+import { dateRangeQuery } from "../../lib/dateRange.js";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { date, EXPORT_ROW_LIMIT, exportFormatSchema, sendTableExport, type ExportSheet } from "../../lib/tableExport.js";
@@ -14,10 +15,10 @@ export async function pollExportRoutes(app: FastifyInstance) {
   const viewer = { preHandler: requirePollAccess("viewer") };
 
   app.get<{ Params: { pollId: string } }>("/:pollId/voters/export", viewer, async (request, reply) => {
-    const query = exportFormatSchema.extend({ search: z.string().trim().min(1).optional() }).parse(request.query);
+    const query = exportFormatSchema.extend({ search: z.string().trim().min(1).optional(), ...dateRangeQuery }).parse(request.query);
     const [poll, { items }] = await Promise.all([
       pollsService.getPoll(request.params.pollId),
-      pollsRepo.listVoters(request.params.pollId, query.search, { page: 1, pageSize: EXPORT_ROW_LIMIT }),
+      pollsRepo.listVoters(request.params.pollId, query.search, { page: 1, pageSize: EXPORT_ROW_LIMIT }, { dateFrom: query.dateFrom, dateTo: query.dateTo }),
     ]);
     const sheet: ExportSheet<Voter> = {
       name: "Voters",

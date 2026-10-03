@@ -1,4 +1,5 @@
 import { and, count, desc, eq, ilike, inArray, isNotNull, or, sql } from "drizzle-orm";
+import { dateRangeConditions, dateRangeQuery, type DateRange } from "../../lib/dateRange.js";
 import { db } from "../../db/client.js";
 import { businessMembers, businesses, pollMembers, polls, programMembers, programs, tenantMembers, tenants, users } from "../../db/schema/index.js";
 import type { PaginationInput } from "../../lib/pagination.js";
@@ -20,13 +21,14 @@ export async function insertUser(tenantId: string, input: CreateUserInput & { pa
 }
 
 /** The team: people inside the account, and people on the team who have a space of their own. */
-export async function listUsers(tenantId: string, search: string | undefined, pagination: PaginationInput) {
+export async function listUsers(tenantId: string, search: string | undefined, pagination: PaginationInput, range: DateRange = {}) {
   const link = and(eq(tenantMembers.userId, users.id), eq(tenantMembers.tenantId, tenantId));
   const conditions = [or(eq(users.tenantId, tenantId), isNotNull(tenantMembers.id))!];
   if (search) {
     const term = `%${search}%`;
     conditions.push(or(ilike(users.name, term), ilike(users.email, term))!);
   }
+  conditions.push(...dateRangeConditions(users.createdAt, range));
   const where = and(...conditions);
   const { limit, offset } = toOffsetLimit(pagination);
 

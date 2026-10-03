@@ -1,4 +1,5 @@
 import * as React from "react";
+import { DateRangeFilter, useDateRange } from "@/components/DateRangeFilter";
 import { ExportButtons } from "@/components/ExportButtons";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -171,7 +172,8 @@ function DocumentsListPage({ kind }: { kind: DocumentKind }) {
   const [search, setSearch] = React.useState("");
   const [status, setStatus] = React.useState("all");
   const [page, setPage] = React.useState(1);
-  const params = { page, pageSize: 20, search: search || undefined, status: status === "all" ? undefined : status };
+  const range = useDateRange();
+  const params = { page, pageSize: 20, search: search || undefined, status: status === "all" ? undefined : status, dateFrom: range.dateFrom, dateTo: range.dateTo };
   const { data, isLoading } = useQuery({
     queryKey: docKeys.list(business.id, kind, params),
     queryFn: () => listDocuments(business.id, kind, params),
@@ -216,6 +218,7 @@ function DocumentsListPage({ kind }: { kind: DocumentKind }) {
             }}
           />
         </div>
+        <DateRangeFilter range={range} onChange={() => setPage(1)} label="Issued" />
         <Select
           value={status}
           onValueChange={(v) => {
@@ -239,7 +242,7 @@ function DocumentsListPage({ kind }: { kind: DocumentKind }) {
         <div className="ml-auto">
           <ExportButtons
             path={`/businesses/${business.id}/${kindPath(kind)}/export`}
-            params={{ search, status: status === "all" ? undefined : status }}
+            params={{ search, status: status === "all" ? undefined : status, dateFrom: range.dateFrom, dateTo: range.dateTo }}
             fileLabel={`${business.name} ${label(kind).toLowerCase()}s`}
           />
         </div>

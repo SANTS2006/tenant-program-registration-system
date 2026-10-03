@@ -2,6 +2,7 @@ import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { payments, walletEntries } from "../../db/schema/index.js";
 import { env } from "../../config/env.js";
+import { dateRangeConditions, type DateRange } from "../../lib/dateRange.js";
 import { platformFee, leonesToMinor } from "../../lib/money.js";
 import { toOffsetLimit, buildPaginatedResult, type PaginationInput } from "../../lib/pagination.js";
 
@@ -53,9 +54,9 @@ export async function creditPayment(tx: Tx, payment: { id: string; tenantId: str
   return { feeMinor, netMinor: payment.amountMinor - feeMinor };
 }
 
-export async function listEntries(tenantId: string, pagination: PaginationInput) {
+export async function listEntries(tenantId: string, pagination: PaginationInput, range: DateRange = {}) {
   const { offset, limit } = toOffsetLimit(pagination);
-  const where = eq(walletEntries.tenantId, tenantId);
+  const where = and(eq(walletEntries.tenantId, tenantId), ...dateRangeConditions(walletEntries.createdAt, range));
   const [items, totalRow] = await Promise.all([
     db
       .select({

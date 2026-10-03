@@ -1,4 +1,5 @@
 import * as React from "react";
+import { DateRangeFilter, useDateRange } from "@/components/DateRangeFilter";
 import { ExportButtons } from "@/components/ExportButtons";
 import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
@@ -18,7 +19,8 @@ export function PollVotersPage() {
   const { poll } = usePollOutletContext();
   const [search, setSearch] = React.useState("");
   const [page, setPage] = React.useState(1);
-  const params = { page, pageSize: 25, search: search || undefined };
+  const range = useDateRange();
+  const params = { page, pageSize: 25, search: search || undefined, dateFrom: range.dateFrom, dateTo: range.dateTo };
   const { data, isLoading } = useQuery({
     queryKey: pollKeys.voters(poll.id, params),
     queryFn: () => listPollVoters(poll.id, params),
@@ -47,8 +49,9 @@ export function PollVotersPage() {
               }}
             />
           </div>
-          <ExportButtons path={`/polls/${poll.id}/voters/export`} params={{ search }} fileLabel={`${poll.name} voters`} />
+          <ExportButtons path={`/polls/${poll.id}/voters/export`} params={{ search, dateFrom: range.dateFrom, dateTo: range.dateTo }} fileLabel={`${poll.name} voters`} />
         </div>
+        <DateRangeFilter range={range} onChange={() => setPage(1)} label="Joined" />
         {isLoading && <p className="text-sm text-muted-foreground">Loading voters...</p>}
         {data && data.items.length === 0 && <p className="text-sm text-muted-foreground">No voters yet.</p>}
         {data && data.items.length > 0 && (

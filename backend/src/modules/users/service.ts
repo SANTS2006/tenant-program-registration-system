@@ -75,8 +75,8 @@ async function teamMember(tenantId: string, id: string) {
   return { ...rest, role: member.role, ownSpace: member.ownSpace };
 }
 
-export async function listUsers(tenantId: string, search: string | undefined, pagination: PaginationInput) {
-  const { items, total } = await usersRepo.listUsers(tenantId, search, pagination);
+export async function listUsers(tenantId: string, search: string | undefined, pagination: PaginationInput, range: { dateFrom?: Date; dateTo?: Date } = {}) {
+  const { items, total } = await usersRepo.listUsers(tenantId, search, pagination, range);
   return buildPaginatedResult(items, total, pagination);
 }
 

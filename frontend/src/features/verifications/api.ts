@@ -34,6 +34,8 @@ export interface ListVerificationsParams {
   documentType?: VerificationDocument;
   result?: "valid" | "invalid";
   registrationId?: string;
+  dateFrom?: string;
+  dateTo?: string;
 }
 
 export const DOCUMENT_LABELS: Record<VerificationDocument, string> = {

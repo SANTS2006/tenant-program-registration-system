@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { dateRangeQuery } from "../../lib/dateRange.js";
 import { paginationSchema } from "../../lib/pagination.js";
 
 // A tenant admin invites teammates only -- never another admin/super_admin.
@@ -26,6 +27,7 @@ export const addProgramMembershipSchema = z.object({
 
 export const listUsersQuerySchema = paginationSchema.extend({
   search: z.string().trim().min(1).optional(),
+  ...dateRangeQuery,
 });
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;

@@ -29,7 +29,7 @@ export interface ProgramPaymentsPage extends PaginatedResult<ProgramPayment> {
   summary: { paidMinor: number; pendingMinor: number };
 }
 
-export function listProgramPayments(programId: string, params: { page?: number; pageSize?: number; status?: string }) {
+export function listProgramPayments(programId: string, params: { page?: number; pageSize?: number; status?: string; dateFrom?: string; dateTo?: string }) {
   const query = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== "") query.set(k, String(v));
   return apiFetch<ProgramPaymentsPage>(`/programs/${programId}/payments?${query.toString()}`);
@@ -138,8 +138,13 @@ export interface PayoutRow {
 }
 
 export const getFunds = () => apiFetch<FundsSummary>("/funds");
-export const getLedger = (page: number) => apiFetch<PaginatedResult<LedgerEntry>>(`/funds/entries?page=${page}&pageSize=15`);
-export const getPayouts = (page: number) => apiFetch<PaginatedResult<PayoutRow>>(`/funds/payouts?page=${page}&pageSize=10`);
+const dates = (range: { dateFrom?: string; dateTo?: string }) =>
+  (range.dateFrom ? `&dateFrom=${encodeURIComponent(range.dateFrom)}` : "") + (range.dateTo ? `&dateTo=${encodeURIComponent(range.dateTo)}` : "");
+
+export const getLedger = (page: number, range: { dateFrom?: string; dateTo?: string } = {}) =>
+  apiFetch<PaginatedResult<LedgerEntry>>(`/funds/entries?page=${page}&pageSize=15${dates(range)}`);
+export const getPayouts = (page: number, range: { dateFrom?: string; dateTo?: string } = {}) =>
+  apiFetch<PaginatedResult<PayoutRow>>(`/funds/payouts?page=${page}&pageSize=10${dates(range)}`);
 
 export const addPayoutAccount = (input: { type: "momo" | "bank"; providerId: string; accountNumber: string; accountName: string; password: string }) =>
   apiFetch<PayoutAccount[]>("/funds/accounts", { method: "POST", body: input });

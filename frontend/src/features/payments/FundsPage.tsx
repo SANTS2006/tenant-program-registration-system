@@ -1,4 +1,5 @@
 import * as React from "react";
+import { DateRangeFilter, useDateRange } from "@/components/DateRangeFilter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ArrowDownToLine, Banknote, Clock, Landmark, Plus, Smartphone, Trash2, Wallet } from "lucide-react";
@@ -284,8 +285,18 @@ export function FundsPage() {
   const { data: funds, isLoading } = useQuery({ queryKey: ["funds", "summary"], queryFn: getFunds, refetchInterval: 20_000 });
   const [ledgerPage, setLedgerPage] = React.useState(1);
   const [payoutPage, setPayoutPage] = React.useState(1);
-  const { data: ledger } = useQuery({ queryKey: ["funds", "ledger", ledgerPage], queryFn: () => getLedger(ledgerPage), refetchInterval: 20_000 });
-  const { data: payouts } = useQuery({ queryKey: ["funds", "payouts", payoutPage], queryFn: () => getPayouts(payoutPage), refetchInterval: 20_000 });
+  const ledgerRange = useDateRange();
+  const payoutRange = useDateRange();
+  const { data: ledger } = useQuery({
+    queryKey: ["funds", "ledger", ledgerPage, ledgerRange.dateFrom, ledgerRange.dateTo],
+    queryFn: () => getLedger(ledgerPage, { dateFrom: ledgerRange.dateFrom, dateTo: ledgerRange.dateTo }),
+    refetchInterval: 20_000,
+  });
+  const { data: payouts } = useQuery({
+    queryKey: ["funds", "payouts", payoutPage, payoutRange.dateFrom, payoutRange.dateTo],
+    queryFn: () => getPayouts(payoutPage, { dateFrom: payoutRange.dateFrom, dateTo: payoutRange.dateTo }),
+    refetchInterval: 20_000,
+  });
   const [withdrawOpen, setWithdrawOpen] = React.useState(false);
   const [addOpen, setAddOpen] = React.useState(false);
   const [removing, setRemoving] = React.useState<PayoutAccount | null>(null);
@@ -368,8 +379,9 @@ export function FundsPage() {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
           <CardTitle className="text-base">Withdrawals</CardTitle>
+          <DateRangeFilter range={payoutRange} onChange={() => setPayoutPage(1)} label="Withdrawal" />
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>
@@ -430,9 +442,12 @@ export function FundsPage() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Money in and out</CardTitle>
-          <CardDescription>Every payment received, fee and withdrawal, newest first.</CardDescription>
+        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle className="text-base">Money in and out</CardTitle>
+            <CardDescription>Every payment received, fee and withdrawal, newest first.</CardDescription>
+          </div>
+          <DateRangeFilter range={ledgerRange} onChange={() => setLedgerPage(1)} label="Ledger" />
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>

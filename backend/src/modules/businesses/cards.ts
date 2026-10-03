@@ -1,3 +1,4 @@
+import { dateRangeConditions } from "../../lib/dateRange.js";
 import { and, count, desc, eq, ilike, isNull, or } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { businessCards } from "../../db/schema/index.js";
@@ -22,8 +23,8 @@ export async function findCard(businessId: string, cardId: string): Promise<Card
   return row;
 }
 
-export async function listCards(businessId: string, query: { search?: string }, pagination: PaginationInput) {
-  const conditions = [eq(businessCards.businessId, businessId), isNull(businessCards.deletedAt)];
+export async function listCards(businessId: string, query: { search?: string; dateFrom?: Date; dateTo?: Date }, pagination: PaginationInput) {
+  const conditions = [eq(businessCards.businessId, businessId), isNull(businessCards.deletedAt), ...dateRangeConditions(businessCards.createdAt, query)];
   if (query.search) {
     const term = `%${query.search}%`;
     conditions.push(or(ilike(businessCards.name, term), ilike(businessCards.jobTitle, term), ilike(businessCards.email, term))!);

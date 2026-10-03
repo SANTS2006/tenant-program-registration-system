@@ -5,8 +5,8 @@ export const platformKeys = {
   all: ["platform-tenants"] as const,
   list: (params: platformApi.ListTenantsParams) => ["platform-tenants", "list", params] as const,
   detail: (tenantId: string) => ["platform-tenants", "detail", tenantId] as const,
-  users: (tenantId: string) => ["platform-tenants", tenantId, "users"] as const,
-  programs: (tenantId: string) => ["platform-tenants", tenantId, "programs"] as const,
+  users: (tenantId: string, range: object = {}) => ["platform-tenants", tenantId, "users", range] as const,
+  programs: (tenantId: string, range: object = {}) => ["platform-tenants", tenantId, "programs", range] as const,
 };
 
 export function useTenantsList(params: platformApi.ListTenantsParams) {
@@ -24,10 +24,10 @@ export function useTenant(tenantId: string | undefined) {
   });
 }
 
-export function useTenantUsers(tenantId: string | undefined) {
+export function useTenantUsers(tenantId: string | undefined, range: { dateFrom?: string; dateTo?: string } = {}) {
   return useQuery({
-    queryKey: platformKeys.users(tenantId ?? ""),
-    queryFn: () => platformApi.listTenantUsers(tenantId!),
+    queryKey: platformKeys.users(tenantId ?? "", range),
+    queryFn: () => platformApi.listTenantUsers(tenantId!, range),
     enabled: !!tenantId,
   });
 }
@@ -37,14 +37,14 @@ export function useUpdateUserStatus(tenantId: string) {
   return useMutation({
     mutationFn: ({ userId, status }: { userId: string; status: "active" | "suspended" }) =>
       platformApi.updateUserStatus(userId, status),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: platformKeys.users(tenantId) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["platform-tenants", tenantId, "users"] }),
   });
 }
 
-export function useTenantPrograms(tenantId: string | undefined) {
+export function useTenantPrograms(tenantId: string | undefined, range: { dateFrom?: string; dateTo?: string } = {}) {
   return useQuery({
-    queryKey: platformKeys.programs(tenantId ?? ""),
-    queryFn: () => platformApi.listTenantPrograms(tenantId!),
+    queryKey: platformKeys.programs(tenantId ?? "", range),
+    queryFn: () => platformApi.listTenantPrograms(tenantId!, range),
     enabled: !!tenantId,
   });
 }

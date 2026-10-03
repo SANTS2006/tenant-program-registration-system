@@ -1,4 +1,5 @@
 import * as React from "react";
+import { DateRangeFilter, useDateRange } from "@/components/DateRangeFilter";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,9 +20,10 @@ export function ProgramPaymentsPage() {
   const navigate = useNavigate();
   const [status, setStatus] = React.useState("all");
   const [page, setPage] = React.useState(1);
+  const range = useDateRange();
   const { data, isLoading } = useQuery({
-    queryKey: ["payments", program.id, status, page],
-    queryFn: () => listProgramPayments(program.id, { page, pageSize: 20, status: status === "all" ? undefined : status }),
+    queryKey: ["payments", program.id, status, page, range.dateFrom, range.dateTo],
+    queryFn: () => listProgramPayments(program.id, { page, pageSize: 20, status: status === "all" ? undefined : status, dateFrom: range.dateFrom, dateTo: range.dateTo }),
     refetchInterval: 20_000,
   });
 
@@ -69,6 +71,7 @@ export function ProgramPaymentsPage() {
             <SelectItem value="failed">Failed</SelectItem>
           </SelectContent>
         </Select>
+        <DateRangeFilter range={range} onChange={() => setPage(1)} label="Payment" />
         <RefreshButton />
         <p className="ml-auto text-xs text-muted-foreground">Money received goes to your payment fund.</p>
       </div>

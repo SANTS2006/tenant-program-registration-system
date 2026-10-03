@@ -1,3 +1,4 @@
+import { dateRangeConditions } from "../../lib/dateRange.js";
 import { and, count, desc, eq, gte, ilike, isNull, max, or, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { businessDocuments } from "../../db/schema/index.js";
@@ -161,10 +162,12 @@ export async function deleteDocument(businessId: string, kind: BusinessDocumentK
 export async function listDocuments(
   businessId: string,
   kind: BusinessDocumentKind,
-  query: { search?: string; status?: string },
+  query: { search?: string; status?: string; dateFrom?: Date; dateTo?: Date },
   pagination: PaginationInput,
 ) {
   const conditions = [eq(businessDocuments.businessId, businessId), eq(businessDocuments.kind, kind), isNull(businessDocuments.deletedAt)];
+  // The date on the document itself (when it was issued).
+  conditions.push(...dateRangeConditions(businessDocuments.issueDate, query));
   if (query.status) conditions.push(eq(businessDocuments.status, query.status));
   if (query.search) {
     const term = `%${query.search}%`;

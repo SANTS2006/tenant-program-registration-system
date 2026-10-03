@@ -85,7 +85,7 @@ export async function pollRoutes(app: FastifyInstance) {
 
   app.get<{ Params: PollParams }>("/:pollId/voters", viewer, async (request, reply) => {
     const query = listVotersQuerySchema.parse(request.query);
-    return sendSuccess(reply, await pollsService.listVoters(request.params.pollId, query.search, query));
+    return sendSuccess(reply, await pollsService.listVoters(request.params.pollId, query.search, query, { dateFrom: query.dateFrom, dateTo: query.dateTo }));
   });
 
   app.get<{ Params: PollParams }>("/:pollId/verified-voters", viewer, async (request, reply) => {

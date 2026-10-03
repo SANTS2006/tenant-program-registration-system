@@ -217,8 +217,8 @@ export async function buildResults(pollId: string) {
   return { ...totals, positions, updatedAt: new Date().toISOString() };
 }
 
-export async function listVoters(pollId: string, search: string | undefined, pagination: PaginationInput) {
-  const { items, total } = await pollsRepo.listVoters(pollId, search, pagination);
+export async function listVoters(pollId: string, search: string | undefined, pagination: PaginationInput, range: { dateFrom?: Date; dateTo?: Date } = {}) {
+  const { items, total } = await pollsRepo.listVoters(pollId, search, pagination, range);
   return buildPaginatedResult(items, total, pagination);
 }
 

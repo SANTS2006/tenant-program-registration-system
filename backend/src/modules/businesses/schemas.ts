@@ -1,3 +1,4 @@
+import { dateRangeQuery } from "../../lib/dateRange.js";
 import { z } from "zod";
 import { ownImageUrl } from "../../lib/cloudinaryUrl.js";
 import { paginationSchema } from "../../lib/pagination.js";
@@ -111,6 +112,7 @@ export const statusConfigSchema = z.object({
 export const listDocumentsQuerySchema = paginationSchema.extend({
   search: z.string().trim().min(1).optional(),
   status: z.string().trim().max(30).optional(),
+  ...dateRangeQuery,
 });
 
 export const sendDocumentSchema = z.object({
@@ -150,7 +152,7 @@ export const saveCardSchema = z.object({
   showQr: z.boolean(),
 });
 
-export const listCardsQuerySchema = paginationSchema.extend({ search: z.string().trim().min(1).optional() });
+export const listCardsQuerySchema = paginationSchema.extend({ search: z.string().trim().min(1).optional(), ...dateRangeQuery });
 
 export const sendCardSchema = z.object({
   email: z.string().trim().email("Enter a valid email address").max(254),

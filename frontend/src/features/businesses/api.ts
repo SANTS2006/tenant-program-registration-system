@@ -126,7 +126,7 @@ export const getBusinessAnalytics = (businessId: string) => apiFetch<BusinessAna
 export const saveDocumentSettings = (businessId: string, kind: DocumentKind, settings: DocumentSettings) =>
   apiFetch<DocumentSettings>(`/businesses/${businessId}/settings/${kindPath(kind)}`, { method: "PUT", body: settings });
 
-export const listDocuments = (businessId: string, kind: DocumentKind, params: { page?: number; pageSize?: number; search?: string; status?: string }) =>
+export const listDocuments = (businessId: string, kind: DocumentKind, params: { page?: number; pageSize?: number; search?: string; status?: string; dateFrom?: string; dateTo?: string }) =>
   apiFetch<PaginatedResult<BusinessDocument>>(`/businesses/${businessId}/${kindPath(kind)}${query(params)}`);
 export const getDocument = (businessId: string, kind: DocumentKind, documentId: string) =>
   apiFetch<BusinessDocument>(`/businesses/${businessId}/${kindPath(kind)}/${documentId}`);
@@ -176,7 +176,7 @@ export interface BusinessCard {
 
 export type CardInput = Omit<BusinessCard, "id" | "businessId" | "lastSentTo" | "sentAt" | "createdAt" | "updatedAt">;
 
-export const listCards = (businessId: string, params: { page?: number; pageSize?: number; search?: string }) => {
+export const listCards = (businessId: string, params: { page?: number; pageSize?: number; search?: string; dateFrom?: string; dateTo?: string }) => {
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) if (value !== undefined && value !== "") query.set(key, String(value));
   const text = query.toString();

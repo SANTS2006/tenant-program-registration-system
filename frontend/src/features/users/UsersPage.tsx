@@ -1,4 +1,5 @@
 import * as React from "react";
+import { DateRangeFilter, useDateRange } from "@/components/DateRangeFilter";
 import { ExportButtons } from "@/components/ExportButtons";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -187,7 +188,8 @@ function RemoveFromTeamButton({ userId, name }: { userId: string; name: string }
 export function UsersPage() {
   usePageMeta({ title: "Users" });
   const [search, setSearch] = React.useState("");
-  const { data, isLoading } = useUsersList({ page: 1, pageSize: 50, search: search || undefined });
+  const range = useDateRange();
+  const { data, isLoading } = useUsersList({ page: 1, pageSize: 50, search: search || undefined, dateFrom: range.dateFrom, dateTo: range.dateTo });
 
   return (
     <div className="flex flex-col gap-6">
@@ -201,8 +203,9 @@ export function UsersPage() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Input placeholder="Search users..." aria-label="Search users" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
-        <ExportButtons path="/users/export" params={{ search }} fileLabel="Users" />
+        <ExportButtons path="/users/export" params={{ search, dateFrom: range.dateFrom, dateTo: range.dateTo }} fileLabel="Users" />
       </div>
+      <DateRangeFilter range={range} label="Joined" />
 
       <div className="overflow-hidden rounded-xl border border-border/70 bg-card/60 backdrop-blur-sm">
         <Table>

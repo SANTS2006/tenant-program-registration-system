@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { RefreshButton } from "@/components/RefreshButton";
+import { DateRangeFilter, inDateRange, useDateRange } from "@/components/DateRangeFilter";
 import { ApiError } from "@/lib/api";
 import { formatMinor } from "@/lib/money";
 import { usePageMeta } from "@/lib/seo";
@@ -21,6 +22,8 @@ export function PlatformPaymentsPage() {
   const { data, isLoading } = useQuery({ queryKey: ["platform-payments"], queryFn: getPlatformPayments, refetchInterval: 20_000 });
   const [deciding, setDeciding] = React.useState<{ payout: Awaiting; decision: "approve" | "reject" } | null>(null);
   const [note, setNote] = React.useState("");
+  const awaitingRange = useDateRange();
+  const reviewRange = useDateRange();
 
   const review = useMutation({
     mutationFn: () => reviewPayout(deciding!.payout.id, deciding!.decision, note.trim() || undefined),
@@ -42,6 +45,9 @@ export function PlatformPaymentsPage() {
   });
 
   if (isLoading || !data) return <p className="text-sm text-muted-foreground">Loading payments...</p>;
+  // These are short queues, so the date range is applied here rather than on the server.
+  const awaiting = data.awaitingReview.filter((p) => inDateRange(p.createdAt, awaitingRange));
+  const inReview = data.paymentsInReview.filter((p) => inDateRange(p.createdAt, reviewRange));
 
   return (
     <div className="flex flex-col gap-6">
@@ -87,9 +93,12 @@ export function PlatformPaymentsPage() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Withdrawals waiting for approval</CardTitle>
-          <CardDescription>Large withdrawals are held until someone other than the requester approves them. Check the account looks right before approving.</CardDescription>
+        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle className="text-base">Withdrawals waiting for approval</CardTitle>
+            <CardDescription>Large withdrawals are held until someone other than the requester approves them. Check the account looks right before approving.</CardDescription>
+          </div>
+          <DateRangeFilter range={awaitingRange} label="Requested" />
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>
@@ -103,14 +112,14 @@ export function PlatformPaymentsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.awaitingReview.length === 0 && (
+              {awaiting.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5} className="py-6 text-center text-muted-foreground">
                     Nothing is waiting.
                   </TableCell>
                 </TableRow>
               )}
-              {data.awaitingReview.map((p) => (
+              {awaiting.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell className="whitespace-nowrap">{new Date(p.createdAt).toLocaleString()}</TableCell>
                   <TableCell className="whitespace-nowrap font-medium">{p.tenantName}</TableCell>
@@ -134,9 +143,12 @@ export function PlatformPaymentsPage() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Payments that need a look</CardTitle>
-          <CardDescription>The amount received didn&apos;t match what was asked, or the checkout didn&apos;t match. Nothing is credited until this is sorted.</CardDescription>
+        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle className="text-base">Payments that need a look</CardTitle>
+            <CardDescription>The amount received didn&apos;t match what was asked, or the checkout didn&apos;t match. Nothing is credited until this is sorted.</CardDescription>
+          </div>
+          <DateRangeFilter range={reviewRange} label="Payment" />
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>
@@ -151,14 +163,14 @@ export function PlatformPaymentsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.paymentsInReview.length === 0 && (
+              {inReview.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="py-6 text-center text-muted-foreground">
                     Nothing to look at.
                   </TableCell>
                 </TableRow>
               )}
-              {data.paymentsInReview.map((p) => (
+              {inReview.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell className="whitespace-nowrap">{new Date(p.createdAt).toLocaleString()}</TableCell>
                   <TableCell className="whitespace-nowrap">{p.tenantName}</TableCell>

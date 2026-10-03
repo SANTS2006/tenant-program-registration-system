@@ -1,3 +1,4 @@
+import { dateRangeConditions, type DateRange } from "../../lib/dateRange.js";
 import { and, asc, count, countDistinct, desc, eq, ilike, inArray, isNotNull, isNull, notInArray, or, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { pollCandidates, pollMembers, pollPositions, polls, pollVerifiedVoters, pollVoters, pollVotes, users, voterAccounts } from "../../db/schema/index.js";
@@ -165,8 +166,8 @@ export async function positionVoterCounts(pollId: string) {
     .groupBy(pollVotes.positionId);
 }
 
-export async function listVoters(pollId: string, search: string | undefined, pagination: PaginationInput) {
-  const conditions = [eq(pollVoters.pollId, pollId)];
+export async function listVoters(pollId: string, search: string | undefined, pagination: PaginationInput, range: DateRange = {}) {
+  const conditions = [eq(pollVoters.pollId, pollId), ...dateRangeConditions(pollVoters.joinedAt, range)];
   if (search) {
     const term = `%${search}%`;
     conditions.push(or(ilike(voterAccounts.name, term), ilike(voterAccounts.email, term))!);

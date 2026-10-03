@@ -4,11 +4,12 @@ import { AppError } from "../../lib/errors.js";
 import { sendSuccess } from "../../lib/response.js";
 import { recordAudit } from "../audit/service.js";
 import { paginationSchema } from "../../lib/pagination.js";
+import { dateRangeQuery } from "../../lib/dateRange.js";
 import * as platformService from "./service.js";
 
 export async function listTenantsHandler(request: FastifyRequest, reply: FastifyReply) {
-  const pagination = paginationSchema.parse(request.query);
-  const result = await platformService.listTenants(pagination);
+  const query = paginationSchema.extend(dateRangeQuery).parse(request.query);
+  const result = await platformService.listTenants(query, { dateFrom: query.dateFrom, dateTo: query.dateTo });
   return sendSuccess(reply, result);
 }
 
@@ -20,7 +21,8 @@ export async function getTenantHandler(request: FastifyRequest, reply: FastifyRe
 
 export async function listTenantUsersHandler(request: FastifyRequest, reply: FastifyReply) {
   const { tenantId } = request.params as { tenantId: string };
-  const users = await platformService.getTenantUsers(tenantId);
+  const range = z.object(dateRangeQuery).parse(request.query);
+  const users = await platformService.getTenantUsers(tenantId, range);
   return sendSuccess(reply, users);
 }
 
@@ -45,6 +47,7 @@ export async function updateUserStatusHandler(request: FastifyRequest, reply: Fa
 
 export async function listTenantProgramsHandler(request: FastifyRequest, reply: FastifyReply) {
   const { tenantId } = request.params as { tenantId: string };
-  const programs = await platformService.getTenantPrograms(tenantId);
+  const range = z.object(dateRangeQuery).parse(request.query);
+  const programs = await platformService.getTenantPrograms(tenantId, range);
   return sendSuccess(reply, programs);
 }

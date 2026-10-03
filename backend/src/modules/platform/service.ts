@@ -3,8 +3,8 @@ import type { PaginationInput } from "../../lib/pagination.js";
 import { buildPaginatedResult } from "../../lib/pagination.js";
 import * as platformRepo from "./repository.js";
 
-export async function listTenants(pagination: PaginationInput) {
-  const { items, total } = await platformRepo.listTenants(pagination);
+export async function listTenants(pagination: PaginationInput, range: { dateFrom?: Date; dateTo?: Date } = {}) {
+  const { items, total } = await platformRepo.listTenants(pagination, range);
   return buildPaginatedResult(items, total, pagination);
 }
 
@@ -14,9 +14,9 @@ export async function getTenant(tenantId: string) {
   return tenant;
 }
 
-export async function getTenantUsers(tenantId: string) {
+export async function getTenantUsers(tenantId: string, range: { dateFrom?: Date; dateTo?: Date } = {}) {
   await getTenant(tenantId);
-  return platformRepo.listUsersForTenant(tenantId);
+  return platformRepo.listUsersForTenant(tenantId, range);
 }
 
 export async function setUserStatus(userId: string, status: "active" | "suspended") {
@@ -28,7 +28,7 @@ export async function setUserStatus(userId: string, status: "active" | "suspende
   return user;
 }
 
-export async function getTenantPrograms(tenantId: string) {
+export async function getTenantPrograms(tenantId: string, range: { dateFrom?: Date; dateTo?: Date } = {}) {
   await getTenant(tenantId);
-  return platformRepo.listProgramsForTenant(tenantId);
+  return platformRepo.listProgramsForTenant(tenantId, range);
 }

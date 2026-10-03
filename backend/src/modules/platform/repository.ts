@@ -1,11 +1,16 @@
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, sql, type SQL } from "drizzle-orm";
+import { dateRangeConditions, type DateRange } from "../../lib/dateRange.js";
 import { db } from "../../db/client.js";
 import { programs, refreshTokens, tenants, users } from "../../db/schema/index.js";
 import type { PaginationInput } from "../../lib/pagination.js";
 import { toOffsetLimit } from "../../lib/pagination.js";
 
-export async function listTenants(pagination: PaginationInput) {
+export async function listTenants(pagination: PaginationInput, range: DateRange = {}) {
   const { limit, offset } = toOffsetLimit(pagination);
+  const conds: SQL[] = [];
+  if (range.dateFrom) conds.push(sql`t.created_at >= ${range.dateFrom}`);
+  if (range.dateTo) conds.push(sql`t.created_at <= ${range.dateTo}`);
+  const whereSql = conds.length ? sql`WHERE ${sql.join(conds, sql` AND `)}` : sql``;
 
   const result = await db.execute<{
     id: string;
@@ -24,11 +29,12 @@ export async function listTenants(pagination: PaginationInput) {
       (SELECT count(*)::int FROM programs p WHERE p.tenant_id = t.id AND p.deleted_at IS NULL) AS program_count
     FROM tenants t
     LEFT JOIN users owner ON owner.id = t.owner_user_id
+    ${whereSql}
     ORDER BY t.created_at DESC
     LIMIT ${limit} OFFSET ${offset}
   `);
 
-  const [totalRow] = (await db.execute<{ value: number }>(sql`SELECT count(*)::int AS value FROM tenants`)).rows;
+  const [totalRow] = (await db.execute<{ value: number }>(sql`SELECT count(*)::int AS value FROM tenants t ${whereSql}`)).rows;
 
   return {
     items: result.rows.map((r) => ({
@@ -60,7 +66,7 @@ export async function findTenantById(tenantId: string) {
   return row ?? null;
 }
 
-export async function listUsersForTenant(tenantId: string) {
+export async function listUsersForTenant(tenantId: string, range: DateRange = {}) {
   return db
     .select({
       id: users.id,
@@ -72,7 +78,7 @@ export async function listUsersForTenant(tenantId: string) {
       lastLoginAt: users.lastLoginAt,
     })
     .from(users)
-    .where(eq(users.tenantId, tenantId))
+    .where(and(eq(users.tenantId, tenantId), ...dateRangeConditions(users.createdAt, range)))
     .orderBy(desc(users.createdAt));
 }
 
@@ -92,7 +98,7 @@ export async function revokeUserSessions(userId: string) {
     .where(and(eq(refreshTokens.userId, userId), isNull(refreshTokens.revokedAt)));
 }
 
-export async function listProgramsForTenant(tenantId: string) {
+export async function listProgramsForTenant(tenantId: string, range: DateRange = {}) {
   return db
     .select({
       id: programs.id,
@@ -103,6 +109,6 @@ export async function listProgramsForTenant(tenantId: string) {
       createdAt: programs.createdAt,
     })
     .from(programs)
-    .where(and(eq(programs.tenantId, tenantId), isNull(programs.deletedAt)))
+    .where(and(eq(programs.tenantId, tenantId), isNull(programs.deletedAt), ...dateRangeConditions(programs.createdAt, range)))
     .orderBy(desc(programs.createdAt));
 }

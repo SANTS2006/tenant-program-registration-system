@@ -114,7 +114,7 @@ export const getBallot = (pollId: string) => apiFetch<BallotPosition[]>(`/polls/
 export const saveBallot = (pollId: string, positions: BallotPosition[]) =>
   apiFetch<BallotPosition[]>(`/polls/${pollId}/ballot`, { method: "PUT", body: { positions } });
 export const getPollResults = (pollId: string) => apiFetch<PollResults>(`/polls/${pollId}/results`);
-export const listPollVoters = (pollId: string, params: { page?: number; pageSize?: number; search?: string }) =>
+export const listPollVoters = (pollId: string, params: { page?: number; pageSize?: number; search?: string; dateFrom?: string; dateTo?: string }) =>
   apiFetch<Paginated<PollVoter>>(`/polls/${pollId}/voters${query({ ...params })}`);
 export interface VerifiedVoters {
   enabled: boolean;

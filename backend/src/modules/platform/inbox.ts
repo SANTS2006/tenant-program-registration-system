@@ -1,5 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
+import { dateRangeQuery } from "../../lib/dateRange.js";
 import { AppError } from "../../lib/errors.js";
 import { buildPaginatedResult, paginationSchema } from "../../lib/pagination.js";
 import { sendSuccess } from "../../lib/response.js";
@@ -9,12 +10,13 @@ const listQuerySchema = paginationSchema.extend({
   kind: z.enum(["feedback", "contact", "report"]).optional(),
   status: z.enum(["new", "read", "resolved"]).optional(),
   search: z.string().trim().max(200).optional(),
+  ...dateRangeQuery,
 });
 
 export async function listSupportMessagesHandler(request: FastifyRequest, reply: FastifyReply) {
   const query = listQuerySchema.parse(request.query);
   const [{ items, total }, newCounts] = await Promise.all([
-    supportRepo.listSupportMessages({ kind: query.kind, status: query.status, search: query.search || undefined }, query),
+    supportRepo.listSupportMessages({ kind: query.kind, status: query.status, search: query.search || undefined, dateFrom: query.dateFrom, dateTo: query.dateTo }, query),
     supportRepo.countNewByKind(),
   ]);
   return sendSuccess(reply, { ...buildPaginatedResult(items, total, query), newCounts });

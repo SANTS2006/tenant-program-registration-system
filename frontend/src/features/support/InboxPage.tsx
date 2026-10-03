@@ -1,4 +1,5 @@
 import * as React from "react";
+import { DateRangeFilter, useDateRange } from "@/components/DateRangeFilter";
 import { ExportButtons } from "@/components/ExportButtons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -45,12 +46,13 @@ export function InboxPage() {
   const [status, setStatus] = React.useState("all");
   const [search, setSearch] = React.useState("");
   const [page, setPage] = React.useState(1);
+  const range = useDateRange();
   const [openId, setOpenId] = React.useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["inbox", kind, status, search, page],
+    queryKey: ["inbox", kind, status, search, page, range.dateFrom, range.dateTo],
     queryFn: () =>
-      listMessages({ kind, status: status === "all" ? undefined : (status as MessageStatus), search: search || undefined, page }),
+      listMessages({ kind, status: status === "all" ? undefined : (status as MessageStatus), search: search || undefined, page, dateFrom: range.dateFrom, dateTo: range.dateTo }),
     placeholderData: (previous) => previous,
     refetchInterval: 60_000,
   });
@@ -93,7 +95,7 @@ export function InboxPage() {
         </div>
         <ExportButtons
           path="/platform/messages/export"
-          params={{ kind, status: status === "all" ? undefined : status, search }}
+          params={{ kind, status: status === "all" ? undefined : status, search, dateFrom: range.dateFrom, dateTo: range.dateTo }}
           fileLabel={`Inbox ${kind}`}
         />
       </div>
@@ -135,6 +137,7 @@ export function InboxPage() {
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-3">
+            <DateRangeFilter range={range} onChange={() => setPage(1)} label="Received" />
             <div className="relative max-w-xs flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
