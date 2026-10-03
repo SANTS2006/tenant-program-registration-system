@@ -1,3 +1,6 @@
+import { desc, eq } from "drizzle-orm";
+import { db } from "../../db/client.js";
+import { payments } from "../../db/schema/index.js";
 import { AppError } from "../../lib/errors.js";
 import type { PaginationInput } from "../../lib/pagination.js";
 import { buildPaginatedResult } from "../../lib/pagination.js";
@@ -199,6 +202,7 @@ export async function listRegistrations(programId: string, query: ListRegistrati
     programId,
     {
       status: query.status,
+      paymentStatus: query.paymentStatus,
       search: query.search,
       dateFrom: query.dateFrom,
       dateTo: query.dateTo,
@@ -239,10 +243,26 @@ export async function getRegistrationDetail(programId: string, registrationId: s
       )
     : [];
 
+  const paymentAttempts = await db
+    .select({
+      id: payments.id,
+      status: payments.status,
+      amountMinor: payments.amountMinor,
+      currency: payments.currency,
+      channel: payments.channel,
+      failureReason: payments.failureReason,
+      createdAt: payments.createdAt,
+      paidAt: payments.paidAt,
+    })
+    .from(payments)
+    .where(eq(payments.registrationId, registration.id))
+    .orderBy(desc(payments.createdAt));
+
   return {
     registration,
     files,
     history,
+    payments: paymentAttempts,
     form: formVersion,
     currentForm: current ? { form: current.form, sections: current.sections, fields: current.fields } : null,
     missingRequired,

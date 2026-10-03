@@ -3,13 +3,14 @@ import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import jwt from "jsonwebtoken";
 import { env } from "../../config/env.js";
 import { db } from "../../db/client.js";
-import { payments, programs, registrations } from "../../db/schema/index.js";
+import { forms, payments, programs, registrations } from "../../db/schema/index.js";
 import { AppError } from "../../lib/errors.js";
 import { formatMinor } from "../../lib/money.js";
 import { buildPaginatedResult, toOffsetLimit, type PaginationInput } from "../../lib/pagination.js";
 import { recordAudit } from "../audit/service.js";
 import { queueEmail } from "../email/outbox.js";
 import { paymentReceivedEmail } from "../email/templates.js";
+import { signSubmissionToken } from "../registrations/summary.js";
 import { riskFlagsFor, type PaymentActor } from "./fraud.js";
 import {
   createCheckoutSession,
@@ -152,10 +153,16 @@ async function paymentWithContext(paymentId: string) {
       programKind: programs.kind,
       idCardEnabled: programs.idCardEnabled,
       ticketEnabled: programs.ticketEnabled,
+      idCardConfig: programs.idCardConfig,
+      ticketConfig: programs.ticketConfig,
+      allowSubmissionCopy: programs.allowSubmissionCopy,
+      confirmationMessage: forms.confirmationMessage,
+      showRegistrationNumber: forms.showRegistrationNumber,
     })
     .from(payments)
     .innerJoin(registrations, eq(registrations.id, payments.registrationId))
     .innerJoin(programs, eq(programs.id, payments.programId))
+    .innerJoin(forms, eq(forms.id, registrations.formId))
     .where(eq(payments.id, paymentId))
     .limit(1);
   if (!row) throw AppError.notFound("Payment not found");
@@ -199,8 +206,13 @@ export async function paymentStatusForToken(token: string, options: { refresh?: 
     redirectUrl: open ? payment.redirectUrl : null,
     expiresAt: payment.expiresAt,
     canRetry: registration.paymentStatus !== "paid" && registration.paymentStatus !== "waived" && payment.status !== "pending",
-    idCardAvailable: ctx.idCardEnabled,
-    ticketAvailable: ctx.ticketEnabled,
+    registrationStatus: registration.status,
+    confirmationMessage: ctx.confirmationMessage,
+    showRegistrationNumber: ctx.showRegistrationNumber,
+    idCardAvailable: ctx.idCardEnabled && (ctx.idCardConfig as { showOnConfirmation?: boolean } | null)?.showOnConfirmation !== false,
+    ticketAvailable: ctx.ticketEnabled && (ctx.ticketConfig as { showOnConfirmation?: boolean } | null)?.showOnConfirmation !== false,
+    // Lets them view and keep a copy of what they submitted, once it is paid (orders always get one).
+    receiptToken: ctx.programKind === "order_form" || ctx.allowSubmissionCopy ? signSubmissionToken(registration.id) : undefined,
   };
 }
 

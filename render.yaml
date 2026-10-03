@@ -57,5 +57,34 @@ projects:
               - key: EMAIL_FROM_ADDRESS
                 sync: false
               # Max database connections per instance; keep below the Neon plan limit divided by instances.
+              # ---- Payments with Monime (https://docs.monime.io). Leave these empty to keep payments switched off. ----
+              # From the Monime dashboard: a personal access token for the space, and the space id (starts with spc-).
+              - key: MONIME_ACCESS_TOKEN
+                sync: false
+              - key: MONIME_SPACE_ID
+                sync: false
+              # Set when you create the webhook in Monime (at least 32 characters). Webhook address: <API_URL>/api/webhooks/monime
+              - key: MONIME_WEBHOOK_SECRET
+                sync: false
+              # Turn on ("true") once a real webhook from Monime has been seen to verify, so unsigned ones are refused.
+              - key: MONIME_WEBHOOK_STRICT
+                value: "false"
+              # What the platform keeps from each payment (percent, plus a fixed amount in Leones), and how long money is held before it can be withdrawn.
+              - key: PAYMENTS_FEE_PERCENT
+                value: "0"
+              - key: PAYMENTS_FEE_FIXED
+                value: "0"
+              - key: PAYMENTS_HOLD_HOURS
+                value: "24"
+              - key: PAYMENTS_MAX_AMOUNT
+                value: "10000000"
+              - key: PAYOUT_MIN_AMOUNT
+                value: "50"
+              - key: PAYOUT_DAILY_LIMIT
+                value: "5000000"
+              - key: PAYOUT_REVIEW_ABOVE
+                value: "1000000"
+              - key: PAYOUT_NEW_ACCOUNT_HOURS
+                value: "24"
               - key: DB_POOL_MAX
                 value: "10"

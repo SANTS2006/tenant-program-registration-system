@@ -73,7 +73,26 @@ async function buildRows(programId: string, filters: RegistrationFilters) {
     buildFieldColumns(programId),
   ]);
 
-  const columns = [...BUILT_IN_COLUMNS, ...fieldColumns];
+  // Payment and order columns appear only when there is something to show in them.
+  const hasPayments = registrationsList.some((r) => r.paymentStatus !== "none");
+  const hasOrders = registrationsList.some((r) => (r.responses as Record<string, unknown>)?.__order);
+  const columns = [
+    ...BUILT_IN_COLUMNS,
+    ...(hasPayments
+      ? [
+          { key: "paymentStatus", label: "Payment" },
+          { key: "amountDue", label: "Amount due (NLe)" },
+          { key: "paidAt", label: "Paid at" },
+        ]
+      : []),
+    ...(hasOrders
+      ? [
+          { key: "orderItems", label: "Order items" },
+          { key: "orderTotal", label: "Order total (NLe)" },
+        ]
+      : []),
+    ...fieldColumns,
+  ];
 
   const rows = registrationsList.map((registration: RegistrationRow) => {
     const responses = (registration.responses as Record<string, unknown>) ?? {};
@@ -85,6 +104,16 @@ async function buildRows(programId: string, filters: RegistrationFilters) {
       applicantEmail: registration.applicantEmail ?? "",
       applicantPhone: registration.applicantPhone ?? "",
     };
+    if (hasPayments) {
+      row.paymentStatus = registration.paymentStatus;
+      row.amountDue = (registration.amountDueMinor / 100).toFixed(2);
+      row.paidAt = registration.paidAt ? registration.paidAt.toISOString() : "";
+    }
+    if (hasOrders) {
+      const order = responses.__order as { lines?: { name: string; quantity: number }[]; totalMinor?: number } | undefined;
+      row.orderItems = (order?.lines ?? []).map((l) => `${l.quantity} x ${l.name}`).join("; ");
+      row.orderTotal = order?.totalMinor !== undefined ? (order.totalMinor / 100).toFixed(2) : "";
+    }
     for (const field of fieldColumns) {
       row[field.key] = formatCellValue(withOtherText(responses[field.key], responses[otherTextKey(field.key)], responses[followTextKey(field.key)]));
     }

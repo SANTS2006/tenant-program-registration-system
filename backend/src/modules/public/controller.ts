@@ -7,6 +7,8 @@ import { readIdempotencyKey, withIdempotency } from "../../lib/idempotency.js";
 import { TtlCache } from "../../lib/ttlCache.js";
 import { sendSuccess } from "../../lib/response.js";
 import * as formsService from "../forms/service.js";
+import { isMonimeConfigured } from "../payments/monime.js";
+import { programLineItems, resolvePaymentConfig } from "../payments/pricing.js";
 import * as programsRepo from "../programs/repository.js";
 import * as registrationsService from "../registrations/service.js";
 import { submitRegistrationSchema } from "../registrations/schemas.js";
@@ -36,6 +38,16 @@ async function businessFor(program: programsRepo.ProgramRow) {
   };
 }
 
+function publicPaymentInfo(program: programsRepo.ProgramRow) {
+  const config = resolvePaymentConfig(program.paymentConfig);
+  const enabled = config.enabled && isMonimeConfigured();
+  return {
+    enabled,
+    currency: "SLE",
+    lines: enabled && program.kind !== "order_form" ? programLineItems(program, config).map((l) => ({ id: l.id, name: l.name, amountMinor: l.totalMinor })) : [],
+  };
+}
+
 async function toPublicProgram(program: programsRepo.ProgramRow) {
   return {
     kind: program.kind,
@@ -52,6 +64,8 @@ async function toPublicProgram(program: programsRepo.ProgramRow) {
     registrationStartDate: program.registrationStartDate,
     registrationEndDate: program.registrationEndDate,
     registrationOpen: isRegistrationOpen(program),
+    // What the registrant will be asked to pay (an order form's items come with its form instead).
+    payment: publicPaymentInfo(program),
   };
 }
 

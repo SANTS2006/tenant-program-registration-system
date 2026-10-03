@@ -22,6 +22,7 @@ import {
 import * as programsApi from "./api";
 import { useProgramStats } from "../registrations/hooks";
 import { IdCardSettingsCard } from "../idcards/IdCardSettingsCard";
+import { PaymentSettingsCard } from "../payments/PaymentSettingsCard";
 import { RegistrationRulesCard } from "./RegistrationRulesCard";
 import { NotificationSettingsCard } from "./NotificationSettingsCard";
 import { TicketSettingsCard } from "../tickets/TicketSettingsCard";
@@ -272,6 +273,11 @@ export function ProgramOverviewPage() {
         <div className="lg:col-span-3">
           <NotificationSettingsCard program={program} />
         </div>
+        {program.kind !== "order_form" && (
+          <div className="lg:col-span-3">
+            <PaymentSettingsCard program={program} />
+          </div>
+        )}
         <div className="lg:col-span-3">
           <IdCardSettingsCard program={program} />
         </div>

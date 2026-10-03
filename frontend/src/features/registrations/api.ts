@@ -16,6 +16,7 @@ export interface ListRegistrationsParams {
   search?: string;
   dateFrom?: string;
   dateTo?: string;
+  paymentStatus?: string;
   sortBy?: "submittedAt" | "registrationNumber" | "status";
   sortDir?: "asc" | "desc";
 }
@@ -37,6 +38,17 @@ export interface RegistrationDetail {
   registration: Registration;
   files: RegistrationFile[];
   history: RegistrationHistoryEntry[];
+  /** Every attempt to pay for this registration. */
+  payments?: {
+    id: string;
+    status: string;
+    amountMinor: number;
+    currency: string;
+    channel: { type?: string; provider?: string; phoneNumber?: string } | null;
+    failureReason: string | null;
+    createdAt: string;
+    paidAt: string | null;
+  }[];
   form: FormWithContent;
   /** The program's questions as they are now, for editing; null until a form is published. */
   currentForm: { form: FormWithContent["form"]; sections: FormWithContent["sections"]; fields: FormWithContent["fields"] } | null;
@@ -70,6 +82,7 @@ export interface ExportParams {
   search?: string;
   dateFrom?: string;
   dateTo?: string;
+  paymentStatus?: string;
 }
 
 export function exportRegistrations(programId: string, programName: string, params: ExportParams) {

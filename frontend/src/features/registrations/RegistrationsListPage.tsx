@@ -16,6 +16,8 @@ import { ImportRegistrationsDialog } from "./ImportRegistrationsDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { RegistrationStatusBadge } from "@/components/StatusBadge";
+import { formatMinor } from "@/lib/money";
+import { PaymentBadge } from "../payments/PaymentBadge";
 import { ApiError } from "@/lib/api";
 import { useProgramOutletContext } from "../programs/ProgramDetailLayout";
 import { exportRegistrations } from "./api";
@@ -27,6 +29,9 @@ export function RegistrationsListPage() {
   const navigate = useNavigate();
   const [search, setSearch] = React.useState("");
   const [status, setStatus] = React.useState<string>("all");
+  const [paymentFilter, setPaymentFilter] = React.useState<string>("all");
+  // The payment column and filter only appear for programs that take payments.
+  const takesPayments = Boolean(program.paymentConfig?.enabled);
   const [page, setPage] = React.useState(1);
   // Day range (YYYY-MM-DD): from the start of the first day to the end of the last, in the viewer's time zone.
   const [fromDay, setFromDay] = React.useState("");
@@ -44,6 +49,7 @@ export function RegistrationsListPage() {
     status: status === "all" ? undefined : (status as RegistrationStatus),
     dateFrom,
     dateTo,
+    paymentStatus: paymentFilter === "all" ? undefined : paymentFilter,
     sortBy: (sort?.id as "submittedAt" | "registrationNumber" | "status") ?? "submittedAt",
     sortDir: sort?.desc ? "desc" : "asc",
   });
@@ -58,13 +64,29 @@ export function RegistrationsListPage() {
         header: "Status",
         cell: (c) => <RegistrationStatusBadge status={c.getValue<string>()} label={terms.statusLabel(c.getValue<RegistrationStatus>())} tone={terms.statusTone?.(c.getValue<RegistrationStatus>())} />,
       },
+      ...(takesPayments
+        ? [
+            {
+              id: "payment",
+              header: "Payment",
+              cell: (c: { row: { original: Registration } }) => (
+                <span className="flex flex-col gap-0.5">
+                  <PaymentBadge status={c.row.original.paymentStatus} />
+                  {c.row.original.paymentStatus && c.row.original.paymentStatus !== "none" && (c.row.original.amountDueMinor ?? 0) > 0 && (
+                    <span className="text-xs text-muted-foreground">{formatMinor(c.row.original.amountDueMinor ?? 0)}</span>
+                  )}
+                </span>
+              ),
+            } as ColumnDef<Registration>,
+          ]
+        : []),
       {
         accessorKey: "submittedAt",
         header: "Submitted",
         cell: (c) => new Date(c.getValue<string>()).toLocaleString(),
       },
     ],
-    [],
+    [takesPayments],
   );
 
   const table = useReactTable({
@@ -86,6 +108,7 @@ export function RegistrationsListPage() {
         status: status === "all" ? undefined : (status as RegistrationStatus),
         dateFrom,
         dateTo,
+        paymentStatus: paymentFilter === "all" ? undefined : paymentFilter,
       });
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : `Failed to export ${terms.plural}`);
@@ -128,6 +151,26 @@ export function RegistrationsListPage() {
             ))}
           </SelectContent>
         </Select>
+        {takesPayments && (
+          <Select
+            value={paymentFilter}
+            onValueChange={(v) => {
+              setPaymentFilter(v);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-44" aria-label="Filter by payment">
+              <SelectValue placeholder="All payments" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All payments</SelectItem>
+              <SelectItem value="pending">Awaiting payment</SelectItem>
+              <SelectItem value="paid">Paid</SelectItem>
+              <SelectItem value="review">Needs review</SelectItem>
+              <SelectItem value="waived">Waived</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
             From

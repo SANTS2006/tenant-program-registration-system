@@ -27,6 +27,10 @@ const TermsPage = lazyPage(() => import("@/features/legal/policies"), "TermsPage
 const ContactPage = lazyPage(() => import("@/features/legal/ContactPage"), "ContactPage");
 const ReportPage = lazyPage(() => import("@/features/legal/ReportPage"), "ReportPage");
 const PublicProgramPage = lazyPage(() => import("@/features/public-registration/PublicProgramPage"), "PublicProgramPage");
+const ProgramPaymentsPage = lazyPage(() => import("@/features/payments/ProgramPaymentsPage"), "ProgramPaymentsPage");
+const FundsPage = lazyPage(() => import("@/features/payments/FundsPage"), "FundsPage");
+const PlatformPaymentsPage = lazyPage(() => import("@/features/payments/PlatformPaymentsPage"), "PlatformPaymentsPage");
+const PublicPaymentPage = lazyPage(() => import("@/features/payments/PublicPaymentPage"), "PublicPaymentPage");
 const PublicRegistrationPage = lazyPage(() => import("@/features/public-registration/PublicRegistrationPage"), "PublicRegistrationPage");
 const ConfirmationPage = lazyPage(() => import("@/features/public-registration/ConfirmationPage"), "ConfirmationPage");
 const VerifyPage = lazyPage(() => import("@/features/public-registration/VerifyPage"), "VerifyPage");
@@ -119,6 +123,8 @@ export function AppRoutes() {
           <Route element={<BareLayout />}>
             <Route path="/programs/:slug/register" element={<PublicRegistrationPage />} />
             <Route path="/programs/:slug/confirmation" element={<ConfirmationPage />} />
+            {/* Where a payer lands after Monime's page, and where an unfinished payment is picked up again. */}
+            <Route path="/payment/:token" element={<PublicPaymentPage />} />
             {/* A business's live order page and its confirmation. */}
             <Route path="/order/:slug" element={<PublicOrderPage />} />
             <Route path="/order/:slug/confirmation" element={<OrderConfirmationPage />} />
@@ -165,6 +171,7 @@ export function AppRoutes() {
                 <Route path="analytics" element={<ProgramAnalyticsPage />} />
                 <Route path="registrations" element={<RegistrationsListPage />} />
                 <Route path="verifications" element={<VerificationsPage />} />
+                <Route path="payments" element={<ProgramPaymentsPage />} />
                 <Route path="registrations/:registrationId" element={<RegistrationDetailPage />} />
               </Route>
             </Route>
@@ -173,6 +180,7 @@ export function AppRoutes() {
           <Route element={<ProtectedRoute roles={["admin"]} />}>
             <Route element={<AdminLayout />}>
               <Route path="/admin/users" element={<UsersPage />} />
+              <Route path="/admin/funds" element={<FundsPage />} />
             </Route>
           </Route>
 
@@ -181,6 +189,7 @@ export function AppRoutes() {
               <Route path="/admin/tenants" element={<TenantsListPage />} />
               <Route path="/admin/tenants/:tenantId" element={<TenantDetailPage />} />
               <Route path="/admin/inbox" element={<InboxPage />} />
+              <Route path="/admin/platform-payments" element={<PlatformPaymentsPage />} />
             </Route>
           </Route>
 

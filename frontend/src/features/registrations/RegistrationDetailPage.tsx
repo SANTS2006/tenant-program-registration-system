@@ -13,6 +13,7 @@ import { ApiError, downloadAuthenticatedFile } from "@/lib/api";
 import { useProgramOutletContext } from "../programs/ProgramDetailLayout";
 import { RegistrationVerifications } from "../verifications/VerificationsPage";
 import { RegistrantIdCardPanel } from "../idcards/RegistrantIdCardPanel";
+import { OrderItemsCard, RegistrationPaymentCard } from "../payments/RegistrationPaymentCard";
 import { isOtherOption, otherTextKey } from "../public-registration/DynamicForm";
 import { downloadRegistrantDocument } from "../designs/documentImage";
 import { downloadRegistrationFile, editRegistrationAnswers } from "./api";
@@ -213,6 +214,8 @@ export function RegistrationDetailPage() {
       </div>
 
       <div className="flex flex-col gap-6">
+        <OrderItemsCard registration={registration} />
+        <RegistrationPaymentCard programId={program.id} detail={data} canEdit={canEdit} />
         {canEdit && (
         <Card>
           <CardHeader>

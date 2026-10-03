@@ -37,6 +37,8 @@ export interface Program {
   allowSubmissionCopy: boolean;
   notifyOnVerification: boolean;
   registrationNumberConfig: Partial<RegistrationNumberConfig>;
+  /** Payments for this program (prices in cents). */
+  paymentConfig?: PaymentConfig;
   createdAt: string;
   updatedAt: string;
   /** The current user's role on this program (only on the single-program endpoint). */
@@ -45,6 +47,25 @@ export interface Program {
   kind?: "program" | "order_form";
   businessId?: string | null;
 }
+
+export interface PaymentConfig {
+  enabled: boolean;
+  registrationFeeMinor: number;
+  idCardPriceMinor: number;
+  ticketPriceMinor: number;
+}
+
+/** One thing an order form sells. Prices are in cents. */
+export interface OrderItem {
+  id: string;
+  name: string;
+  description?: string;
+  priceMinor: number;
+  imageUrl?: string;
+  maxQuantity?: number;
+}
+
+export type PaymentStatus = "none" | "pending" | "paid" | "review" | "waived" | "failed";
 
 export interface RegistrationNumberConfig {
   prefix: string;
@@ -66,6 +87,8 @@ export interface PublicProgram {
   registrationStartDate: string | null;
   registrationEndDate: string | null;
   registrationOpen: boolean;
+  /** What the registrant will be asked to pay, if payments are on. */
+  payment?: { enabled: boolean; currency: string; lines: { id: string; name: string; amountMinor: number }[] };
   kind?: "program" | "order_form";
   /** For an order form: the business the order goes to. */
   business?: {
@@ -203,6 +226,8 @@ export interface FormMeta {
   requireConsent: boolean;
   consentText: string | null;
   consentConditions?: ConditionalRule[] | null;
+  /** The goods an order form sells. */
+  orderItems?: OrderItem[];
   showRegistrationNumber: boolean;
   registrationNumberConditions?: ConditionalRule[] | null;
   reviewConfirmEnabled?: boolean;
@@ -247,6 +272,10 @@ export interface Registration {
   applicantPhone: string | null;
   responses: Record<string, unknown>;
   submittedAt: string;
+  /** none (nothing to pay), pending (awaiting payment), paid, review, waived. */
+  paymentStatus?: PaymentStatus;
+  amountDueMinor?: number;
+  paidAt?: string | null;
   /** Admin changes to this registrant's ID card. */
   documentOverrides?: { role?: string; photoUrl?: string };
 }

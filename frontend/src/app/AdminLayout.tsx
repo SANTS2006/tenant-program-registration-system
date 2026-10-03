@@ -1,7 +1,7 @@
 import * as React from "react";
 import { NavLink } from "react-router-dom";
 import { LazyOutlet } from "@/components/PageLoading";
-import { Building2, Inbox, LayoutDashboard, ListChecks, LogOut, Menu, MessageSquarePlus, Settings, Store, Users, Vote, X } from "lucide-react";
+import { Building2, Inbox, Landmark, Wallet, LayoutDashboard, ListChecks, LogOut, Menu, MessageSquarePlus, Settings, Store, Users, Vote, X } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { useAuth } from "./AuthContext";
 import { cn } from "@/lib/utils";
@@ -18,11 +18,15 @@ const navItems = [
   { to: "/admin/businesses", label: "Businesses", icon: Store, end: false },
   // Tenant team management -- only the tenant's own admin (owner) can invite/manage teammates.
   { to: "/admin/users", label: "Users", icon: Users, end: false, adminOnly: true },
+  // The payment fund: money received from registrations and orders, and withdrawals.
+  { to: "/admin/funds", label: "Payment fund", icon: Wallet, end: false, adminOnly: true },
   { to: "/admin/settings", label: "Settings", icon: Settings, end: false },
   // Cross-tenant, read-only oversight -- only the one platform super_admin sees this.
   { to: "/admin/tenants", label: "Accounts", icon: Building2, end: false, platformOnly: true },
   // Feedback, contact messages, and reports sent to the platform team.
   { to: "/admin/inbox", label: "Inbox", icon: Inbox, end: false, platformOnly: true },
+  // Withdrawals waiting for approval, payments that need a look, and Monime balances.
+  { to: "/admin/platform-payments", label: "Payments", icon: Landmark, end: false, platformOnly: true },
 ];
 
 function BrandMark() {

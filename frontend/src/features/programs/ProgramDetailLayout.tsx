@@ -94,6 +94,11 @@ export function ProgramDetailLayout() {
     return <p className="text-sm text-muted-foreground">Loading program...</p>;
   }
 
+  // The Payments tab appears once the program takes payments.
+  const visibleTabs = program.paymentConfig?.enabled
+    ? [...tabs.slice(0, 4), { to: "payments", label: "Payments", end: false }, ...tabs.slice(4)]
+    : tabs;
+
   return (
     <div className="flex flex-col gap-6">
       {/* Hero banner: image container uses `relative` positioning so the name/status
@@ -131,7 +136,7 @@ export function ProgramDetailLayout() {
       </div>
 
       <div className="-mx-1 flex gap-1.5 overflow-x-auto rounded-xl border border-border/70 bg-card/60 p-1.5 backdrop-blur-sm sm:mx-0">
-        {tabs.map((tab) => (
+        {visibleTabs.map((tab) => (
           <NavLink
             key={tab.label}
             to={`/admin/programs/${programId}${tab.to ? `/${tab.to}` : ""}`}

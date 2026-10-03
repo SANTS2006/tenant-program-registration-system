@@ -19,6 +19,8 @@ export interface SubmitRegistrationResult {
   ticketAvailable: boolean;
   /** Private link token for viewing and downloading the submitted answers. */
   receiptToken?: string;
+  /** When the registration or order has to be paid for. */
+  payment?: { token: string; status: "pending" | "failed"; redirectUrl: string | null; amountMinor: number; currency: string };
 }
 
 export function submitRegistration(
@@ -27,12 +29,13 @@ export function submitRegistration(
   files: UploadedFileInfo[],
   consentAccepted: boolean,
   idempotencyKey?: string,
+  items?: { itemId: string; quantity: number }[],
 ) {
   return apiFetch<SubmitRegistrationResult>(`/public/programs/${slug}/registrations`, {
     method: "POST",
     // The same key on a retry makes the server return the first result instead of registering twice.
     headers: idempotencyKey ? { "Idempotency-Key": idempotencyKey } : undefined,
-    body: { responses, files, consentAccepted },
+    body: { responses, files, consentAccepted, items },
   });
 }
 

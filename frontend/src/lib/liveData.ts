@@ -21,6 +21,9 @@ const LIVE_ROOTS = new Set([
   "polls",
   "programs",
   "analytics",
+  "payments",
+  "funds",
+  "platform-payments",
 ]);
 
 // Single items someone may be editing, and one-off lookups, are never refreshed behind their back.

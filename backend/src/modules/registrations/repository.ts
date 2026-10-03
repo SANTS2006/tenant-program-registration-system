@@ -216,6 +216,7 @@ export async function getRegistrationHistory(registrationId: string) {
 
 export interface RegistrationFilters {
   status?: RegistrationStatus;
+  paymentStatus?: "none" | "pending" | "paid" | "review" | "waived";
   search?: string;
   dateFrom?: Date;
   dateTo?: Date;
@@ -227,6 +228,7 @@ function buildRegistrationWhere(programId: string, filters: RegistrationFilters)
   const conditions = [eq(registrations.programId, programId)];
 
   if (filters.status) conditions.push(eq(registrations.status, filters.status));
+  if (filters.paymentStatus) conditions.push(eq(registrations.paymentStatus, filters.paymentStatus));
   if (filters.dateFrom) conditions.push(gte(registrations.submittedAt, filters.dateFrom));
   if (filters.dateTo) conditions.push(lte(registrations.submittedAt, filters.dateTo));
   if (filters.search) {

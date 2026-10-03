@@ -1,4 +1,4 @@
-import type { ConditionalRule, FieldConfig, FieldType } from "@/types/api";
+import type { ConditionalRule, FieldConfig, FieldType, OrderItem } from "@/types/api";
 
 export interface EditableSection {
   key: string;
@@ -38,6 +38,8 @@ export interface EditableFormPayload {
   reviewConfirmText?: string;
   reviewConfirmConditions?: ConditionalRule[];
   layoutMode: FormLayoutMode;
+  /** The goods an order form sells (order forms only). */
+  orderItems?: OrderItem[];
   sections: EditableSection[];
   fields: EditableField[];
 }

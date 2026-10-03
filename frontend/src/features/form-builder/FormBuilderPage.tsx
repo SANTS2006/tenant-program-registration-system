@@ -29,6 +29,8 @@ import { FIELD_TYPE_GROUPS, FIELD_TYPE_META, smartDefaultConfig } from "./fieldT
 import { SortableFieldRow } from "./SortableFieldRow";
 import { FieldSettingsDialog } from "./FieldSettingsDialog";
 import { ShareFormCard } from "./ShareFormCard";
+import { PaymentSettingsCard } from "../payments/PaymentSettingsCard";
+import { fromEditable, OrderItemsEditor, toEditable, type EditableItem } from "../payments/OrderItemsEditor";
 import type { EditableField, EditableSection, FormLayoutMode } from "./types";
 import { DynamicForm } from "../public-registration/DynamicForm";
 import { FormCoverHeader } from "../public-registration/FormCoverHeader";
@@ -61,6 +63,7 @@ export function FormBuilderPage() {
   const [reviewConfirmEnabled, setReviewConfirmEnabled] = React.useState(true);
   const [reviewConfirmText, setReviewConfirmText] = React.useState("");
   const [reviewConfirmConditions, setReviewConfirmConditions] = React.useState<ConditionalRule[] | undefined>(undefined);
+  const [orderItems, setOrderItems] = React.useState<EditableItem[]>([]);
   const [layoutMode, setLayoutMode] = React.useState<FormLayoutMode>("stepped");
   const [sections, setSections] = React.useState<EditableSection[]>([]);
   const [fields, setFields] = React.useState<EditableField[]>([]);
@@ -86,6 +89,7 @@ export function FormBuilderPage() {
     setReviewConfirmText(data.form.reviewConfirmText ?? "");
     setReviewConfirmConditions(data.form.reviewConfirmConditions ?? undefined);
     setLayoutMode(data.form.layoutMode);
+    setOrderItems(toEditable(data.form.orderItems ?? []));
     setSections(
       data.sections.map((s) => ({
         key: s.id,
@@ -186,6 +190,7 @@ export function FormBuilderPage() {
     reviewConfirmText: reviewConfirmText.trim() || undefined,
     reviewConfirmConditions: reviewConfirmEnabled ? reviewConfirmConditions : undefined,
     layoutMode,
+    orderItems: program.kind === "order_form" ? fromEditable(orderItems).items : undefined,
     sections: sections.map((s) => ({
       key: s.key,
       title: s.title,
@@ -196,7 +201,15 @@ export function FormBuilderPage() {
     fields,
   });
 
+  /** The items for sale must be complete before anything is saved. */
+  const itemsProblem = () => {
+    if (program.kind !== "order_form") return null;
+    return fromEditable(orderItems).error ?? null;
+  };
+
   const handleSave = async () => {
+    const problem = itemsProblem();
+    if (problem) return void toast.error(problem);
     setSaving(true);
     try {
       await saveFormDraft(program.id, buildPayload());
@@ -210,6 +223,8 @@ export function FormBuilderPage() {
   };
 
   const handlePublish = async () => {
+    const problem = itemsProblem();
+    if (problem) return void toast.error(problem);
     setPublishing(true);
     try {
       await saveFormDraft(program.id, buildPayload());
@@ -407,6 +422,12 @@ export function FormBuilderPage() {
         </Card>
       ) : (
       <>
+      {program.kind === "order_form" && (
+        <>
+          <PaymentSettingsCard program={program} />
+          <OrderItemsEditor items={orderItems} onChange={setOrderItems} />
+        </>
+      )}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Form settings</CardTitle>

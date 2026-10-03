@@ -59,12 +59,19 @@ export function PublicRegistrationPage({ variant = "registration" }: { variant?:
 
   const draftKey = data ? `draft:${isOrder ? "order" : "program"}:${slug}:${data.form.id}` : undefined;
 
-  const handleSubmit = async (responses: Record<string, unknown>, files: UploadedFileInfo[], consentAccepted: boolean) => {
+  const handleSubmit = async (responses: Record<string, unknown>, files: UploadedFileInfo[], consentAccepted: boolean, items?: { itemId: string; quantity: number }[]) => {
     setSubmitting(true);
     setErrors([]);
     try {
-      const result = await submitRegistration(slug!, responses, files, consentAccepted, submissionKey.current);
+      const result = await submitRegistration(slug!, responses, files, consentAccepted, submissionKey.current, items);
       clearSavedDraft(draftKey);
+      // Something to pay: on to Monime's payment page (or, if it could not be opened, to the payment page here, which can try again).
+      if (result.payment) {
+        const target = result.payment.redirectUrl;
+        if (target && target.startsWith("https://")) window.location.assign(target);
+        else navigate(`/payment/${result.payment.token}`);
+        return;
+      }
       navigate(isOrder ? `/order/${slug}/confirmation` : `/programs/${slug}/confirmation`, { state: result });
     } catch (err) {
       if (err instanceof ApiError && Array.isArray(err.details)) {
@@ -108,10 +115,12 @@ export function PublicRegistrationPage({ variant = "registration" }: { variant?:
           reviewConfirmConditions={data.form.reviewConfirmConditions}
           onUploadFile={(file, fieldKey) => uploadPublicFile(slug!, fieldKey, file)}
           onSubmit={handleSubmit}
+          orderItems={data.form.orderItems}
+          payment={program?.payment}
           storageKey={draftKey}
           reviewBeforeSubmit={isOrder}
           onCancel={isOrder ? undefined : () => navigate(`/programs/${slug}`)}
-          submitLabel={isOrder ? "Confirm and place order" : undefined}
+          submitLabel={isOrder && !(program?.payment?.enabled) ? "Confirm and place order" : undefined}
         />
       </CardContent>
     </Card>

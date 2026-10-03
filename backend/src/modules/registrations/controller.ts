@@ -56,7 +56,7 @@ export async function getProgramStatsHandler(request: FastifyRequest, reply: Fas
 export async function exportRegistrationsHandler(request: FastifyRequest, reply: FastifyReply) {
   const { programId } = request.params as { programId: string };
   const query = exportRegistrationsQuerySchema.parse(request.query);
-  const filters = { status: query.status, search: query.search, dateFrom: query.dateFrom, dateTo: query.dateTo };
+  const filters = { status: query.status, paymentStatus: query.paymentStatus, search: query.search, dateFrom: query.dateFrom, dateTo: query.dateTo };
   const program = await programsRepo.findProgramById(programId);
   if (!program) throw AppError.notFound("Program not found");
   const baseName = `${program.name.replace(/[\\/:*?"<>|]+/g, " ").trim()} ${new Date().toISOString().slice(0, 10)}`;

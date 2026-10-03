@@ -6,7 +6,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertCircle, ChevronLeft, ChevronRight, Eraser, Loader2, ShieldCheck, UploadCloud } from "lucide-react";
-import type { ConditionalRule, FollowUp, FormField, FormSection } from "@/types/api";
+import type { ConditionalRule, FollowUp, FormField, FormSection, OrderItem } from "@/types/api";
+import { formatMinor } from "@/lib/money";
+import { OrderItemsPicker, selectionList, selectionTotal, type Selection } from "./OrderItemsPicker";
 
 const followUpAsksFile = (mode: FollowUp["mode"]) => mode === "file" || mode === "text_or_file";
 const followUpAsksText = (mode: FollowUp["mode"]) => mode !== "file";
@@ -33,7 +35,16 @@ export interface UploadedFileInfo {
 interface DynamicFormProps {
   sections: FormSection[];
   fields: FormField[];
-  onSubmit: (responses: Record<string, unknown>, files: UploadedFileInfo[], consentAccepted: boolean) => Promise<void>;
+  onSubmit: (
+    responses: Record<string, unknown>,
+    files: UploadedFileInfo[],
+    consentAccepted: boolean,
+    items?: { itemId: string; quantity: number }[],
+  ) => Promise<void>;
+  /** An order form's goods: the customer picks quantities and sees the total. */
+  orderItems?: OrderItem[];
+  /** What a registration costs (fee, ID card, ticket), shown before the registrant submits and pays. */
+  payment?: { enabled: boolean; currency?: string; lines: { id: string; name: string; amountMinor: number }[] };
   onUploadFile?: (file: File, fieldKey: string) => Promise<UploadedFileInfo>;
   submitting?: boolean;
   errors?: string[];
@@ -61,6 +72,7 @@ interface DynamicFormProps {
 }
 
 interface SavedDraft {
+  selection?: Selection;
   responses: Record<string, unknown>;
   files: Record<string, UploadedFileInfo>;
   step: number;
@@ -86,6 +98,28 @@ export function clearSavedDraft(key: string | undefined) {
   } catch {
     /* storage can be blocked; nothing to clear */
   }
+}
+
+/** What the person is about to pay, line by line, and the total. */
+function ChargeSummary({ lines, total, heading = "To pay" }: { lines: { id: string; name: string; amountMinor: number }[]; total: number; heading?: string }) {
+  return (
+    <section aria-label={heading} className="flex flex-col gap-2 rounded-xl border border-primary/25 bg-gradient-brand-soft p-4 text-sm">
+      <h3 className="font-semibold">{heading}</h3>
+      <ul className="flex flex-col gap-1">
+        {lines.map((line) => (
+          <li key={line.id} className="flex justify-between gap-3">
+            <span className="min-w-0 truncate">{line.name}</span>
+            <span className="shrink-0 font-medium">{formatMinor(line.amountMinor)}</span>
+          </li>
+        ))}
+      </ul>
+      <div className="flex justify-between border-t border-primary/20 pt-2 text-base font-bold">
+        <span>Total</span>
+        <span>{formatMinor(total)}</span>
+      </div>
+      <p className="text-xs text-muted-foreground">You&apos;ll pay on the next page with Orange Money, Africell Money or QMoney. Your registration is held until the payment is confirmed.</p>
+    </section>
+  );
 }
 
 const REVIEW_REQUIRED_MESSAGE = "Please confirm you have checked all your answers before submitting";
@@ -354,6 +388,8 @@ export function DynamicForm({
   sections,
   fields,
   onSubmit,
+  orderItems,
+  payment,
   onUploadFile,
   submitting,
   errors,
@@ -394,6 +430,17 @@ export function DynamicForm({
   }, [errorCount, errors, stepErrors]);
   const [reviewConfirmed, setReviewConfirmed] = React.useState(false);
   const [reviewing, setReviewing] = React.useState(false);
+  const catalogue = orderItems ?? [];
+  const [selection, setSelection] = React.useState<Selection>(() => draft?.selection ?? {});
+  const [itemsMissing, setItemsMissing] = React.useState(false);
+  const chosenCount = Object.values(selection).reduce((a, b) => a + b, 0);
+  // What will be charged: an order's items, or the registration's fee, ID card and ticket.
+  const chargeLines =
+    catalogue.length > 0
+      ? catalogue.filter((i) => (selection[i.id] ?? 0) > 0).map((i) => ({ id: i.id, name: `${selection[i.id]} x ${i.name}`, amountMinor: i.priceMinor * (selection[i.id] ?? 0) }))
+      : (payment?.enabled ? payment.lines : []);
+  const chargeTotal = catalogue.length > 0 ? selectionTotal(catalogue, selection) : chargeLines.reduce((sum, l) => sum + l.amountMinor, 0);
+  const willPay = Boolean(payment?.enabled) && chargeTotal > 0;
 
   const fieldsBySection = (sectionId: string | null) =>
     fields.filter((f) => f.sectionId === sectionId).sort((a, b) => a.orderIndex - b.orderIndex);
@@ -427,13 +474,13 @@ export function DynamicForm({
     if (!storageKey) return;
     const timer = window.setTimeout(() => {
       try {
-        window.localStorage.setItem(storageKey, JSON.stringify({ responses, files: uploadedFiles, step: stepIndex } satisfies SavedDraft));
+        window.localStorage.setItem(storageKey, JSON.stringify({ responses, files: uploadedFiles, step: stepIndex, selection } satisfies SavedDraft));
       } catch {
         /* storage full or blocked: the form still works, it just won't be remembered */
       }
     }, 300);
     return () => window.clearTimeout(timer);
-  }, [storageKey, responses, uploadedFiles, stepIndex]);
+  }, [storageKey, responses, uploadedFiles, stepIndex, selection]);
 
   // Empties every answer and upload at once, and returns to the first step.
   const clearForm = () => {
@@ -445,6 +492,8 @@ export function DynamicForm({
     setStepIndex(0);
     setReviewConfirmed(false);
     setConsentChecked(false);
+    setSelection({});
+    setItemsMissing(false);
   };
 
   // Questions the person has typed in themselves no longer follow the question they copy from.
@@ -550,6 +599,10 @@ export function DynamicForm({
 
   const validateStep = (): boolean => {
     const missing = validateFields(currentStep.fields);
+    // An order needs at least one item, asked on the step that shows the items.
+    const needsItems = catalogue.length > 0 && (isSingle || activeStep === 0) && chosenCount === 0;
+    setItemsMissing(needsItems);
+    if (needsItems) missing.unshift("Choose at least one item to order");
     setStepErrors(missing);
     return missing.length === 0;
   };
@@ -602,7 +655,7 @@ export function DynamicForm({
         return mode !== undefined && followUpAsksFile(mode);
       })
       .map(([, file]) => file);
-    await onSubmit(responses, files, !consentNeeded || consentChecked);
+    await onSubmit(responses, files, !consentNeeded || consentChecked, catalogue.length > 0 ? selectionList(catalogue, selection) : undefined);
   };
 
   const renderField = (field: FormField) => {
@@ -937,6 +990,7 @@ export function DynamicForm({
             </ul>
           </div>
         )}
+        {chargeLines.length > 0 && <ChargeSummary lines={chargeLines} total={chargeTotal} heading={catalogue.length > 0 ? "Your order" : "To pay"} />}
         {groups.map((group) => {
           const rows = group.fields
             .filter((f) => isVisible(f, responses))
@@ -963,7 +1017,7 @@ export function DynamicForm({
             Edit my answers
           </Button>
           <Button type="button" onClick={() => void submitNow()} loading={submitting}>
-            {submitting ? "Submitting..." : (submitLabel ?? "Confirm and submit")}
+            {submitting ? "Submitting..." : (submitLabel ?? (willPay ? `Confirm and pay ${formatMinor(chargeTotal)}` : "Confirm and submit"))}
           </Button>
         </div>
       </div>
@@ -989,6 +1043,18 @@ export function DynamicForm({
         </div>
       )}
 
+      {catalogue.length > 0 && (isSingle || activeStep === 0) && (
+        <OrderItemsPicker
+          items={catalogue}
+          selection={selection}
+          error={itemsMissing && chosenCount === 0}
+          onChange={(update) => {
+            setSelection(update);
+            setItemsMissing(false);
+          }}
+        />
+      )}
+
       {isSingle ? (
         <div className="flex flex-col gap-8">
           {groups.map((group) => (
@@ -1003,6 +1069,8 @@ export function DynamicForm({
       ) : (
         <div className="flex flex-col gap-5">{currentStep.fields.map(renderField)}</div>
       )}
+
+      {willPay && (isSingle || isLastStep) && <ChargeSummary lines={chargeLines} total={chargeTotal} />}
 
       {consentNeeded && (isSingle || isLastStep) && (
         <div className="flex flex-col gap-3 rounded-xl border border-border/70 bg-gradient-brand-soft p-4">
@@ -1089,7 +1157,7 @@ export function DynamicForm({
           </Button>
           {isSingle || isLastStep ? (
             <Button type="submit" loading={submitting}>
-              {reviewBeforeSubmit ? "Review your answers" : submitting ? "Submitting..." : (submitLabel ?? "Submit registration")}
+              {reviewBeforeSubmit ? "Review your answers" : submitting ? "Submitting..." : (submitLabel ?? (willPay ? `Submit and pay ${formatMinor(chargeTotal)}` : "Submit registration"))}
             </Button>
           ) : (
             <Button type="button" onClick={handleNext}>

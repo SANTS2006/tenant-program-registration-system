@@ -46,7 +46,8 @@ export async function creditPayment(tx: Tx, payment: { id: string; tenantId: str
   if (feeMinor > 0) {
     await tx
       .insert(walletEntries)
-      .values({ tenantId: payment.tenantId, kind: "fee", amountMinor: -feeMinor, currency: payment.currency, availableAt: new Date(), paymentId: payment.id, note: "Platform fee" })
+      // Held for the same time as the payment, so the balance never dips below zero while the money is on hold.
+      .values({ tenantId: payment.tenantId, kind: "fee", amountMinor: -feeMinor, currency: payment.currency, availableAt, paymentId: payment.id, note: "Platform fee" })
       .onConflictDoNothing();
   }
   return { feeMinor, netMinor: payment.amountMinor - feeMinor };
