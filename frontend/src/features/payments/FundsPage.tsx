@@ -334,7 +334,7 @@ export function FundsPage() {
 
       <div className="grid gap-4 md:grid-cols-3">
         <BalanceCard label="Available" value={funds.balances.availableMinor} hint="Ready to withdraw" icon={Wallet} />
-        <BalanceCard label="On hold" value={funds.balances.pendingMinor} hint={`Released ${funds.limits.holdHours} hours after each payment`} icon={Clock} tone="bg-none bg-amber-500" />
+        <BalanceCard label="On hold" value={funds.balances.pendingMinor} hint={`Released ${funds.limits.holdMinutes === 0 ? "at once" : funds.limits.holdMinutes % 60 === 0 ? `${funds.limits.holdMinutes / 60} hours` : `${funds.limits.holdMinutes} minutes`}${funds.limits.holdMinutes === 0 ? "" : " after each payment"}`} icon={Clock} tone="bg-none bg-amber-500" />
         <BalanceCard label="Total" value={funds.balances.totalMinor} hint="Available plus on hold" icon={Banknote} tone="bg-none bg-slate-500" />
       </div>
       {(funds.limits.feePercent > 0 || funds.limits.feeFixedMinor > 0) && (

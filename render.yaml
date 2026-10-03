@@ -74,8 +74,8 @@ projects:
                 value: "0"
               - key: PAYMENTS_FEE_FIXED
                 value: "0"
-              - key: PAYMENTS_HOLD_HOURS
-                value: "24"
+              - key: PAYMENTS_HOLD_MINUTES
+                value: "5"
               - key: PAYMENTS_MAX_AMOUNT
                 value: "10000000"
               - key: PAYOUT_MIN_AMOUNT

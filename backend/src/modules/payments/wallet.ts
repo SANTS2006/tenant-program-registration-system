@@ -39,7 +39,7 @@ export async function balancesFor(tenantId: string, executor: Pick<typeof db, "s
  */
 export async function creditPayment(tx: Tx, payment: { id: string; tenantId: string; amountMinor: number; currency: string }) {
   const feeMinor = platformFee(payment.amountMinor, env.PAYMENTS_FEE_PERCENT, leonesToMinor(env.PAYMENTS_FEE_FIXED));
-  const availableAt = new Date(Date.now() + env.PAYMENTS_HOLD_HOURS * 3_600_000);
+  const availableAt = new Date(Date.now() + env.PAYMENTS_HOLD_MINUTES * 60_000);
   await tx
     .insert(walletEntries)
     .values({ tenantId: payment.tenantId, kind: "payment", amountMinor: payment.amountMinor, currency: payment.currency, availableAt, paymentId: payment.id })

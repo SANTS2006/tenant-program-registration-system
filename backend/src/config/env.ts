@@ -67,7 +67,7 @@ const envSchema = z.object({
   PAYMENTS_FEE_PERCENT: z.coerce.number().min(0).max(30).default(0),
   PAYMENTS_FEE_FIXED: z.coerce.number().min(0).default(0),
   // Money from a payment can't be withdrawn until this many hours have passed (time to spot problems).
-  PAYMENTS_HOLD_HOURS: z.coerce.number().min(0).max(24 * 30).default(24),
+  PAYMENTS_HOLD_MINUTES: z.coerce.number().min(0).max(60 * 24 * 30).default(5),
   // The largest single payment accepted, in Leones.
   PAYMENTS_MAX_AMOUNT: z.coerce.number().positive().default(10_000_000),
   // Withdrawals: smallest, largest per day, the size above which a person on our team must approve it, and how long a new account waits.

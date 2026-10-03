@@ -95,7 +95,7 @@ export async function fundsSummaryHandler(request: FastifyRequest, reply: Fastif
       minMinor: leonesToMinor(env.PAYOUT_MIN_AMOUNT),
       dailyLimitMinor: leonesToMinor(env.PAYOUT_DAILY_LIMIT),
       reviewAboveMinor: leonesToMinor(env.PAYOUT_REVIEW_ABOVE),
-      holdHours: env.PAYMENTS_HOLD_HOURS,
+      holdMinutes: env.PAYMENTS_HOLD_MINUTES,
       newAccountHours: env.PAYOUT_NEW_ACCOUNT_HOURS,
       feePercent: env.PAYMENTS_FEE_PERCENT,
       feeFixedMinor: leonesToMinor(env.PAYMENTS_FEE_FIXED),
