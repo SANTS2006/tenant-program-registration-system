@@ -312,14 +312,20 @@ export function FundsPage() {
     onError: (err) => toast.error(err instanceof ApiError ? err.message : "Could not cancel the withdrawal"),
   });
 
-  const startWithdraw = () => {
-    if (!funds) return;
-    if (!funds.configured) return void toast.error("Payments are not connected on this platform yet.");
-    if (!funds.accounts.length) return void toast.info("Add a withdrawal account first. Use \"Add account\" below.");
-    if (!funds.accounts.some((a) => a.usable)) return void toast.info(`Your new account is not ready yet. It can be used ${waitText(funds.limits.newAccountMinutes)} after it is added.`);
-    if (funds.balances.availableMinor <= 0) return void toast.info("There is no money available to withdraw yet. New payments are released after the hold.");
-    setWithdrawOpen(true);
-  };
+  /** Why withdrawing isn't possible right now, or null when it is. */
+  const withdrawBlock = !funds
+    ? null
+    : !funds.configured
+      ? "Payments are not connected on this platform yet."
+      : !funds.accounts.length
+        ? 'Add a withdrawal account first, using "Add account" below.'
+        : !funds.accounts.some((a) => a.usable)
+          ? `Your new account is not ready yet. It can be used ${waitText(funds.limits.newAccountMinutes)} after it is added.`
+          : funds.balances.availableMinor <= 0
+            ? funds.balances.pendingMinor > 0
+              ? "Your money is still on hold. It becomes available to withdraw after the hold."
+              : "There is no money available to withdraw yet."
+            : null;
 
   if (isLoading || !funds) return <p className="text-sm text-muted-foreground">Loading your payment fund...</p>;
 
@@ -332,12 +338,14 @@ export function FundsPage() {
         </div>
         <div className="flex gap-2">
           <RefreshButton />
-          <Button onClick={startWithdraw}>
+          <Button onClick={() => setWithdrawOpen(true)} disabled={withdrawBlock !== null} title={withdrawBlock ?? undefined}>
             <ArrowDownToLine className="h-4 w-4" />
             Withdraw
           </Button>
         </div>
       </div>
+
+      {funds.configured && withdrawBlock && <p className="text-sm text-muted-foreground">Withdraw is off for now: {withdrawBlock}</p>}
 
       {!funds.configured && (
         <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm">Payments are not connected on this platform yet, so nothing can be paid or withdrawn. Ask the platform administrator to connect Monime.</p>
