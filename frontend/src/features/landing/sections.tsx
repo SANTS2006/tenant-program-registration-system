@@ -46,6 +46,8 @@ import {
   PencilLine,
   SlidersHorizontal,
   Zap,
+  Wallet,
+  Smartphone as PhoneIcon,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -226,6 +228,21 @@ const FEATURES: { icon: LucideIcon; title: string; description: string }[] = [
     icon: CalendarClock,
     title: "Smarter form rules",
     description: "Earliest and latest dates, minimum ages, fields that fill themselves in, and extra boxes that appear only when needed.",
+  },
+  {
+    icon: PhoneIcon,
+    title: "Get paid with mobile money",
+    description: "Charge for registration, ID cards, tickets and orders. People pay with Orange Money, Africell Money or QMoney through Monime, and documents unlock once the payment is confirmed.",
+  },
+  {
+    icon: ShoppingBag,
+    title: "Items, prices and live totals",
+    description: "List what you sell on the order form. Customers pick quantities, see the total as they go, and pay before the order goes through.",
+  },
+  {
+    icon: Wallet,
+    title: "Payment fund and withdrawals",
+    description: "Every payment lands in your fund. Withdraw to your own mobile money or bank account, protected by your password, a waiting period for new accounts, and limits.",
   },
   {
     icon: SlidersHorizontal,
@@ -783,6 +800,14 @@ const FAQS = [
   {
     q: "Can I limit a poll to people I have approved?",
     a: "Yes. Turn on verified voters and paste their emails. Anyone who is not on the list cannot create an account, sign in or vote.",
+  },
+  {
+    q: "Can people pay when they register or order?",
+    a: "Yes. Turn on payments for a program or an order form and set the prices. People pay with Orange Money, Africell Money or QMoney through Monime, and the money goes to your payment fund. Every payment is confirmed with Monime before it counts, and ID cards and tickets are only released once it is paid.",
+  },
+  {
+    q: "How do I get the money I collect?",
+    a: "Open the Payment fund page, add a mobile money number or bank account, and withdraw. You confirm with your password, a new account waits a day before first use, large amounts are approved by our team, and every move is recorded.",
   },
   {
     q: "Can I import registrations I already have?",
