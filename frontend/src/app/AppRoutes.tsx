@@ -29,6 +29,7 @@ const ReportPage = lazyPage(() => import("@/features/legal/ReportPage"), "Report
 const PublicProgramPage = lazyPage(() => import("@/features/public-registration/PublicProgramPage"), "PublicProgramPage");
 const ProgramPaymentsPage = lazyPage(() => import("@/features/payments/ProgramPaymentsPage"), "ProgramPaymentsPage");
 const FundsPage = lazyPage(() => import("@/features/payments/FundsPage"), "FundsPage");
+const AuditLogsPage = lazyPage(() => import("@/features/audit/AuditLogsPage"), "AuditLogsPage");
 const PlatformPaymentsPage = lazyPage(() => import("@/features/payments/PlatformPaymentsPage"), "PlatformPaymentsPage");
 const PublicPaymentPage = lazyPage(() => import("@/features/payments/PublicPaymentPage"), "PublicPaymentPage");
 const PublicRegistrationPage = lazyPage(() => import("@/features/public-registration/PublicRegistrationPage"), "PublicRegistrationPage");
@@ -190,6 +191,7 @@ export function AppRoutes() {
               <Route path="/admin/tenants/:tenantId" element={<TenantDetailPage />} />
               <Route path="/admin/inbox" element={<InboxPage />} />
               <Route path="/admin/platform-payments" element={<PlatformPaymentsPage />} />
+              <Route path="/admin/audit" element={<AuditLogsPage />} />
             </Route>
           </Route>
 

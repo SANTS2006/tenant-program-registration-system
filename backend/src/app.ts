@@ -34,6 +34,7 @@ import { publicIdCardRoutes } from "./modules/idcards/publicRoutes.js";
 import { analyticsRoutes } from "./modules/analytics/routes.js";
 import { platformRoutes } from "./modules/platform/routes.js";
 import { publicTicketRoutes, ticketRoutes } from "./modules/tickets/routes.js";
+import { registerRequestAudit } from "./modules/audit/requestAudit.js";
 import { fundsRoutes, programPaymentRoutes, publicPaymentRoutes, webhookRoutes } from "./modules/payments/routes.js";
 
 
@@ -67,6 +68,9 @@ export function buildApp() {
     // limit of 100 makes such routes answer 404.
     routerOptions: { maxParamLength: 1000 },
   });
+
+  // Every action in the system is written to the audit log (see modules/audit).
+  registerRequestAudit(app);
 
   app.register(helmet, {
     crossOriginResourcePolicy: { policy: "cross-origin" },

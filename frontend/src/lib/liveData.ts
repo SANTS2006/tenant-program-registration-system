@@ -6,6 +6,7 @@ export const LIVE_REFRESH_MS = 20_000;
 // Lists, tables and numbers that change while people use the system (new registrations, votes, orders, messages...).
 const LIVE_ROOTS = new Set([
   "registrations",
+  "audit",
   "verifications",
   "dashboard-overview",
   "dashboard-analytics-trend",

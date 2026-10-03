@@ -4,7 +4,7 @@ import { AppError } from "../../lib/errors.js";
 import { sendSuccess } from "../../lib/response.js";
 import { requireRole } from "../../middleware/authorize.js";
 import { DOCUMENT_WORDING, type BusinessDocumentKind } from "../../shared/designs/index.js";
-import { recordAudit } from "../audit/service.js";
+import { recordAudit } from "../audit/recorder.js";
 import * as registrationsRepo from "../registrations/repository.js";
 import { createUploadSignature } from "../uploads/service.js";
 import { getBusinessRole, requireBusinessAccess } from "./access.js";

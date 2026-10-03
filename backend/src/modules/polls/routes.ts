@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import { requireRole } from "../../middleware/authorize.js";
 import { AppError } from "../../lib/errors.js";
 import { sendSuccess } from "../../lib/response.js";
-import { recordAudit } from "../audit/service.js";
+import { recordAudit } from "../audit/recorder.js";
 import { createUploadSignature } from "../uploads/service.js";
 import { getPollRole, requirePollAccess } from "./access.js";
 import { createPollSchema, listPollsQuerySchema, listVotersQuerySchema, saveBallotSchema, updatePollSchema, verifiedVotersSchema } from "./schemas.js";

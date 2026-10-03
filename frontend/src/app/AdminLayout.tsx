@@ -1,7 +1,7 @@
 import * as React from "react";
 import { NavLink } from "react-router-dom";
 import { LazyOutlet } from "@/components/PageLoading";
-import { Building2, Inbox, Landmark, Wallet, LayoutDashboard, ListChecks, LogOut, Menu, MessageSquarePlus, Settings, Store, Users, Vote, X } from "lucide-react";
+import { Building2, ScrollText, Inbox, Landmark, Wallet, LayoutDashboard, ListChecks, LogOut, Menu, MessageSquarePlus, Settings, Store, Users, Vote, X } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { useAuth } from "./AuthContext";
 import { cn } from "@/lib/utils";
@@ -27,6 +27,7 @@ const navItems = [
   { to: "/admin/inbox", label: "Inbox", icon: Inbox, end: false, platformOnly: true },
   // Withdrawals waiting for approval, payments that need a look, and Monime balances.
   { to: "/admin/platform-payments", label: "Payments", icon: Landmark, end: false, platformOnly: true },
+  { to: "/admin/audit", label: "Audit log", icon: ScrollText, end: false, platformOnly: true },
 ];
 
 function BrandMark() {

@@ -4,7 +4,7 @@ import { isOwnCloudinaryUrl } from "../../lib/cloudinaryUrl.js";
 import { attachmentDisposition } from "../../lib/downloadName.js";
 import { AppError } from "../../lib/errors.js";
 import { sendSuccess } from "../../lib/response.js";
-import { recordAudit } from "../audit/service.js";
+import { recordAudit } from "../audit/recorder.js";
 import * as programsRepo from "../programs/repository.js";
 import { z } from "zod";
 import { importTemplateFor, previewImport, runImport } from "./importService.js";

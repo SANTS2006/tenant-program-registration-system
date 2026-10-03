@@ -2,7 +2,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { env, isProduction } from "../../config/env.js";
 import { AppError } from "../../lib/errors.js";
 import { sendSuccess } from "../../lib/response.js";
-import { recordAudit } from "../audit/service.js";
+import { recordAudit } from "../audit/recorder.js";
 import { createUploadSignature } from "../uploads/service.js";
 import * as authService from "./service.js";
 import {

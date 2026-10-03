@@ -9,7 +9,7 @@ import { leonesToMinor } from "../../lib/money.js";
 import { paginationSchema } from "../../lib/pagination.js";
 import { dateRangeQuery } from "../../lib/dateRange.js";
 import { sendSuccess } from "../../lib/response.js";
-import { recordAudit } from "../audit/service.js";
+import { recordAudit } from "../audit/recorder.js";
 import * as programsRepo from "../programs/repository.js";
 import { diagnoseMonime, isMonimeConfigured, listFinancialAccounts, MonimeError } from "./monime.js";
 import { paymentConfigSchema, resolvePaymentConfig } from "./pricing.js";

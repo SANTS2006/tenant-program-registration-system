@@ -9,7 +9,7 @@ import { formatMinor, leonesToMinor } from "../../lib/money.js";
 import { buildPaginatedResult, toOffsetLimit, type PaginationInput } from "../../lib/pagination.js";
 import { verifyPassword } from "../../lib/password.js";
 import { TtlCache } from "../../lib/ttlCache.js";
-import { recordAudit } from "../audit/service.js";
+import { recordAudit } from "../audit/recorder.js";
 import { queueEmail } from "../email/outbox.js";
 import { paymentsNoticeEmail } from "../email/templates.js";
 import { createPayout, getPayout, isMonimeConfigured, listBanks, listMomos, MonimeError, type PayoutDestination } from "./monime.js";
@@ -325,12 +325,16 @@ function destinationOf(account: { type: string; providerId: string; accountNumbe
 }
 
 async function fail(payoutId: string, reason: string) {
-  await db.transaction(async (tx) => {
+  const failed = await db.transaction(async (tx) => {
     const [row] = await tx.select().from(payouts).where(eq(payouts.id, payoutId)).for("update");
-    if (!row || row.status === "failed" || row.status === "completed") return;
+    if (!row || row.status === "failed" || row.status === "completed") return null;
     await tx.update(payouts).set({ status: "failed", failureReason: reason, updatedAt: new Date() }).where(eq(payouts.id, payoutId));
     await reversePayout(tx, row, "Withdrawal failed");
+    return row;
   });
+  if (failed) {
+    void recordAudit({ action: "payout.failed", actorType: "system", tenantId: failed.tenantId, entityType: "payout", entityId: failed.id, outcome: "failed", metadata: { reason, amountMinor: failed.amountMinor } });
+  }
 }
 
 /** Sends queued withdrawals to Monime and follows up on ones in progress. Runs in the background on every instance. */
@@ -381,6 +385,7 @@ export async function processPayouts(): Promise<number> {
       if (remote.status === "completed") {
         await db.update(payouts).set({ status: "completed", completedAt: new Date(), updatedAt: new Date() }).where(and(eq(payouts.id, payout.id), eq(payouts.status, "processing")));
         const row = payout;
+        void recordAudit({ action: "payout.completed", actorType: "system", tenantId: row.tenantId, entityType: "payout", entityId: row.id, metadata: { amountMinor: row.amountMinor } });
         void notifyAdmins(row.tenantId, { heading: "Your withdrawal is complete", message: "The money has been sent.", details: [{ label: "Amount", value: formatMinor(row.amountMinor) }] });
         handled++;
       } else if (remote.status === "failed") {

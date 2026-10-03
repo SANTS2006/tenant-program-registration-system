@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { businesses } from "../../db/schema/index.js";
 import { AppError } from "../../lib/errors.js";
+import { recordAudit } from "../audit/recorder.js";
 import { readIdempotencyKey, withIdempotency } from "../../lib/idempotency.js";
 import { TtlCache } from "../../lib/ttlCache.js";
 import { sendSuccess } from "../../lib/response.js";
@@ -107,6 +108,23 @@ export async function submitPublicRegistrationHandler(request: FastifyRequest, r
   const { value, replay } = await withIdempotency(`registration:${slug}`, key, async () => {
     const result = await registrationsService.submitRegistration(slug, input, { ip: request.ip, userAgent: request.headers["user-agent"] });
     const program = await programsRepo.findProgramById(result.registration.programId);
+    await recordAudit({
+      action: "public.submit",
+      label: program?.kind === "order_form" ? "Placed an order" : "Submitted a registration",
+      actorType: "visitor",
+      tenantId: program?.tenantId,
+      entityType: "registration",
+      entityId: result.registration.id,
+      metadata: {
+        registrationNumber: result.registration.registrationNumber,
+        program: program?.name,
+        slug,
+        kind: program?.kind,
+        amountDueMinor: result.registration.amountDueMinor || undefined,
+        paymentStarted: result.payment ? true : undefined,
+        applicantEmail: result.registration.applicantEmail ?? undefined,
+      },
+    });
     // Orders always get their copy; a program's admin chooses whether registrants do.
     const offerCopy = !program || program.kind === "order_form" || program.allowSubmissionCopy;
     return {

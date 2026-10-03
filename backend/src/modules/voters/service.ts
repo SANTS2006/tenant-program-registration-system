@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { recordAudit } from "../audit/recorder.js";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import jwt from "jsonwebtoken";
@@ -374,6 +375,17 @@ export async function castVote(
     });
   }
   await pollsRepo.addPollVoter(poll.id, voter.id);
+  // Who voted and where, never who they voted for: the ballot stays secret.
+  await recordAudit({
+    action: "voter.vote",
+    actorType: "voter",
+    actorName: voter.name,
+    actorEmail: voter.email,
+    tenantId: poll.tenantId,
+    entityType: "poll",
+    entityId: poll.id,
+    metadata: { poll: poll.name, position: position.title },
+  });
 
   const results = await buildResults(poll.id);
   if (poll.notifyOnVote) void notifyTeam(poll, voter, position.title, results.positions.find((p) => p.id === position.id)?.totalVotes ?? 0);

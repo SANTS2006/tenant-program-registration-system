@@ -8,7 +8,7 @@ import { forms, payments, programs, registrations } from "../../db/schema/index.
 import { AppError } from "../../lib/errors.js";
 import { formatMinor } from "../../lib/money.js";
 import { buildPaginatedResult, toOffsetLimit, type PaginationInput } from "../../lib/pagination.js";
-import { recordAudit } from "../audit/service.js";
+import { recordAudit } from "../audit/recorder.js";
 import { queueEmail } from "../email/outbox.js";
 import { paymentReceivedEmail } from "../email/templates.js";
 import { signSubmissionToken } from "../registrations/summary.js";
@@ -131,6 +131,14 @@ export async function startPayment(input: {
   await db.update(registrations).set({ paymentStatus: "pending", amountDueMinor: input.totalMinor }).where(eq(registrations.id, input.registration.id));
 
   const token = signPaymentToken(created!.id);
+  void recordAudit({
+    action: "payment.started",
+    actorType: "visitor",
+    tenantId: input.program.tenantId,
+    entityType: "payment",
+    entityId: created!.id,
+    metadata: { registrationNumber: input.registration.registrationNumber, amountMinor: input.totalMinor, purpose: input.purpose, flags: flags.length ? flags : undefined },
+  });
   try {
     const opened = await openCheckout(created!, input.program.name);
     return { token, status: "pending", redirectUrl: opened.redirectUrl, amountMinor: input.totalMinor, currency: "SLE" };
@@ -339,7 +347,7 @@ async function completePayment(paymentId: string, verdict: ProviderVerdict): Pro
 
   if (result.firstTime) {
     const row = result.row;
-    void recordAudit({ action: "payment.completed", entityType: "payment", entityId: row.id, metadata: { programId: row.programId, amountMinor: row.amountMinor } });
+    void recordAudit({ action: "payment.completed", actorType: "system", tenantId: row.tenantId, entityType: "payment", entityId: row.id, metadata: { programId: row.programId, amountMinor: row.amountMinor, registrationId: row.registrationId } });
     if (row.payerEmail) {
       const email = paymentReceivedEmail({
         payerName: row.payerName ?? "there",
@@ -360,6 +368,15 @@ async function markPayment(paymentId: string, status: "failed" | "expired" | "ca
     .where(and(eq(payments.id, paymentId), inArray(payments.status, ["pending", "review"])))
     .returning();
   if (!row) return;
+  void recordAudit({
+    action: `payment.${status}`,
+    actorType: "system",
+    tenantId: row.tenantId,
+    entityType: "payment",
+    entityId: row.id,
+    outcome: status === "review" || status === "failed" ? "failed" : "success",
+    metadata: { reason: reason ?? undefined, amountMinor: row.amountMinor },
+  });
   // The registration keeps waiting for payment unless the amount needs a person's look.
   if (status === "review") await setRegistrationStatus(row.registrationId, "review");
   else {

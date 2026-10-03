@@ -4,6 +4,7 @@ import { pool } from "./db/client.js";
 import { startMaintenance } from "./lib/maintenance.js";
 import { startOutboxWorker } from "./modules/email/outbox.js";
 import { startPaymentsWorker } from "./modules/payments/worker.js";
+import { flushAudit } from "./modules/audit/recorder.js";
 
 const app = buildApp();
 
@@ -37,6 +38,8 @@ async function shutdown(signal: string) {
     await stopWorker?.();
     await stopPayments?.();
     await app.close();
+    // The last audit entries are written before the database connection is closed.
+    await flushAudit();
     await pool.end();
     process.exit(0);
   } catch (err) {

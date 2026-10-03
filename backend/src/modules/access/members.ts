@@ -8,7 +8,7 @@ import { AppError } from "../../lib/errors.js";
 import { hashPassword } from "../../lib/password.js";
 import { sendSuccess } from "../../lib/response.js";
 import { generateVerificationCode } from "../../lib/tokens.js";
-import { recordAudit } from "../audit/service.js";
+import { recordAudit } from "../audit/recorder.js";
 import * as usersRepo from "../users/repository.js";
 import * as authRepo from "../auth/repository.js";
 import { generateUniqueTenantSlug } from "../auth/service.js";

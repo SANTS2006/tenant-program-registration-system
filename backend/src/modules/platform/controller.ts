@@ -2,7 +2,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { AppError } from "../../lib/errors.js";
 import { sendSuccess } from "../../lib/response.js";
-import { recordAudit } from "../audit/service.js";
+import { recordAudit } from "../audit/recorder.js";
 import { paginationSchema } from "../../lib/pagination.js";
 import { dateRangeQuery } from "../../lib/dateRange.js";
 import * as platformService from "./service.js";

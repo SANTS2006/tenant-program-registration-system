@@ -1,3 +1,4 @@
+import { recordAudit } from "../audit/recorder.js";
 import { assertDocumentsUnlocked } from "../payments/gate.js";
 import { env } from "../../config/env.js";
 import { participantFileName } from "../../lib/downloadName.js";
@@ -260,6 +261,17 @@ export async function verifyRegistration(
 
   // An ID card or ticket that hasn't been paid for is not valid.
   const valid = registration.status !== "rejected" && registration.status !== "cancelled" && registration.paymentStatus !== "pending" && registration.paymentStatus !== "review";
+  void recordAudit({
+    action: "verification.scan",
+    actorType: context.user ? "user" : "visitor",
+    actorUserId: context.user?.id ?? null,
+    tenantId: program.tenantId,
+    entityType: "registration",
+    entityId: registration.id,
+    outcome: valid ? "success" : "failed",
+    metadata: { registrationNumber: registration.registrationNumber, document: context.documentType, valid, program: program.name },
+    ipAddress: context.ipAddress,
+  });
   // Only credit the scan to a signed-in person who is on this program's team.
   const verifiedBy = context.user && (await getProgramRole(context.user, program.id)) ? context.user.id : null;
 
