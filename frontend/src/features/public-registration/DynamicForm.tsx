@@ -974,8 +974,8 @@ export function DynamicForm({
     return (
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-1">
-          <h2 className="text-xl font-semibold">Check your answers</h2>
-          <p className="text-sm text-muted-foreground">Look everything over. If something is wrong, go back and fix it before you confirm.</p>
+          <h2 className="text-xl font-semibold">{catalogue.length > 0 ? "Review your order" : "Check your answers"}</h2>
+          <p className="text-sm text-muted-foreground">{catalogue.length > 0 ? "Look over your order and your details. If something is wrong, go back and fix it before you confirm." : "Look everything over. If something is wrong, go back and fix it before you confirm."}</p>
         </div>
         {combinedErrors.length > 0 && (
           <div role="alert" className="flex flex-col gap-1 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
@@ -1014,7 +1014,7 @@ export function DynamicForm({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Button type="button" variant="outline" onClick={() => setReviewing(false)} disabled={submitting}>
             <ChevronLeft className="h-4 w-4" />
-            Edit my answers
+            {catalogue.length > 0 ? "Edit my order" : "Edit my answers"}
           </Button>
           <Button type="button" onClick={() => void submitNow()} loading={submitting}>
             {submitting ? "Submitting..." : (submitLabel ?? (willPay ? `Confirm and pay ${formatMinor(chargeTotal)}` : "Confirm and submit"))}

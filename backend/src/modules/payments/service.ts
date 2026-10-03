@@ -63,7 +63,34 @@ export interface PaymentStart {
   currency: string;
 }
 
+/** Keeps what Monime said when a payment page could not be opened (the payer only sees a general message). */
+function noteCheckoutFailure(payment: PaymentRow, err: unknown) {
+  const monime = err instanceof MonimeError;
+  const reason = monime ? `${err.reason ?? err.message}${err.status ? ` (Monime answered ${err.status})` : ""}` : err instanceof AppError ? err.message : "Unexpected error";
+  console.error("Could not open a Monime payment page:", reason, monime && err.requestId ? `request ${err.requestId}` : "");
+  void recordAudit({
+    action: "payment.checkout_failed",
+    label: "A payment page could not be opened",
+    actorType: "system",
+    tenantId: payment.tenantId,
+    entityType: "payment",
+    entityId: payment.id,
+    outcome: "failed",
+    metadata: { programId: payment.programId, reason, ...(monime && err.requestId ? { requestId: err.requestId } : {}) },
+  });
+  return reason;
+}
+
 async function openCheckout(payment: PaymentRow, programName: string): Promise<PaymentRow> {
+  try {
+    return await openCheckoutUnchecked(payment, programName);
+  } catch (err) {
+    noteCheckoutFailure(payment, err);
+    throw err;
+  }
+}
+
+async function openCheckoutUnchecked(payment: PaymentRow, programName: string): Promise<PaymentRow> {
   const token = signPaymentToken(payment.id);
   const base = env.APP_URL.replace(/\/$/, "");
   const lines = payment.lineItems as LineItem[];
