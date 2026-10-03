@@ -47,6 +47,7 @@ import {
   SlidersHorizontal,
   Zap,
   Wallet,
+  ScrollText,
   Smartphone as PhoneIcon,
   type LucideIcon,
 } from "lucide-react";
@@ -243,6 +244,21 @@ const FEATURES: { icon: LucideIcon; title: string; description: string }[] = [
     icon: Wallet,
     title: "Payment fund and withdrawals",
     description: "Every payment lands in your fund. Withdraw to your own mobile money or bank account, protected by your password, a waiting period for new accounts, and limits.",
+  },
+  {
+    icon: BarChart3,
+    title: "Money on your dashboard",
+    description: "See what you collected today and this week, what is waiting to be paid, your top earners and the latest payments, beside your registrations and orders.",
+  },
+  {
+    icon: PieChart,
+    title: "Payment analytics",
+    description: "For every program and order form: money collected each day, how people paid, best-selling items, and how many who registered went on to pay.",
+  },
+  {
+    icon: ScrollText,
+    title: "Audit log for the platform",
+    description: "Every action across every account is recorded and grouped by account, including visitors on live pages, with failed and refused attempts highlighted.",
   },
   {
     icon: SlidersHorizontal,
@@ -712,6 +728,16 @@ const SECURITY: { icon: LucideIcon; title: string; description: string }[] = [
     description: "Duplicate submissions are blocked at the database, emails are queued and retried, and sign-in attempts and uploads are limited.",
   },
   {
+    icon: ScrollText,
+    title: "Tamper-proof audit trail",
+    description: "Every change, sign-in, payment and withdrawal is recorded with who, when and from where. Passwords and answers are never stored in it, and entries can't be edited.",
+  },
+  {
+    icon: Wallet,
+    title: "Safe payments",
+    description: "Payments are confirmed directly with Monime before they count. Withdrawals need your password, new accounts wait before first use, and large amounts need approval.",
+  },
+  {
     icon: Download,
     title: "Your data, exportable",
     description: "Export registrations at any time and download every uploaded file from its registration.",
@@ -807,7 +833,11 @@ const FAQS = [
   },
   {
     q: "How do I get the money I collect?",
-    a: "Open the Payment fund page, add a mobile money number or bank account, and withdraw. You confirm with your password, a new account waits a day before first use, large amounts are approved by our team, and every move is recorded.",
+    a: "Open the Payment fund page, add a mobile money number or bank account, and withdraw. You confirm with your password, a new account waits a few minutes before first use, large amounts are approved by our team, and every move is recorded.",
+  },
+  {
+    q: "Who can see what happens in the system?",
+    a: "Platform administrators have an audit log that records every action, grouped by account: who did it, what, when, from where and whether it worked, including visitors on the live registration and order pages. Passwords, form answers and who someone voted for are never stored in it, and entries can't be changed or removed. Nobody else can open it.",
   },
   {
     q: "Can I import registrations I already have?",

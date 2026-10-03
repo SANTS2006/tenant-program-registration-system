@@ -22,6 +22,7 @@ import {
 import { HeroDashboard, RegistrationToast, ShareCardMock } from "./visuals";
 import { DesignCarousel, DocumentStack3D, HeroIdCard, HeroTicket } from "./lazyShowcase";
 import { ModuleCube, ModuleList } from "./moduleCube";
+import { AuditScene, PaymentsPoints, PaymentsScene } from "./paymentsShowcase";
 import { usePageMeta } from "@/lib/seo";
 
 /** Soft blurred color fields drifting behind a section. */
@@ -83,8 +84,8 @@ function Hero() {
           </Reveal>
           <Reveal delay={240}>
             <p className="max-w-xl text-lg text-muted-foreground">
-              Build registration forms, run voting polls, take orders, and send invoices and receipts. Share everything with a link or
-              QR code, review every response, and issue ID cards and tickets from a single, secure workspace.
+              Build registration forms, run voting polls, take orders, get paid with mobile money, and send invoices and receipts. Share
+              everything with a link or QR code, review every response, and issue ID cards and tickets from a single, secure workspace.
             </p>
           </Reveal>
           <Reveal delay={360} className="flex flex-wrap gap-3">
@@ -264,6 +265,26 @@ export function LandingPage() {
           <FeaturesGrid />
         </Section>
 
+        <Section id="payments" className="overflow-hidden bg-card/40">
+          <SectionHeading
+            eyebrow="Payments"
+            title={
+              <>
+                Get paid with <span className="gradient-text">Orange, Africell and QMoney</span>
+              </>
+            }
+            description="Charge for registration, ID cards, tickets and orders. Customers pick items, watch the total add up, and pay on a secure Monime page. The money lands in your own payment fund."
+          />
+          <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+            <Reveal variant="zoom" className="flex justify-center">
+              <PaymentsScene />
+            </Reveal>
+            <Reveal delay={120}>
+              <PaymentsPoints />
+            </Reveal>
+          </div>
+        </Section>
+
         <Section id="paperwork" className="overflow-hidden">
           <SectionHeading
             eyebrow="Invoices, quotations and receipts"
@@ -314,6 +335,21 @@ export function LandingPage() {
             description="Invite colleagues and control, program by program, who can manage and who can only view."
           />
           <Roles />
+        </Section>
+
+        <Section id="audit" className="overflow-hidden">
+          <SectionHeading
+            eyebrow="Audit log"
+            title={
+              <>
+                Every action, <span className="gradient-text">recorded by account</span>
+              </>
+            }
+            description="Platform administrators can see who did what, when, from where and whether it worked, from sign-ins and edits to payments and withdrawals. Entries can't be changed or removed."
+          />
+          <Reveal variant="zoom">
+            <AuditScene />
+          </Reveal>
         </Section>
 
         <Section id="security" className="bg-card/40">
