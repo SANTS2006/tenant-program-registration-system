@@ -49,7 +49,7 @@ export async function resolveTenantId(request: FastifyRequest, pattern: string):
   }
   if (p.token && pattern.includes("/payments/")) {
     // The signed link is only read here to find the account; it is not trusted for anything else.
-    const sub = (jwt.decode(p.token) as { sub?: string } | null)?.sub;
+    const sub = p.token.split(".")[0];
     if (sub && UUID.test(sub)) {
       return cached(`payment:${sub}`, () => firstTenant(db.select({ tenantId: payments.tenantId }).from(payments).where(eq(payments.id, sub)).limit(1)));
     }

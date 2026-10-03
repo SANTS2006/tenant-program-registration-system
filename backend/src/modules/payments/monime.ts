@@ -68,7 +68,7 @@ async function call<T>(method: "GET" | "POST" | "PATCH" | "DELETE", path: string
         signal: AbortSignal.timeout(options.timeoutMs ?? 15_000),
       });
       const requestId = response.headers.get("monime-request-id") ?? undefined;
-      let json: { success?: boolean; result?: T; error?: { code?: string; reason?: string; message?: string } } = {};
+      let json: { success?: boolean; result?: T; error?: { code?: string; reason?: string; message?: string; details?: unknown } } = {};
       try {
         json = (await response.json()) as typeof json;
       } catch {
@@ -76,7 +76,8 @@ async function call<T>(method: "GET" | "POST" | "PATCH" | "DELETE", path: string
       }
       if (response.ok && json.success !== false) return json.result as T;
 
-      const reason = String(json.error?.reason ?? json.error?.code ?? `HTTP ${response.status}`);
+      const details = json.error?.details === undefined ? "" : ` ${redact(JSON.stringify(json.error.details)).slice(0, 300)}`;
+      const reason = `${String(json.error?.reason ?? json.error?.code ?? `HTTP ${response.status}`)}${json.error?.message ? `: ${redact(String(json.error.message)).slice(0, 200)}` : ""}${details}`;
       const retryable = response.status >= 500 || response.status === 429;
       last = new MonimeError(`Monime ${method} ${path} failed: ${reason}`, response.status, retryable, requestId, reason);
       if (!retryable) throw last;

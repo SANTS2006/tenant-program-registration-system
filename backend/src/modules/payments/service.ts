@@ -1,6 +1,5 @@
-import { createHmac } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
-import jwt from "jsonwebtoken";
 import { env } from "../../config/env.js";
 import { dateRangeConditions } from "../../lib/dateRange.js";
 import { db } from "../../db/client.js";
@@ -33,19 +32,33 @@ type RegistrationRow = typeof registrations.$inferSelect;
 
 const PAYMENT_KEY = createHmac("sha256", env.JWT_SECRET).update("payment-status-token").digest();
 
-/** A private link that lets the payer see, resume and retry one payment without an account. */
+/**
+ * A private link that lets the payer see, resume and retry one payment without an account.
+ * It is kept short on purpose: Monime only accepts return addresses up to 255 characters, and the link is part of them.
+ * Form: <payment id>.<expiry>.<signature>
+ */
+const TOKEN_LIFETIME_MS = 14 * 24 * 60 * 60_000;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const tokenSignature = (paymentId: string, expiry: string) => createHmac("sha256", PAYMENT_KEY).update(`${paymentId}.${expiry}`).digest("base64url").slice(0, 32);
+
 export function signPaymentToken(paymentId: string): string {
-  return jwt.sign({ sub: paymentId }, PAYMENT_KEY, { expiresIn: "14d", audience: "payment" });
+  const expiry = Math.floor((Date.now() + TOKEN_LIFETIME_MS) / 1000).toString(36);
+  return `${paymentId}.${expiry}.${tokenSignature(paymentId, expiry)}`;
 }
 
 export function readPaymentToken(token: string): string {
-  try {
-    const payload = jwt.verify(token, PAYMENT_KEY, { audience: "payment" }) as { sub?: string };
-    if (!payload.sub) throw new Error("missing subject");
-    return payload.sub;
-  } catch {
-    throw AppError.notFound("This payment link has expired or isn't valid");
-  }
+  const [id, expiry, signature, extra] = token.split(".");
+  const valid =
+    extra === undefined &&
+    id !== undefined &&
+    expiry !== undefined &&
+    signature !== undefined &&
+    UUID_RE.test(id) &&
+    timingSafeEqual(Buffer.from(signature.padEnd(32, "~")), Buffer.from(tokenSignature(id, expiry).padEnd(32, "~"))) &&
+    signature.length === 32 &&
+    parseInt(expiry, 36) * 1000 > Date.now();
+  if (!valid) throw AppError.notFound("This payment link has expired or isn't valid");
+  return id;
 }
 
 export function assertPaymentsAvailable() {

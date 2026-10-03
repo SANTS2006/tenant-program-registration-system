@@ -229,3 +229,23 @@ describe("documents held until paid", () => {
     for (const status of ["none", "paid", "waived"]) expect(() => assertDocumentsUnlocked({ paymentStatus: status })).not.toThrow();
   });
 });
+
+describe("the private payment link", () => {
+  it("is short enough to fit in Monime's 255-character return addresses", async () => {
+    const { signPaymentToken, readPaymentToken } = await import("../../src/modules/payments/service.js");
+    const id = "46703421-a539-4e8e-ada0-325190600278";
+    const token = signPaymentToken(id);
+    expect(`https://registerprogram.ntsdigitalsolutions.com/payment/${token}?result=cancelled`.length).toBeLessThan(255);
+    expect(readPaymentToken(token)).toBe(id);
+  });
+
+  it("rejects a changed, forged or expired link", async () => {
+    const { signPaymentToken, readPaymentToken } = await import("../../src/modules/payments/service.js");
+    const token = signPaymentToken("46703421-a539-4e8e-ada0-325190600278");
+    const [id, expiry, signature] = token.split(".");
+    expect(() => readPaymentToken(`${id}.${expiry}.${signature!.slice(0, -1)}x`)).toThrow();
+    expect(() => readPaymentToken(`11111111-a539-4e8e-ada0-325190600278.${expiry}.${signature}`)).toThrow();
+    expect(() => readPaymentToken(`${id}.${(1).toString(36)}.${signature}`)).toThrow();
+    expect(() => readPaymentToken("not-a-link")).toThrow();
+  });
+});
