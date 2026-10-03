@@ -238,6 +238,8 @@ export interface MonimeFinancialAccount {
   balance?: { available?: MonimeMoney } | null;
 }
 
+export const getFinancialAccount = (id: string) => call<MonimeFinancialAccount>("GET", `/financial-accounts/${encodeURIComponent(id)}`);
+
 export const listFinancialAccounts = () => call<MonimeFinancialAccount[]>("GET", "/financial-accounts", { query: { limit: 50 } });
 
 /** True when a checkout address is on a host the platform trusts (https only), so a payer is never sent somewhere else. */

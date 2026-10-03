@@ -11,7 +11,7 @@ import { dateRangeQuery } from "../../lib/dateRange.js";
 import { sendSuccess } from "../../lib/response.js";
 import { recordAudit } from "../audit/recorder.js";
 import * as programsRepo from "../programs/repository.js";
-import { diagnoseMonime, isMonimeConfigured, listFinancialAccounts, MonimeError } from "./monime.js";
+import { diagnoseMonime, getFinancialAccount, isMonimeConfigured, listFinancialAccounts, MonimeError } from "./monime.js";
 import { paymentConfigSchema, resolvePaymentConfig } from "./pricing.js";
 import * as payoutsService from "./payouts.js";
 import * as paymentsService from "./service.js";
@@ -199,7 +199,21 @@ export async function platformPaymentsOverviewHandler(_request: FastifyRequest, 
   if (monime.configured) {
     try {
       const accounts = await listFinancialAccounts();
-      monime = { configured: true, accounts: accounts.map((a) => ({ id: a.id, name: a.name, currency: a.currency, availableMinor: a.balance?.available?.value ?? null })) };
+      const balanceOf = (a: { balance?: { available?: { value?: unknown } | null } | null }) => {
+        const n = Number(a.balance?.available?.value);
+        return a.balance?.available?.value === undefined || a.balance?.available?.value === null || !Number.isFinite(n) ? null : n;
+      };
+      monime = {
+        configured: true,
+        accounts: await Promise.all(
+          accounts.map(async (a) => {
+            let balance = balanceOf(a);
+            // The list may leave the balance out; the single account has it.
+            if (balance === null) balance = await getFinancialAccount(a.id).then(balanceOf, () => null);
+            return { id: a.id, name: a.name, currency: a.currency, availableMinor: balance };
+          }),
+        ),
+      };
     } catch (err) {
       // Say what is actually wrong (a rejected token reads very differently from an unreachable server).
       const diagnosis = err instanceof MonimeError ? await diagnoseMonime() : null;
