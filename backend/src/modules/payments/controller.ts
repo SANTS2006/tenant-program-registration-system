@@ -190,7 +190,7 @@ export async function platformPaymentsOverviewHandler(_request: FastifyRequest, 
   ]);
   let monime: {
     configured: boolean;
-    accounts: { id: string; name: string; currency: string; availableMinor: number | null }[];
+    accounts: { id: string; name: string; currency: string; availableMinor: number | null; fields?: string }[];
     error?: string;
     status?: number;
     detail?: string;
@@ -208,9 +208,16 @@ export async function platformPaymentsOverviewHandler(_request: FastifyRequest, 
         accounts: await Promise.all(
           accounts.map(async (a) => {
             let balance = balanceOf(a);
+            let seen = a as unknown as Record<string, unknown>;
             // The list may leave the balance out; the single account has it.
-            if (balance === null) balance = await getFinancialAccount(a.id).then(balanceOf, () => null);
-            return { id: a.id, name: a.name, currency: a.currency, availableMinor: balance };
+            if (balance === null) {
+              const full = await getFinancialAccount(a.id).catch(() => null);
+              if (full) {
+                seen = full as unknown as Record<string, unknown>;
+                balance = balanceOf(full);
+              }
+            }
+            return { id: a.id, name: a.name, currency: a.currency, availableMinor: balance, ...(balance === null ? { fields: Object.keys(seen).join(", ") } : {}) };
           }),
         ),
       };

@@ -165,7 +165,7 @@ export interface PlatformPayments {
   totals: { paidMinor: number; feesMinor: number; paymentCount: number };
   monime: {
     configured: boolean;
-    accounts: { id: string; name: string; currency: string; availableMinor: number | null }[];
+    accounts: { id: string; name: string; currency: string; availableMinor: number | null; fields?: string }[];
     /** What is wrong, in plain words. */
     error?: string;
     status?: number;
