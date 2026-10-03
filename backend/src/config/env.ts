@@ -38,6 +38,35 @@ const envSchema = z.object({
   // database's connection limit.
   DB_POOL_MAX: z.coerce.number().int().positive().max(100).default(10),
 
+  // ---- Payments through Monime (https://docs.monime.io). Everything is optional: with no access token
+  // the payment features simply stay switched off. Keep the token and secrets only in the hosting settings. ----
+  MONIME_ACCESS_TOKEN: z.string().optional().default(""),
+  MONIME_SPACE_ID: z.string().optional().default(""),
+  MONIME_API_BASE: z.string().url().default("https://api.monime.io/v1"),
+  MONIME_API_VERSION: z.string().default("caph.2025-08-23"),
+  // The secret set on the webhook in the Monime dashboard (at least 32 characters).
+  MONIME_WEBHOOK_SECRET: z.string().optional().default(""),
+  // When "true", a webhook whose signature can't be verified is refused. Off by default: either way a
+  // webhook only prompts us to ask Monime directly what happened, and the answer is what counts.
+  MONIME_WEBHOOK_STRICT: z.enum(["true", "false"]).default("false").transform((v) => v === "true"),
+  // Payers may only be sent to pages on these hosts (and their subdomains).
+  MONIME_REDIRECT_HOSTS: z.string().default("monime.io,monime.app"),
+  // Card and bank payments are off unless switched on; mobile money (Orange, Africell, QMoney) is always on.
+  MONIME_ALLOW_CARDS: z.enum(["true", "false"]).default("false").transform((v) => v === "true"),
+  MONIME_ALLOW_BANKS: z.enum(["true", "false"]).default("false").transform((v) => v === "true"),
+  // What the platform keeps from each payment: a percentage plus a fixed amount in Leones.
+  PAYMENTS_FEE_PERCENT: z.coerce.number().min(0).max(30).default(0),
+  PAYMENTS_FEE_FIXED: z.coerce.number().min(0).default(0),
+  // Money from a payment can't be withdrawn until this many hours have passed (time to spot problems).
+  PAYMENTS_HOLD_HOURS: z.coerce.number().min(0).max(24 * 30).default(24),
+  // The largest single payment accepted, in Leones.
+  PAYMENTS_MAX_AMOUNT: z.coerce.number().positive().default(10_000_000),
+  // Withdrawals: smallest, largest per day, the size above which a person on our team must approve it, and how long a new account waits.
+  PAYOUT_MIN_AMOUNT: z.coerce.number().positive().default(50),
+  PAYOUT_DAILY_LIMIT: z.coerce.number().positive().default(5_000_000),
+  PAYOUT_REVIEW_ABOVE: z.coerce.number().min(0).default(1_000_000),
+  PAYOUT_NEW_ACCOUNT_HOURS: z.coerce.number().min(0).max(24 * 14).default(24),
+
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
   RATE_LIMIT_WINDOW: z.string().default("1 minute"),
 });

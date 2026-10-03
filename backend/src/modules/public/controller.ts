@@ -91,7 +91,7 @@ export async function submitPublicRegistrationHandler(request: FastifyRequest, r
   // connection returns the first result instead of creating a second registration.
   const key = readIdempotencyKey(request.headers["idempotency-key"]);
   const { value, replay } = await withIdempotency(`registration:${slug}`, key, async () => {
-    const result = await registrationsService.submitRegistration(slug, input);
+    const result = await registrationsService.submitRegistration(slug, input, { ip: request.ip, userAgent: request.headers["user-agent"] });
     const program = await programsRepo.findProgramById(result.registration.programId);
     // Orders always get their copy; a program's admin chooses whether registrants do.
     const offerCopy = !program || program.kind === "order_form" || program.allowSubmissionCopy;
@@ -104,6 +104,10 @@ export async function submitPublicRegistrationHandler(request: FastifyRequest, r
       ticketAvailable: result.ticketAvailable,
       // Lets the registrant view and download what they submitted from the success page.
       receiptToken: offerCopy ? signSubmissionToken(result.registration.id) : undefined,
+      // When the registration or order has to be paid for: where to pay, and the private link to follow up.
+      payment: result.payment
+        ? { token: result.payment.token, status: result.payment.status, redirectUrl: result.payment.redirectUrl, amountMinor: result.payment.amountMinor, currency: result.payment.currency }
+        : undefined,
     };
   });
   if (replay) reply.header("idempotent-replay", "true");

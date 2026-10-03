@@ -1,3 +1,4 @@
+import { assertDocumentsUnlocked } from "../payments/gate.js";
 import { env } from "../../config/env.js";
 import { participantFileName } from "../../lib/downloadName.js";
 import { AppError } from "../../lib/errors.js";
@@ -174,6 +175,7 @@ async function publicRegistrationWithCard(slug: string, registrationNumber: stri
   const found = await findPublicRegistration(slug, registrationNumber);
   // Hidden from the success page means no public download either, not just a hidden button.
   if (!resolveIdCardConfig(found.program.idCardConfig).showOnConfirmation) throw AppError.notFound("ID card not available");
+  assertDocumentsUnlocked(found.registration);
   return found;
 }
 
@@ -256,7 +258,8 @@ export async function verifyRegistration(
   const registration = await registrationsRepo.findRegistrationByNumber(program.id, registrationNumber);
   if (!registration) throw AppError.notFound("Registration not found");
 
-  const valid = registration.status !== "rejected" && registration.status !== "cancelled";
+  // An ID card or ticket that hasn't been paid for is not valid.
+  const valid = registration.status !== "rejected" && registration.status !== "cancelled" && registration.paymentStatus !== "pending" && registration.paymentStatus !== "review";
   // Only credit the scan to a signed-in person who is on this program's team.
   const verifiedBy = context.user && (await getProgramRole(context.user, program.id)) ? context.user.id : null;
 

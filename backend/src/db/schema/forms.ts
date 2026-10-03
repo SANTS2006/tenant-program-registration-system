@@ -38,6 +38,8 @@ export const forms = pgTable(
     reviewConfirmText: text("review_confirm_text"),
     reviewConfirmConditions: jsonb("review_confirm_conditions"),
     layoutMode: formLayoutModeEnum("layout_mode").notNull().default("stepped"),
+    // The goods an order form sells: [{ id, name, description, priceMinor, imageUrl, maxQuantity }].
+    orderItems: jsonb("order_items").notNull().default([]),
     status: formStatusEnum("status").notNull().default("draft"),
     publishedAt: timestamp("published_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

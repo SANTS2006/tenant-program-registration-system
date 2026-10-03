@@ -169,6 +169,13 @@
       "when": 1790943603852,
       "tag": "0023_smooth_sharon_ventura",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791032113478,
+      "tag": "0024_lumpy_psynapse",
+      "breakpoints": true
     }
   ]
 }

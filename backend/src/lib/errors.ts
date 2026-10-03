@@ -6,6 +6,8 @@ export type ErrorCode =
   | "NOT_FOUND"
   | "CONFLICT"
   | "RATE_LIMITED"
+  | "PAYMENT_REQUIRED"
+  | "PAYMENT_UNAVAILABLE"
   | "INTERNAL_ERROR";
 
 export class AppError extends Error {
@@ -39,6 +41,16 @@ export class AppError extends Error {
 
   static notFound(message = "Resource not found") {
     return new AppError("NOT_FOUND", message, 404);
+  }
+
+  /** The thing asked for needs a payment first (e.g. an ID card that hasn't been paid for). */
+  static paymentRequired(message: string) {
+    return new AppError("PAYMENT_REQUIRED", message, 402);
+  }
+
+  /** The payment service can't be reached or isn't set up; nothing was charged. */
+  static paymentUnavailable(message = "Payments are not available right now. Please try again in a moment.") {
+    return new AppError("PAYMENT_UNAVAILABLE", message, 503);
   }
 
   static conflict(message: string, details?: unknown) {

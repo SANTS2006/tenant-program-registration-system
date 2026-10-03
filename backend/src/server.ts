@@ -3,6 +3,7 @@ import { env } from "./config/env.js";
 import { pool } from "./db/client.js";
 import { startMaintenance } from "./lib/maintenance.js";
 import { startOutboxWorker } from "./modules/email/outbox.js";
+import { startPaymentsWorker } from "./modules/payments/worker.js";
 
 const app = buildApp();
 
@@ -17,6 +18,7 @@ process.on("uncaughtException", (err) => {
 });
 
 let stopWorker: (() => Promise<void>) | undefined;
+let stopPayments: (() => Promise<void>) | undefined;
 let stopMaintenance: (() => void) | undefined;
 let shuttingDown = false;
 
@@ -33,6 +35,7 @@ async function shutdown(signal: string) {
   try {
     stopMaintenance?.();
     await stopWorker?.();
+    await stopPayments?.();
     await app.close();
     await pool.end();
     process.exit(0);
@@ -49,6 +52,7 @@ app
   .then((address) => {
     app.log.info(`Server listening at ${address}`);
     stopWorker = startOutboxWorker(app.log);
+    stopPayments = startPaymentsWorker(app.log);
     stopMaintenance = startMaintenance(app.log);
   })
   .catch((err) => {

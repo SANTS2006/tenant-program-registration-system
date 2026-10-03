@@ -9,6 +9,7 @@ import {
   unique,
   uniqueIndex,
   boolean,
+  bigint,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -37,6 +38,10 @@ export const registrations = pgTable(
     // True when the program allowed one registration per email at the time: the database itself then
     // refuses a second one, even if two submissions arrive in the same instant.
     uniqueEmailGuard: boolean("unique_email_guard").notNull().default(false),
+    // none (nothing to pay), pending (awaiting payment), paid, failed, review (paid amount didn't match) or waived.
+    paymentStatus: text("payment_status").notNull().default("none"),
+    amountDueMinor: bigint("amount_due_minor", { mode: "number" }).notNull().default(0),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
     submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -46,6 +51,7 @@ export const registrations = pgTable(
     unique("registrations_program_number_unique").on(table.programId, table.registrationNumber),
     index("registrations_program_status_idx").on(table.programId, table.status),
     index("registrations_program_submitted_idx").on(table.programId, table.submittedAt),
+    index("registrations_program_payment_idx").on(table.programId, table.paymentStatus),
     index("registrations_email_idx").on(table.applicantEmail),
     // The "has this email registered here already?" check lowercases the address.
     index("registrations_program_email_lower_idx").on(table.programId, sql`lower(${table.applicantEmail})`),

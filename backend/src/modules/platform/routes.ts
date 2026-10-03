@@ -9,6 +9,7 @@ import {
 } from "./controller.js";
 import { getSupportMessageHandler, listSupportMessagesHandler, updateSupportMessageHandler } from "./inbox.js";
 import { platformExportRoutes } from "./exports.js";
+import { platformPaymentRoutes } from "../payments/routes.js";
 
 // Cross-account administration for the platform super_admin. Program, form and
 // registration management goes through the normal /programs routes, where the
@@ -28,4 +29,5 @@ export async function platformRoutes(app: FastifyInstance) {
   app.patch("/messages/:messageId", updateSupportMessageHandler);
 
   await app.register(platformExportRoutes);
+  await app.register(platformPaymentRoutes);
 }

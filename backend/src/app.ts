@@ -34,6 +34,7 @@ import { publicIdCardRoutes } from "./modules/idcards/publicRoutes.js";
 import { analyticsRoutes } from "./modules/analytics/routes.js";
 import { platformRoutes } from "./modules/platform/routes.js";
 import { publicTicketRoutes, ticketRoutes } from "./modules/tickets/routes.js";
+import { fundsRoutes, programPaymentRoutes, publicPaymentRoutes, webhookRoutes } from "./modules/payments/routes.js";
 
 
 // Resolves to <repo>/frontend/dist from both src/ (tsx) and dist/ (built bundle).
@@ -169,6 +170,8 @@ export function buildApp() {
       protectedApp.register(dashboardRoutes, { prefix: "/dashboard" });
       protectedApp.register(auditRoutes, { prefix: "/audit-logs" });
       protectedApp.register(platformRoutes, { prefix: "/platform" });
+      protectedApp.register(programPaymentRoutes, { prefix: "/programs" });
+      protectedApp.register(fundsRoutes, { prefix: "/funds" });
     },
     { prefix: "/api" },
   );
@@ -178,6 +181,9 @@ export function buildApp() {
   app.register(publicIdCardRoutes, { prefix: "/api/public" });
   app.register(publicTicketRoutes, { prefix: "/api/public" });
   app.register(supportRoutes, { prefix: "/api/public" });
+  app.register(publicPaymentRoutes, { prefix: "/api/public" });
+  // Monime's payment notifications: no login, protected by signature checks and by always confirming with Monime.
+  app.register(webhookRoutes, { prefix: "/api/webhooks" });
   // Voters have their own sign-in, separate from staff accounts.
   app.register(voterRoutes, { prefix: "/api/voter" });
 

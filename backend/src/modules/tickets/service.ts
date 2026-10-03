@@ -1,3 +1,4 @@
+import { assertDocumentsUnlocked } from "../payments/gate.js";
 import { participantFileName } from "../../lib/downloadName.js";
 import { AppError } from "../../lib/errors.js";
 import { code128, formatLeones, renderTicketSides, ticketHasBack } from "../../shared/designs/index.js";
@@ -126,6 +127,7 @@ async function buildTicketPdf(
 async function publicRegistrationWithTicket(slug: string, registrationNumber: string) {
   const found = await findPublicRegistration(slug, registrationNumber);
   if (!resolveTicketConfig(found.program.ticketConfig).showOnConfirmation) throw AppError.notFound("Ticket not available");
+  assertDocumentsUnlocked(found.registration);
   return found;
 }
 

@@ -832,3 +832,31 @@ export function orderUpdateEmail(params: {
     }),
   };
 }
+
+/** Sent to the payer when their payment has been received. */
+export function paymentReceivedEmail(params: {
+  payerName: string;
+  amount: string;
+  lines: { label: string; value: string }[];
+  reference: string;
+}): { subject: string; html: string } {
+  const body = [
+    paragraph(`Hi <strong style="color:${BRAND.heading};">${escapeHtml(params.payerName)}</strong>,`),
+    paragraph("We've received your payment. Thank you!"),
+    detailsTable([...params.lines, { label: "Total paid", value: params.amount }, { label: "Payment reference", value: params.reference, mono: true }]),
+    paragraph("Please keep this email as your receipt."),
+  ].join("");
+  return {
+    subject: `Payment received - ${params.amount}`,
+    html: layout({ preheader: `We received your payment of ${params.amount}`, eyebrow: "Payment received", heading: "Payment received", body }),
+  };
+}
+
+/** A short notice about money in an organization's account: withdrawals and withdrawal accounts. */
+export function paymentsNoticeEmail(params: { heading: string; message: string; details: { label: string; value: string }[] }): { subject: string; html: string } {
+  const body = [paragraph(escapeHtml(params.message)), detailsTable(params.details)].join("");
+  return {
+    subject: params.heading,
+    html: layout({ preheader: params.message.slice(0, 90), eyebrow: "Payments", heading: params.heading, body }),
+  };
+}

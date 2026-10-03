@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { orderItemsSchema } from "../payments/pricing.js";
 
 export const fieldTypeValues = [
   "short_text",
@@ -133,6 +134,8 @@ export const upsertFormSchema = z.object({
   reviewConfirmText: z.string().max(1000).optional(),
   reviewConfirmConditions: z.array(conditionalRuleSchema).max(10).optional(),
   layoutMode: z.enum(formLayoutModeValues).default("stepped"),
+  // What an order form sells (names and prices); ignored for other programs.
+  orderItems: orderItemsSchema.optional(),
   sections: z.array(sectionInputSchema),
   fields: z.array(fieldInputSchema),
 });

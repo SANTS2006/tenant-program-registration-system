@@ -15,7 +15,7 @@ interface Route {
 }
 
 // Routes that are public on purpose (they carry their own protection: rate limits, signed links, voter sessions).
-const OPEN_PREFIXES = ["/api/auth/", "/api/public/", "/api/voter/"];
+const OPEN_PREFIXES = ["/api/auth/", "/api/public/", "/api/voter/", "/api/webhooks/"];
 
 async function collectRoutes() {
   const app = buildApp();

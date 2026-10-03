@@ -38,6 +38,8 @@ interface CreateRegistrationInput {
   enforceUniqueEmail?: boolean;
   /** What the first line of the status history says; "Registration submitted" when empty. */
   historyNote?: string;
+  /** Set when the registration has to be paid for: it starts as "pending" with the amount due. */
+  payment?: { status: string; amountDueMinor: number };
 }
 
 export async function createRegistration(input: CreateRegistrationInput): Promise<RegistrationRow> {
@@ -53,6 +55,7 @@ export async function createRegistration(input: CreateRegistrationInput): Promis
         applicantPhone: input.applicantPhone,
         responses: input.responses,
         uniqueEmailGuard: Boolean(input.enforceUniqueEmail && input.applicantEmail),
+        ...(input.payment ? { paymentStatus: input.payment.status, amountDueMinor: input.payment.amountDueMinor } : {}),
       })
       .returning();
 

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { isOwnCloudinaryUrl } from "../../lib/cloudinaryUrl.js";
 import { paginationSchema } from "../../lib/pagination.js";
+import { orderSelectionSchema } from "../payments/pricing.js";
 
 export const programStatusChoices = ["submitted", "under_review", "approved", "rejected", "waitlisted", "cancelled"] as const;
 
@@ -43,6 +44,8 @@ export const submitRegistrationSchema = z.object({
   responses: z.record(z.string(), z.unknown()),
   files: z.array(submittedFileSchema).optional().default([]),
   consentAccepted: z.boolean().optional(),
+  // For an order form that sells items: what was chosen (the prices always come from the server's own list).
+  items: orderSelectionSchema.optional(),
 });
 
 export type UpdateStatusInput = z.infer<typeof updateStatusSchema>;

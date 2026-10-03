@@ -11,6 +11,9 @@ import * as programsRepo from "../programs/repository.js";
 import * as registrationsRepo from "./repository.js";
 import { programStatusChoices, type ListRegistrationsQuery, type SubmitRegistrationInput, type UpdateStatusInput } from "./schemas.js";
 import { counterBucket, formatRegistrationNumber, resolveNumberingConfig } from "./numbering.js";
+import { chargePlanFor } from "../payments/charge.js";
+import { assertPaymentAllowed } from "../payments/fraud.js";
+import { assertPaymentsAvailable, startPayment, type PaymentStart } from "../payments/service.js";
 import { dropHiddenFileUploads, evaluateRule, extractApplicantContact, missingRequiredAnswers, validateAndNormalizeResponses } from "./validation.js";
 
 function isRegistrationWindowOpen(program: programsRepo.ProgramRow): boolean {
@@ -20,7 +23,11 @@ function isRegistrationWindowOpen(program: programsRepo.ProgramRow): boolean {
   return true;
 }
 
-export async function submitRegistration(slug: string, input: SubmitRegistrationInput) {
+export async function submitRegistration(
+  slug: string,
+  input: SubmitRegistrationInput,
+  context: { ip?: string | null; userAgent?: string | null } = {},
+) {
   const program = await programsRepo.findProgramBySlug(slug);
   if (!program) throw AppError.notFound("Program not found");
   if (program.status !== "published" || !program.registrationEnabled) {
@@ -55,8 +62,38 @@ export async function submitRegistration(slug: string, input: SubmitRegistration
     throw alreadyRegistered();
   }
 
-  const registration = await createRegistrationWithNumber(program, published.form.id, contact, cleanedResponses, files);
+  // What has to be paid, worked out here from the program's own prices. Checked before anything is saved.
+  const plan = chargePlanFor(program, published.form, input.items);
+  if (plan?.charge) {
+    assertPaymentsAvailable();
+    await assertPaymentAllowed({ ip: context.ip, email: contact.email, phone: contact.phone });
+  }
+  // The order's items and total are kept with the order, as they were when it was placed.
+  if (plan && plan.purpose === "order") cleanedResponses.__order = { lines: plan.lines, totalMinor: plan.totalMinor, currency: "SLE" };
+
+  const registration = await createRegistrationWithNumber(
+    program,
+    published.form.id,
+    contact,
+    cleanedResponses,
+    files,
+    undefined,
+    plan?.charge ? { status: "pending", amountDueMinor: plan.totalMinor } : undefined,
+  );
   const registrationNumber = registration.registrationNumber;
+
+  let payment: PaymentStart | null = null;
+  if (plan?.charge) {
+    payment = await startPayment({
+      program,
+      registration,
+      purpose: plan.purpose,
+      lines: plan.lines,
+      totalMinor: plan.totalMinor,
+      payer: contact,
+      context,
+    });
+  }
 
   if (program.kind === "order_form") {
     // Customers get an order confirmation branded with the business instead.
@@ -88,6 +125,7 @@ export async function submitRegistration(slug: string, input: SubmitRegistration
       ((published.form.registrationNumberConditions ?? []) as Parameters<typeof evaluateRule>[0][]).every((rule) => evaluateRule(rule, input.responses)),
     idCardAvailable: program.idCardEnabled && showsOnConfirmation(program.idCardConfig),
     ticketAvailable: program.ticketEnabled && showsOnConfirmation(program.ticketConfig),
+    payment,
   };
 }
 
@@ -101,6 +139,7 @@ export async function createRegistrationWithNumber(
   responses: Record<string, unknown>,
   files: { fieldKey: string; url: string; publicId: string; filename: string; mimeType: string; sizeBytes: number }[],
   historyNote?: string,
+  payment?: { status: string; amountDueMinor: number },
 ): Promise<registrationsRepo.RegistrationRow> {
   const numbering = resolveNumberingConfig(program.registrationNumberConfig);
   const year = new Date().getFullYear();
@@ -122,6 +161,7 @@ export async function createRegistrationWithNumber(
         files,
         enforceUniqueEmail: program.oneRegistrationPerEmail,
         historyNote,
+        payment,
       });
     } catch (err) {
       if (!isUniqueViolation(err)) throw err;
