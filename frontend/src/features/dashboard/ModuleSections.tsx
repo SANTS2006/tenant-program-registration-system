@@ -8,6 +8,7 @@ import { apiFetch } from "@/lib/api";
 import { RegistrationTrendChart } from "../analytics/charts";
 import { CATEGORICAL_LIGHT } from "../analytics/palette";
 import type { TrendPoint } from "../analytics/api";
+import { AuditSection, PaymentsSection, type AuditInsights, type PaymentInsights } from "./PaymentSections";
 
 interface MoneyRow {
   currency: string;
@@ -17,6 +18,9 @@ interface MoneyRow {
 }
 
 export interface ModuleInsights {
+  payments: PaymentInsights;
+  /** Only for the platform team. */
+  audit: AuditInsights | null;
   polls: {
     total: number;
     open: number;
@@ -244,6 +248,8 @@ export function ModuleSections() {
     <>
       <PollsSection data={data.polls} />
       <BusinessesSection data={data.businesses} />
+      <PaymentsSection data={data.payments} />
+      {data.audit && <AuditSection data={data.audit} />}
     </>
   );
 }

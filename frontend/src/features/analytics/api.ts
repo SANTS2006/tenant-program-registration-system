@@ -52,3 +52,24 @@ export function getFieldAnalytics(programId: string) {
 export function getDashboardTrend(days = 30) {
   return apiFetch<TrendPoint[]>(`/dashboard/analytics/trend?days=${days}`);
 }
+
+export interface PaymentAnalytics {
+  currency: string;
+  created: number;
+  completed: number;
+  registrations: number;
+  collectedMinor: number;
+  waitingMinor: number;
+  averageMinor: number;
+  largestMinor: number;
+  successRate: number | null;
+  byStatus: { status: string; count: number; amountMinor: number }[];
+  byPurpose: { purpose: string; count: number; amountMinor: number }[];
+  byChannel: { provider: string; count: number; amountMinor: number }[];
+  items: { name: string; quantity: number; amountMinor: number }[];
+  trend: TrendPoint[];
+}
+
+export function getPaymentAnalytics(programId: string) {
+  return apiFetch<PaymentAnalytics>(`/programs/${programId}/analytics/payments`);
+}

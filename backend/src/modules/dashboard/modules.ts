@@ -13,6 +13,8 @@ import { resolveStatuses, statusLabelFor } from "../../shared/designs/index.js";
 import { listAccessibleBusinessIds } from "../businesses/access.js";
 import { listAccessiblePollIds } from "../polls/access.js";
 import { pollState } from "../polls/service.js";
+import { getAuditInsights } from "../audit/insights.js";
+import { getPaymentInsights } from "../payments/insights.js";
 import type { AuthenticatedUser } from "../users/types.js";
 
 const NONE = "00000000-0000-0000-0000-000000000000";
@@ -214,5 +216,8 @@ export async function getModuleInsights(user: AuthenticatedUser) {
     })),
   };
 
-  return { polls: pollSummary, businesses: businessSummary };
+  // Payments for everyone with something to collect; the audit log only for the platform team.
+  const [paymentSummary, auditSummary] = await Promise.all([getPaymentInsights(user), user.role === "super_admin" ? getAuditInsights() : Promise.resolve(null)]);
+
+  return { polls: pollSummary, businesses: businessSummary, payments: paymentSummary, audit: auditSummary };
 }

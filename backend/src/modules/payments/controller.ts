@@ -11,6 +11,7 @@ import { dateRangeQuery } from "../../lib/dateRange.js";
 import { sendSuccess } from "../../lib/response.js";
 import { recordAudit } from "../audit/recorder.js";
 import * as programsRepo from "../programs/repository.js";
+import { getProgramPaymentAnalytics } from "./insights.js";
 import { diagnoseMonime, getFinancialAccount, isMonimeConfigured, listFinancialAccounts, MonimeError } from "./monime.js";
 import { paymentConfigSchema, resolvePaymentConfig } from "./pricing.js";
 import * as payoutsService from "./payouts.js";
@@ -70,6 +71,11 @@ export async function listProgramPaymentsHandler(request: FastifyRequest, reply:
   const { programId } = request.params as { programId: string };
   const query = listQuerySchema.parse(request.query);
   return sendSuccess(reply, await paymentsService.listProgramPayments(programId, query));
+}
+
+export async function programPaymentAnalyticsHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { programId } = request.params as { programId: string };
+  return sendSuccess(reply, await getProgramPaymentAnalytics(programId));
 }
 
 export async function waivePaymentHandler(request: FastifyRequest, reply: FastifyReply) {

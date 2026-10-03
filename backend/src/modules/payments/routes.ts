@@ -9,6 +9,7 @@ import {
   listProgramPaymentsHandler,
   monimeWebhookHandler,
   paymentStatusHandler,
+  programPaymentAnalyticsHandler,
   platformPaymentsOverviewHandler,
   recheckPaymentHandler,
   removeAccountHandler,
@@ -46,6 +47,7 @@ export async function webhookRoutes(app: FastifyInstance) {
 /** A program's payment settings and its payments table. */
 export async function programPaymentRoutes(app: FastifyInstance) {
   app.get("/:programId/payments", { preHandler: requireProgramAccess("viewer") }, listProgramPaymentsHandler);
+  app.get("/:programId/analytics/payments", { preHandler: requireProgramAccess("viewer") }, programPaymentAnalyticsHandler);
   app.put("/:programId/payment-config", { preHandler: requireProgramAccess("admin") }, updatePaymentConfigHandler);
   app.post("/:programId/registrations/:registrationId/waive-payment", { preHandler: requireProgramAccess("admin") }, waivePaymentHandler);
 }
