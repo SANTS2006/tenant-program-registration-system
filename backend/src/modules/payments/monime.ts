@@ -9,12 +9,21 @@ import { AppError } from "../../lib/errors.js";
 
 export const isMonimeConfigured = () => Boolean(env.MONIME_ACCESS_TOKEN && env.MONIME_SPACE_ID);
 
+/** Hides the access token and space id if a library ever puts them in an error message. */
+function redact(text: string): string {
+  let out = text;
+  for (const secret of [env.MONIME_ACCESS_TOKEN, env.MONIME_SPACE_ID]) if (secret) out = out.split(secret).join("[hidden]");
+  return out;
+}
+
 export class MonimeError extends Error {
   constructor(
     message: string,
     readonly status: number,
     readonly retryable: boolean,
     readonly requestId?: string,
+    /** What Monime said was wrong (its "reason"), or what went wrong reaching it. Never contains the credentials. */
+    readonly reason?: string,
   ) {
     super(message);
     this.name = "MonimeError";
@@ -67,9 +76,9 @@ async function call<T>(method: "GET" | "POST" | "PATCH" | "DELETE", path: string
       }
       if (response.ok && json.success !== false) return json.result as T;
 
-      const reason = json.error?.reason ?? json.error?.code ?? `HTTP ${response.status}`;
+      const reason = String(json.error?.reason ?? json.error?.code ?? `HTTP ${response.status}`);
       const retryable = response.status >= 500 || response.status === 429;
-      last = new MonimeError(`Monime ${method} ${path} failed: ${reason}`, response.status, retryable, requestId);
+      last = new MonimeError(`Monime ${method} ${path} failed: ${reason}`, response.status, retryable, requestId, reason);
       if (!retryable) throw last;
     } catch (err) {
       if (err instanceof MonimeError) {
@@ -77,7 +86,8 @@ async function call<T>(method: "GET" | "POST" | "PATCH" | "DELETE", path: string
         last = err;
       } else {
         // A timeout or a dropped connection: nothing is known about whether Monime got it, which is what the key is for.
-        last = new MonimeError(`Monime ${method} ${path} could not be reached`, 0, true);
+        const why = redact(err instanceof Error ? `${err.name}: ${err.message}` : "unknown error");
+        last = new MonimeError(`Monime ${method} ${path} could not be reached`, 0, true, undefined, why);
       }
     }
   }
@@ -189,6 +199,37 @@ export interface MonimeBank {
 export const listBanks = () => call<MonimeBank[]>("GET", "/banks", { query: { country: "SL" } });
 
 export const listMomos = () => call<MonimeMomo[]>("GET", "/momos", { query: { country: "SL" } });
+
+export interface MonimeDiagnosis {
+  ok: boolean;
+  status: number;
+  /** What to do about it, in plain words. */
+  hint: string;
+  detail?: string;
+  requestId?: string;
+}
+
+/** Tries the connection and explains, in plain words, why it did not work. */
+export async function diagnoseMonime(): Promise<MonimeDiagnosis> {
+  if (!isMonimeConfigured()) return { ok: false, status: 0, hint: "Add MONIME_ACCESS_TOKEN and MONIME_SPACE_ID in the hosting settings." };
+  if (!env.MONIME_SPACE_ID.startsWith("spc-")) {
+    return { ok: false, status: 0, hint: "MONIME_SPACE_ID looks wrong: a Monime space id starts with \"spc-\". Copy it again from the Monime dashboard." };
+  }
+  try {
+    await call<unknown>("GET", "/financial-accounts", { query: { limit: 1 } });
+    return { ok: true, status: 200, hint: "Connected to Monime." };
+  } catch (err) {
+    if (!(err instanceof MonimeError)) return { ok: false, status: 0, hint: "Something went wrong checking Monime." };
+    const base = { ok: false, status: err.status, detail: err.reason, requestId: err.requestId };
+    if (err.status === 401) return { ...base, hint: "Monime rejected the access token (not authenticated). Create a new personal access token in the Monime dashboard and paste it again: only the token itself, with no quotes and no \"Bearer\"." };
+    if (err.status === 403) return { ...base, hint: "The token is valid but is not allowed to do this. Give the token permission for payments, checkout sessions and financial accounts (or create it with full access), and check the space id belongs to the same account." };
+    if (err.status === 404) return { ...base, hint: "Monime could not find that space. Check MONIME_SPACE_ID is the id of the space the token was created in." };
+    if (err.status === 429) return { ...base, hint: "Monime is limiting requests right now. Try again in a minute." };
+    if (err.status >= 500) return { ...base, hint: "Monime is having a problem on its side. Try again shortly." };
+    if (err.status === 0) return { ...base, hint: "This server could not make a connection to Monime. If it keeps happening, check the MONIME_API_BASE setting and that the host allows outgoing requests." };
+    return { ...base, hint: "Monime refused the request." };
+  }
+}
 
 export interface MonimeFinancialAccount {
   id: string;

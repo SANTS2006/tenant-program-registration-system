@@ -182,6 +182,26 @@ describe("the Monime client", () => {
     }
   });
 
+  it("explains why a connection check failed, in plain words, without the token", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse(401, { success: false, error: { code: 401, reason: "not_authenticated" } })));
+    const rejected = await monime.diagnoseMonime();
+    expect(rejected).toMatchObject({ ok: false, status: 401, detail: "not_authenticated", requestId: "req-1" });
+    expect(rejected.hint).toMatch(/rejected the access token/i);
+    expect(JSON.stringify(rejected)).not.toContain("mon-test-token");
+
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse(403, { success: false, error: { reason: "forbidden" } })));
+    expect((await monime.diagnoseMonime()).hint).toMatch(/not allowed/i);
+
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse(200, { success: true, result: [] })));
+    expect(await monime.diagnoseMonime()).toMatchObject({ ok: true });
+
+    // A network failure whose message contains the token must not leak it.
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError('invalid header value "Bearer mon-test-token-should-never-leak"'); }));
+    const unreachable = await monime.diagnoseMonime();
+    expect(unreachable.status).toBe(0);
+    expect(JSON.stringify(unreachable)).not.toContain("mon-test-token-should-never-leak");
+  });
+
   it("only trusts Monime's own checkout pages", () => {
     expect(monime.isTrustedCheckoutUrl("https://checkout.monime.io/s/abc")).toBe(true);
     expect(monime.isTrustedCheckoutUrl("https://monime.io/pay")).toBe(true);

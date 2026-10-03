@@ -79,7 +79,16 @@ export function PlatformPaymentsPage() {
             {!data.monime.configured ? (
               <p className="text-sm text-amber-600">Not connected. Add the Monime access token and space id in the hosting settings.</p>
             ) : data.monime.error ? (
-              <p className="text-sm text-destructive">{data.monime.error}</p>
+              <div className="flex flex-col gap-1 text-sm">
+                <p className="text-destructive">{data.monime.error}</p>
+                {(data.monime.status || data.monime.detail || data.monime.requestId) && (
+                  <p className="break-words text-xs text-muted-foreground">
+                    {[data.monime.status ? `Monime answered ${data.monime.status}` : null, data.monime.detail, data.monime.requestId ? `request ${data.monime.requestId}` : null]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                )}
+              </div>
             ) : (
               data.monime.accounts.map((a) => (
                 <p key={a.id} className="flex justify-between text-sm">

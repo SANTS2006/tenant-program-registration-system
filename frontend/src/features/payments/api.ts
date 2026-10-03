@@ -163,7 +163,15 @@ export interface PlatformPayments {
   awaitingReview: { id: string; tenantName: string; amountMinor: number; accountName: string; providerId: string; accountNumber: string; createdAt: string }[];
   paymentsInReview: { id: string; amountMinor: number; failureReason: string | null; createdAt: string; tenantName: string; payerEmail: string | null }[];
   totals: { paidMinor: number; feesMinor: number; paymentCount: number };
-  monime: { configured: boolean; accounts: { id: string; name: string; currency: string; availableMinor: number | null }[]; error?: string };
+  monime: {
+    configured: boolean;
+    accounts: { id: string; name: string; currency: string; availableMinor: number | null }[];
+    /** What is wrong, in plain words. */
+    error?: string;
+    status?: number;
+    detail?: string;
+    requestId?: string;
+  };
 }
 
 export const getPlatformPayments = () => apiFetch<PlatformPayments>("/platform/payments");

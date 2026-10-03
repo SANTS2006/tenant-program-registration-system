@@ -11,7 +11,7 @@ import { dateRangeQuery } from "../../lib/dateRange.js";
 import { sendSuccess } from "../../lib/response.js";
 import { recordAudit } from "../audit/service.js";
 import * as programsRepo from "../programs/repository.js";
-import { isMonimeConfigured, listFinancialAccounts, MonimeError } from "./monime.js";
+import { diagnoseMonime, isMonimeConfigured, listFinancialAccounts, MonimeError } from "./monime.js";
 import { paymentConfigSchema, resolvePaymentConfig } from "./pricing.js";
 import * as payoutsService from "./payouts.js";
 import * as paymentsService from "./service.js";
@@ -188,13 +188,29 @@ export async function platformPaymentsOverviewHandler(_request: FastifyRequest, 
       })
       .from(payments),
   ]);
-  let monime: { configured: boolean; accounts: { id: string; name: string; currency: string; availableMinor: number | null }[]; error?: string } = { configured: isMonimeConfigured(), accounts: [] };
+  let monime: {
+    configured: boolean;
+    accounts: { id: string; name: string; currency: string; availableMinor: number | null }[];
+    error?: string;
+    status?: number;
+    detail?: string;
+    requestId?: string;
+  } = { configured: isMonimeConfigured(), accounts: [] };
   if (monime.configured) {
     try {
       const accounts = await listFinancialAccounts();
       monime = { configured: true, accounts: accounts.map((a) => ({ id: a.id, name: a.name, currency: a.currency, availableMinor: a.balance?.available?.value ?? null })) };
     } catch (err) {
-      monime = { configured: true, accounts: [], error: err instanceof MonimeError ? "Monime could not be reached" : "Could not read Monime balances" };
+      // Say what is actually wrong (a rejected token reads very differently from an unreachable server).
+      const diagnosis = err instanceof MonimeError ? await diagnoseMonime() : null;
+      monime = {
+        configured: true,
+        accounts: [],
+        error: diagnosis?.hint ?? "Could not read Monime balances",
+        status: diagnosis?.status,
+        detail: diagnosis?.detail,
+        requestId: diagnosis?.requestId,
+      };
     }
   }
   const t = totals[0];

@@ -40,9 +40,18 @@ const envSchema = z.object({
 
   // ---- Payments through Monime (https://docs.monime.io). Everything is optional: with no access token
   // the payment features simply stay switched off. Keep the token and secrets only in the hosting settings. ----
-  MONIME_ACCESS_TOKEN: z.string().optional().default(""),
-  MONIME_SPACE_ID: z.string().optional().default(""),
-  MONIME_API_BASE: z.string().url().default("https://api.monime.io/v1"),
+  // Pasted values often carry a trailing space or line break, quotes, or a leading "Bearer ": all are removed.
+  MONIME_ACCESS_TOKEN: z
+    .string()
+    .optional()
+    .default("")
+    .transform((v) => v.trim().replace(/^["']+|["']+$/g, "").replace(/^Bearers+/i, "").trim()),
+  MONIME_SPACE_ID: z
+    .string()
+    .optional()
+    .default("")
+    .transform((v) => v.trim().replace(/^["']+|["']+$/g, "").trim()),
+  MONIME_API_BASE: z.string().trim().url().default("https://api.monime.io/v1"),
   MONIME_API_VERSION: z.string().default("caph.2025-08-23"),
   // The secret set on the webhook in the Monime dashboard (at least 32 characters).
   MONIME_WEBHOOK_SECRET: z.string().optional().default(""),
