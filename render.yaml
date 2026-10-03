@@ -84,7 +84,7 @@ projects:
                 value: "5000000"
               - key: PAYOUT_REVIEW_ABOVE
                 value: "1000000"
-              - key: PAYOUT_NEW_ACCOUNT_HOURS
-                value: "24"
+              - key: PAYOUT_NEW_ACCOUNT_MINUTES
+                value: "3"
               - key: DB_POOL_MAX
                 value: "10"

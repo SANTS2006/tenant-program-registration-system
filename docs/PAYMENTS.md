@@ -37,7 +37,7 @@ Set these in the hosting settings (Render). Without the first two, every payment
 | `PAYMENTS_FEE_PERCENT`, `PAYMENTS_FEE_FIXED` | What the platform keeps from each payment (percent, and Leones). Monime's own fees are charged to your Monime account, so set this to cover them. |
 | `PAYMENTS_HOLD_MINUTES` | Money can't be withdrawn until this many minutes after the payment (default 5). |
 | `PAYMENTS_MAX_AMOUNT` | Largest single payment, in Leones (default 10,000,000). |
-| `PAYOUT_MIN_AMOUNT`, `PAYOUT_DAILY_LIMIT`, `PAYOUT_REVIEW_ABOVE`, `PAYOUT_NEW_ACCOUNT_HOURS` | Withdrawal limits; above `PAYOUT_REVIEW_ABOVE` a person on the platform team must approve. |
+| `PAYOUT_MIN_AMOUNT`, `PAYOUT_DAILY_LIMIT`, `PAYOUT_REVIEW_ABOVE`, `PAYOUT_NEW_ACCOUNT_MINUTES` | Withdrawal limits; above `PAYOUT_REVIEW_ABOVE` a person on the platform team must approve. |
 
 **Webhook:** in Monime create a webhook pointing at `https://<your API_URL>/api/webhooks/monime`, with an HMAC (HS256)
 secret equal to `MONIME_WEBHOOK_SECRET`, subscribed to the checkout session, payment and payout events.
@@ -76,7 +76,7 @@ The database change (migration 0024) runs on the next deploy.
 - An append-only ledger per organization; a balance is a sum of entries. Money is held for `PAYMENTS_HOLD_MINUTES`.
 - Withdrawing needs the organization **admin**, who must **re-enter their password** (wrong tries count toward the
   sign-in lockout). Adding or removing a withdrawal account also needs the password.
-- A new account waits `PAYOUT_NEW_ACCOUNT_HOURS` before it can receive money, and every admin is emailed when accounts
+- A new account waits `PAYOUT_NEW_ACCOUNT_MINUTES` before it can receive money, and every admin is emailed when accounts
   are added or withdrawals requested.
 - Requests are serialised per organization (advisory lock), checked against the available balance, minimum and daily
   limit, and the amount leaves the balance at once so it cannot be spent twice. A failed, cancelled or declined

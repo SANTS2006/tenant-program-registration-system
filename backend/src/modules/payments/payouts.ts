@@ -126,7 +126,7 @@ export async function addPayoutAccount(
     .where(and(eq(payoutAccounts.tenantId, actor.tenantId), isNull(payoutAccounts.disabledAt)));
   if ((existing?.n ?? 0) >= 5) throw AppError.validation("You can keep up to 5 withdrawal accounts. Remove one first.");
 
-  const usableAfter = new Date(Date.now() + env.PAYOUT_NEW_ACCOUNT_HOURS * 3_600_000);
+  const usableAfter = new Date(Date.now() + env.PAYOUT_NEW_ACCOUNT_MINUTES * 60_000);
   const [created] = await db
     .insert(payoutAccounts)
     .values({ tenantId: actor.tenantId, type: input.type, providerId: input.providerId, accountNumber, accountName: input.accountName.trim(), usableAfter, createdBy: actor.id })

@@ -74,7 +74,7 @@ const envSchema = z.object({
   PAYOUT_MIN_AMOUNT: z.coerce.number().positive().default(50),
   PAYOUT_DAILY_LIMIT: z.coerce.number().positive().default(5_000_000),
   PAYOUT_REVIEW_ABOVE: z.coerce.number().min(0).default(1_000_000),
-  PAYOUT_NEW_ACCOUNT_HOURS: z.coerce.number().min(0).max(24 * 14).default(24),
+  PAYOUT_NEW_ACCOUNT_MINUTES: z.coerce.number().min(0).max(60 * 24 * 14).default(3),
 
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
   RATE_LIMIT_WINDOW: z.string().default("1 minute"),

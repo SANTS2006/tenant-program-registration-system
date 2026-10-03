@@ -37,6 +37,9 @@ const PAYOUT_LOOK: Record<PayoutRow["status"], { label: string; className: strin
   rejected: { label: "Declined", className: "bg-destructive/15 text-destructive" },
 };
 
+/** "3 minutes", "1 hour", "24 hours". */
+const waitText = (minutes: number) => (minutes === 0 ? "no time" : minutes % 60 === 0 ? `${minutes / 60} ${minutes === 60 ? "hour" : "hours"}` : `${minutes} ${minutes === 1 ? "minute" : "minutes"}`);
+
 function BalanceCard({ label, value, hint, icon: Icon, tone }: { label: string; value: number; hint: string; icon: typeof Wallet; tone?: string }) {
   return (
     <Card>
@@ -113,7 +116,7 @@ function WithdrawDialog({ funds, open, onOpenChange }: { funds: FundsSummary; op
                 ))}
               </SelectContent>
             </Select>
-            {funds.accounts.length > usable.length && <p className="text-xs text-muted-foreground">A new account can be used {funds.limits.newAccountHours} hours after it is added.</p>}
+            {funds.accounts.length > usable.length && <p className="text-xs text-muted-foreground">A new account can be used {waitText(funds.limits.newAccountMinutes)} after it is added.</p>}
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="amount">Amount (NLe)</Label>
@@ -165,7 +168,7 @@ function AddAccountDialog({ funds, open, onOpenChange }: { funds: FundsSummary; 
     mutationFn: () => addPayoutAccount({ type, providerId, accountNumber: number, accountName: name, password }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["funds"] });
-      toast.success(`Account added. It can be used in ${funds.limits.newAccountHours} hours.`);
+      toast.success(`Account added. It can be used in ${waitText(funds.limits.newAccountMinutes)}.`);
       onOpenChange(false);
     },
     onError: (err) => toast.error(err instanceof ApiError ? err.message : "The account could not be added"),
@@ -176,7 +179,7 @@ function AddAccountDialog({ funds, open, onOpenChange }: { funds: FundsSummary; 
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add a withdrawal account</DialogTitle>
-          <DialogDescription>Where your money is sent. For safety a new account waits {funds.limits.newAccountHours} hours before it can be used, and we email every admin.</DialogDescription>
+          <DialogDescription>Where your money is sent. For safety a new account waits {waitText(funds.limits.newAccountMinutes)} before it can be used, and we email every admin.</DialogDescription>
         </DialogHeader>
         <form
           className="flex flex-col gap-4"
@@ -309,8 +312,16 @@ export function FundsPage() {
     onError: (err) => toast.error(err instanceof ApiError ? err.message : "Could not cancel the withdrawal"),
   });
 
+  const startWithdraw = () => {
+    if (!funds) return;
+    if (!funds.configured) return void toast.error("Payments are not connected on this platform yet.");
+    if (!funds.accounts.length) return void toast.info("Add a withdrawal account first. Use \"Add account\" below.");
+    if (!funds.accounts.some((a) => a.usable)) return void toast.info(`Your new account is not ready yet. It can be used ${waitText(funds.limits.newAccountMinutes)} after it is added.`);
+    if (funds.balances.availableMinor <= 0) return void toast.info("There is no money available to withdraw yet. New payments are released after the hold.");
+    setWithdrawOpen(true);
+  };
+
   if (isLoading || !funds) return <p className="text-sm text-muted-foreground">Loading your payment fund...</p>;
-  const hasUsableAccount = funds.accounts.some((a) => a.usable);
 
   return (
     <div className="flex flex-col gap-6">
@@ -321,7 +332,7 @@ export function FundsPage() {
         </div>
         <div className="flex gap-2">
           <RefreshButton />
-          <Button onClick={() => setWithdrawOpen(true)} disabled={!funds.configured || !hasUsableAccount || funds.balances.availableMinor <= 0}>
+          <Button onClick={startWithdraw}>
             <ArrowDownToLine className="h-4 w-4" />
             Withdraw
           </Button>

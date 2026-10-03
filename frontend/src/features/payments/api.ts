@@ -107,7 +107,7 @@ export interface FundsSummary {
     dailyLimitMinor: number;
     reviewAboveMinor: number;
     holdMinutes: number;
-    newAccountHours: number;
+    newAccountMinutes: number;
     feePercent: number;
     feeFixedMinor: number;
   };
