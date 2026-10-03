@@ -79,7 +79,7 @@ projects:
               - key: PAYMENTS_MAX_AMOUNT
                 value: "10000000"
               - key: PAYOUT_MIN_AMOUNT
-                value: "50"
+                value: "1"
               - key: PAYOUT_DAILY_LIMIT
                 value: "5000000"
               - key: PAYOUT_REVIEW_ABOVE
