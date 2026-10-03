@@ -28,6 +28,11 @@ export function RegistrationsListPage() {
   const [search, setSearch] = React.useState("");
   const [status, setStatus] = React.useState<string>("all");
   const [page, setPage] = React.useState(1);
+  // Day range (YYYY-MM-DD): from the start of the first day to the end of the last, in the viewer's time zone.
+  const [fromDay, setFromDay] = React.useState("");
+  const [toDay, setToDay] = React.useState("");
+  const dateFrom = fromDay ? new Date(`${fromDay}T00:00:00`).toISOString() : undefined;
+  const dateTo = toDay ? new Date(`${toDay}T23:59:59.999`).toISOString() : undefined;
   const [sorting, setSorting] = React.useState<SortingState>([{ id: "submittedAt", desc: true }]);
   const [exporting, setExporting] = React.useState<"csv" | "xlsx" | null>(null);
 
@@ -37,6 +42,8 @@ export function RegistrationsListPage() {
     pageSize: 20,
     search: search || undefined,
     status: status === "all" ? undefined : (status as RegistrationStatus),
+    dateFrom,
+    dateTo,
     sortBy: (sort?.id as "submittedAt" | "registrationNumber" | "status") ?? "submittedAt",
     sortDir: sort?.desc ? "desc" : "asc",
   });
@@ -77,6 +84,8 @@ export function RegistrationsListPage() {
         format,
         search: search || undefined,
         status: status === "all" ? undefined : (status as RegistrationStatus),
+        dateFrom,
+        dateTo,
       });
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : `Failed to export ${terms.plural}`);
@@ -119,6 +128,50 @@ export function RegistrationsListPage() {
             ))}
           </SelectContent>
         </Select>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            From
+            <Input
+              type="date"
+              aria-label="From date"
+              className="h-9 w-40"
+              value={fromDay}
+              max={toDay || undefined}
+              onChange={(e) => {
+                setFromDay(e.target.value);
+                setPage(1);
+              }}
+            />
+          </label>
+          <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            To
+            <Input
+              type="date"
+              aria-label="To date"
+              className="h-9 w-40"
+              value={toDay}
+              min={fromDay || undefined}
+              onChange={(e) => {
+                setToDay(e.target.value);
+                setPage(1);
+              }}
+            />
+          </label>
+          {(fromDay || toDay) && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setFromDay("");
+                setToDay("");
+                setPage(1);
+              }}
+            >
+              Clear dates
+            </Button>
+          )}
+        </div>
         <span className="text-sm text-muted-foreground">{data?.total ?? 0} total</span>
         <div className="ml-auto flex flex-wrap gap-2">
           <RefreshButton />
