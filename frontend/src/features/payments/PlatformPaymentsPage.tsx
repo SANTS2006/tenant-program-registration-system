@@ -93,7 +93,7 @@ export function PlatformPaymentsPage() {
               data.monime.accounts.map((a) => (
                 <p key={a.id} className="flex justify-between text-sm">
                   <span className="truncate text-muted-foreground">{a.name}</span>
-                  <span className="font-semibold">{a.availableMinor === null ? "—" : formatMinor(a.availableMinor, a.currency)}</span>
+                  <span className="font-semibold">{a.availableMinor === null ? <span className="text-xs font-normal text-muted-foreground">Monime did not send a balance</span> : formatMinor(a.availableMinor, a.currency)}</span>
                 </p>
               ))
             )}
